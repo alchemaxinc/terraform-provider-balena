@@ -1,0 +1,31 @@
+name: Update Go Dependencies
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0" # Run every Sunday at midnight
+
+jobs:
+  update-go-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Update Go dependencies
+        uses: alchemaxinc/update-deps/golang@v1
+        with:
+          token: ${{ steps.app.outputs.token }}
+          base-branch: "develop"
+          branch-prefix: "update-go-deps"
+          pr-title: "chore: update Go dependencies"
+          commit-message: "chore: update go dependencies"
+          strategy: "controlled"
+          auto-merge: "true"

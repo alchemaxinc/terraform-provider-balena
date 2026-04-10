@@ -1,0 +1,161 @@
+name: Check Balena API Schema
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  check-schema:
+    name: Check for schema updates
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          token: ${{ steps.app.outputs.token }}
+          ref: develop
+
+      - name: Read current pinned version
+        id: current
+        run: |
+          CURRENT_TAG=$(cat schema/VERSION | tr -d '[:space:]')
+          echo "tag=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
+          echo "Current pinned version: $CURRENT_TAG"
+
+      - name: Fetch latest open-balena-api tag
+        id: latest
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          LATEST_TAG=$(gh api repos/balena-io/open-balena-api/tags --jq '.[0].name')
+          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream tag: $LATEST_TAG"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          CURRENT="${{ steps.current.outputs.tag }}"
+          LATEST="${{ steps.latest.outputs.tag }}"
+
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "Schema is up to date at $CURRENT"
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Schema update available: $CURRENT → $LATEST"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download new schema
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          curl -fsSL "https://raw.githubusercontent.com/balena-io/open-balena-api/${LATEST}/src/balena.sbvr" \
+            -o /tmp/balena-new.sbvr
+          echo "Downloaded balena.sbvr from $LATEST"
+
+      - name: Diff schema
+        if: steps.compare.outputs.needs_update == 'true'
+        id: diff
+        run: |
+          if diff -q schema/balena.sbvr /tmp/balena-new.sbvr > /dev/null 2>&1; then
+            echo "No schema diff — only non-schema changes in the release"
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Schema has changed"
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+
+            DIFF_SUMMARY=$(bash schema/diff-sbvr.sh schema/balena.sbvr /tmp/balena-new.sbvr)
+            {
+              echo "summary<<DIFF_EOF"
+              echo "$DIFF_SUMMARY"
+              echo "DIFF_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update VERSION only (no schema diff)
+        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "$LATEST" > schema/VERSION
+          git add schema/VERSION
+          git commit -m "chore: bump schema VERSION to ${LATEST} (no schema changes)"
+          git push
+
+      - name: Update schema files
+        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          cp /tmp/balena-new.sbvr schema/balena.sbvr
+          echo "$LATEST" > schema/VERSION
+
+      - name: Create schema update PR
+        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
+        id: create-pr
+        uses: alchemaxinc/composite-toolbox/create-pr@v1
+        with:
+          token: ${{ steps.app.outputs.token }}
+          base-branch: develop
+          branch-prefix: chore/schema-update
+          branch-postfix: ${{ steps.latest.outputs.tag }}
+          files: "schema/balena.sbvr schema/VERSION"
+          commit-message: "chore: update balena schema to ${{ steps.latest.outputs.tag }}"
+          pr-title: "chore: update balena schema to ${{ steps.latest.outputs.tag }}"
+          pr-body: |
+            ## Balena API Schema Update
+
+            The Balena API schema has changed from `${{ steps.current.outputs.tag }}` to `${{ steps.latest.outputs.tag }}`.
+
+            ${{ steps.diff.outputs.summary }}
+
+            ---
+
+            ### Copilot Instructions
+
+            The upstream Balena API schema (`schema/balena.sbvr`) has been updated.
+            Please review the diff summary above and update the Go client and Terraform
+            provider code to reflect these changes:
+
+            1. Update struct fields in `internal/balena/client.go` to match added/removed
+               Terms and Fact types.
+            2. Update any affected resource or data-source files in `internal/provider/`.
+            3. Add or update Terraform schema attributes as needed.
+            4. Run `make build && make test` to validate your changes compile and pass.
+
+            If the changes are purely additive (new optional fields), the existing tests
+            should still pass. If fields were removed or constraints changed, update the
+            tests accordingly.
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pr_number != ''
+        uses: alchemaxinc/composite-toolbox/merge-pr@v1
+        with:
+          token: ${{ steps.app.outputs.token }}
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
+
+      - name: Request Copilot review
+        if: steps.create-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh pr edit ${{ steps.create-pr.outputs.pr_number }} --add-reviewer "copilot" || echo "Could not add Copilot reviewer"
