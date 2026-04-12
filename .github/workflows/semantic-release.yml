@@ -49,6 +49,14 @@ jobs:
       contents: write
 
     steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - &checkout-code-full
         name: Checkout code (full)
         uses: actions/checkout@v6
@@ -76,16 +84,8 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-
-      - name: Un-draft the release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${{ needs.semantic-release.outputs.tag }}"
-          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq '.id')
-          gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f draft=false
 
   semantic-release-flowing-tags:
     name: Add flowing tags

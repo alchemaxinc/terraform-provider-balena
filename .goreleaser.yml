@@ -50,8 +50,15 @@ signs:
       - "${artifact}"
 
 release:
-  mode: append
+  draft: false
   make_latest: true
 
 changelog:
-  disable: true
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"
