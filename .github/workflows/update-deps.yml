@@ -25,7 +25,7 @@ jobs:
           token: ${{ steps.app.outputs.token }}
           base-branch: "develop"
           branch-prefix: "update-go-deps"
-          pr-title: "chore: update Go dependencies"
-          commit-message: "chore: update go dependencies"
+          pr-title: "fix: update Go dependencies"
+          commit-message: "fix: update go dependencies"
           strategy: "controlled"
           auto-merge: "true"
