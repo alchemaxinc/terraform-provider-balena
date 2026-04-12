@@ -79,6 +79,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
 
+      - name: Un-draft the release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.semantic-release.outputs.tag }}"
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq '.id')
+          gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f draft=false
+
   semantic-release-flowing-tags:
     name: Add flowing tags
     runs-on: ubuntu-latest
