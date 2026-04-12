@@ -9,7 +9,7 @@
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
-    "@semantic-release/github"
+    ["@semantic-release/github", { "draftRelease": true }]
   ],
   "repositoryUrl": "https://github.com/alchemaxinc/terraform-provider-balena",
   "tagFormat": "v${version}"
