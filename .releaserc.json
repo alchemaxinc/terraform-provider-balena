@@ -1,0 +1,16 @@
+{
+  "branches": [
+    "main",
+    {
+      "name": "develop",
+      "prerelease": "dev"
+    }
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github"
+  ],
+  "repositoryUrl": "https://github.com/alchemaxinc/terraform-provider-balena",
+  "tagFormat": "v${version}"
+}
