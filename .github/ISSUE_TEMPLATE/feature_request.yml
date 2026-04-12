@@ -1,0 +1,42 @@
+---
+name: Feature Request
+description: Suggest a new resource, data source, or enhancement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your suggestion! Please describe the feature you'd like to see.
+
+        > **Important:** This provider is a reflection of the [Balena API](https://docs.balena.io/reference/api/resources).
+        > Before submitting, please verify that the feature you're requesting is supported by the Balena API.
+        > If it requires new API functionality, please request it from Balena directly — not here.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature or enhancement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would you use this feature? What problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Configuration
+      description: If applicable, show example `.tf` configuration for the feature.
+      render: hcl
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, links to Balena API docs, etc.

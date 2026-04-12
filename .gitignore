@@ -1,0 +1,32 @@
+# Binaries
+terraform-provider-balena
+terraform-provider-balena_*
+
+# Build artifacts
+dist/
+
+# Local terraform overrides
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.out
+coverage.html
+
+# node_modules (for commitlint / prettier in CI)
+node_modules/
