@@ -50,29 +50,8 @@ signs:
       - "${artifact}"
 
 release:
-  draft: false
+  mode: append
   make_latest: true
-  header: |
-    ## Terraform Provider for Balena Cloud {{ .Tag }}
-
-    Install via the Terraform Registry:
-    ```hcl
-    terraform {
-      required_providers {
-        balena = {
-          source  = "alchemaxinc/balena"
-          version = "~> {{ .Major }}"
-        }
-      }
-    }
-    ```
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
-      - "Merge pull request"
-      - "Merge branch"
+  disable: true
