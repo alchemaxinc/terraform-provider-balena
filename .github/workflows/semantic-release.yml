@@ -27,6 +27,7 @@ jobs:
           client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
 
       - name: Run semantic-release with backmerge
         id: release
@@ -56,6 +57,7 @@ jobs:
           client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
 
       - &checkout-code-full
         name: Checkout code (full)
