@@ -14,9 +14,9 @@ Manages a tag on a Balena device.
 
 ```terraform
 resource "balena_device_tag" "role" {
-  device_uuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
-  tag_key     = "role"
-  value       = "gateway"
+  device_id = 123456
+  tag_key   = "role"
+  value     = "gateway"
 }
 ```
 

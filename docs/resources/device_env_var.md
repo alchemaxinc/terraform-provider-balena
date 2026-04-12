@@ -14,9 +14,9 @@ Manages a device-level environment variable.
 
 ```terraform
 resource "balena_device_env_var" "debug_mode" {
-  device_uuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
-  name        = "DEBUG"
-  value       = "true"
+  device_id = 123456
+  name      = "DEBUG"
+  value     = "true"
 }
 ```
 
