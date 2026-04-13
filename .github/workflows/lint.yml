@@ -170,10 +170,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: Checkout and configure git
         uses: alchemaxinc/composite-toolbox/checkout-and-setup@v1
         with:
           ref: ${{ github.head_ref }}
+          token: ${{ steps.app.outputs.token }}
 
       - *setup-go
       - *cache-tfplugindocs
