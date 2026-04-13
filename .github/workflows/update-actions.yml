@@ -25,7 +25,7 @@ jobs:
         with:
           token: ${{ steps.app.outputs.token }}
           auto-merge: "true"
-          base-branch: "develop"
+          base-branch: "main"
           prefixes: "actions,golangci,goreleaser,crazy-max,hashicorp"
           file-glob: ".github/**/*.yml"
           branch-prefix: "update-actions"

@@ -23,7 +23,7 @@ jobs:
         uses: alchemaxinc/update-deps/golang@v1
         with:
           token: ${{ steps.app.outputs.token }}
-          base-branch: "develop"
+          base-branch: "main"
           branch-prefix: "update-go-deps"
           pr-title: "fix: update Go dependencies"
           commit-message: "fix: update go dependencies"

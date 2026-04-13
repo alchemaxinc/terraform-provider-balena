@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ steps.app.outputs.token }}
-          ref: develop
+          ref: main
 
       - name: Read current pinned version
         id: current
@@ -116,7 +116,7 @@ jobs:
         uses: alchemaxinc/composite-toolbox/create-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
-          base-branch: develop
+          base-branch: main
           branch-prefix: chore/schema-update
           branch-postfix: ${{ steps.latest.outputs.tag }}
           files: "schema/balena.sbvr schema/VERSION"

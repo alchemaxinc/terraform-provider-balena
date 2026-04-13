@@ -17,7 +17,7 @@ Thank you for your interest in contributing! This document covers the process fo
 4. Make your changes
 5. Run checks: `make lint && make test`
 6. Commit using [Conventional Commits](https://www.conventionalcommits.org/): `git commit -m "feat: add widget resource"`
-7. Push and open a pull request against `develop`
+7. Push and open a pull request against `main`
 
 ## Development
 
@@ -34,11 +34,10 @@ make docs           # Generate documentation
 
 This repository follows semantic versioning with an automated release pipeline:
 
-1. Development work happens on the `develop` branch.
-2. A PR is raised from `develop` to `main`.
+1. Development work happens on feature branches off `main`.
+2. PRs are opened against `main`.
 3. On merge to `main`, [semantic-release](https://github.com/semantic-release/semantic-release) analyses conventional commits and creates a version tag and GitHub release.
 4. [GoReleaser](https://goreleaser.com) builds multi-platform binaries and attaches them to the release.
-5. The `main` branch is backmerged into `develop` automatically.
 
 ### Commit Convention
 
