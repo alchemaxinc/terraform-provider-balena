@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
   workflow_dispatch:
 
 jobs:
@@ -29,14 +28,11 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
 
-      - name: Run semantic-release with backmerge
+      - name: Run semantic-release
         id: release
         uses: alchemaxinc/composite-toolbox/semantic-release@v1
         with:
           token: ${{ steps.app.outputs.token }}
-          enable-backmerge: "true"
-          backmerge-target-branch: "develop"
-          source-branch: "main"
 
   goreleaser:
     name: Build and Publish Provider
