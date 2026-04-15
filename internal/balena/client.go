@@ -44,6 +44,15 @@ func IsNotFound(err error) bool {
 	return false
 }
 
+// IsConflict reports whether the error is a 409 Conflict response.
+func IsConflict(err error) bool {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusConflict
+	}
+	return false
+}
+
 // Client is the Balena Cloud REST API client.
 type Client struct {
 	baseURL    string
@@ -863,11 +872,34 @@ func doGetByID[T any](ctx context.Context, c *Client, path string, id int64, que
 }
 
 func doCreate[T any](ctx context.Context, c *Client, path string, body interface{}) (*T, error) {
-	req, err := c.newRequest(ctx, http.MethodPost, path, body)
-	if err != nil {
-		return nil, err
+	var data []byte
+	var err error
+
+	for attempt := 0; ; attempt++ {
+		var req *http.Request
+		req, err = c.newRequest(ctx, http.MethodPost, path, body)
+		if err != nil {
+			return nil, err
+		}
+		data, err = c.do(req)
+		// Retry on 409 Conflict — a concurrent delete of the same resource
+		// (e.g. Terraform renaming a resource) may not have propagated yet.
+		if err != nil && IsConflict(err) && attempt < 3 {
+			delay := time.Duration(attempt+1) * 2 * time.Second
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
+			continue
+		}
+		break
 	}
-	data, err := c.do(req)
+
 	if err != nil {
 		return nil, err
 	}
