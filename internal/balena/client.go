@@ -885,7 +885,16 @@ func doCreate[T any](ctx context.Context, c *Client, path string, body interface
 		// Retry on 409 Conflict — a concurrent delete of the same resource
 		// (e.g. Terraform renaming a resource) may not have propagated yet.
 		if err != nil && IsConflict(err) && attempt < 3 {
-			time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
+			delay := time.Duration(attempt+1) * 2 * time.Second
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
 			continue
 		}
 		break
