@@ -163,27 +163,11 @@ jobs:
         if: steps.cache-tfplugindocs.outputs.cache-hit != 'true'
         run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v${{ env.TFPLUGINDOCS_VERSION }}
 
-  update-docs:
+  check-docs:
     runs-on: ubuntu-latest
     needs: install-tfplugindocs
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: write
     steps:
-      - name: Create temporary GitHub App Token
-        id: app
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
-          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-      - name: Checkout and configure git
-        uses: alchemaxinc/composite-toolbox/checkout-and-setup@v1
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ steps.app.outputs.token }}
-
+      - *checkout-code
       - *setup-go
       - *cache-tfplugindocs
 
@@ -192,17 +176,17 @@ jobs:
           $(go env GOPATH)/bin/tfplugindocs generate --provider-name=balena
           npx prettier@${{ env.PRETTIER_VERSION }} --write docs/
 
-      - name: Commit updated docs
+      - name: Fail if docs are out of date
         run: |
-          git add docs/
-          git diff --cached --quiet && exit 0
-          git commit -m "docs: auto-generate provider documentation"
-          git push
+          if ! git diff --exit-code -- docs/; then
+            echo "::error::Provider docs are stale. Run 'make docs && npx prettier --write docs/' and commit the result."
+            exit 1
+          fi
 
   lint-passed:
     runs-on: ubuntu-latest
     if: always()
-    needs: [run-commitlint, run-prettier, go-lint, validate-examples, update-docs]
+    needs: [run-commitlint, run-prettier, go-lint, validate-examples, check-docs]
     steps:
       - name: Verify all jobs passed or were skipped
         run: |
@@ -211,7 +195,7 @@ jobs:
             "${{ needs.run-prettier.result }}"
             "${{ needs.go-lint.result }}"
             "${{ needs.validate-examples.result }}"
-            "${{ needs.update-docs.result }}"
+            "${{ needs.check-docs.result }}"
           )
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
