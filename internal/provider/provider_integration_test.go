@@ -192,7 +192,11 @@ resource "balena_application" "test" {
   organization_id = %s
 }
 `, appName, testAccOrgID),
-				Check: resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_public", "false"),
+				),
 			},
 			{
 				Config: fmt.Sprintf(`
@@ -202,9 +206,156 @@ resource "balena_application" "test" {
   app_name        = "%s"
   device_type     = "raspberrypi4-64"
   organization_id = %s
+  is_public       = true
+}
+`, appName, testAccOrgID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
+					resource.TestCheckResourceAttr("balena_application.test", "is_public", "true"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_application" "test" {
+  app_name        = "%s"
+  device_type     = "raspberrypi4-64"
+  organization_id = %s
+  is_public       = true
 }
 `, updatedName, testAccOrgID),
-				Check: resource.TestCheckResourceAttr("balena_application.test", "app_name", updatedName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application.test", "app_name", updatedName),
+					resource.TestCheckResourceAttr("balena_application.test", "is_public", "true"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+				),
+			},
+		},
+	})
+}
+
+// testAccCheckOrganizationDestroy verifies that organizations created by a
+// test have been deleted. Only applies to ad-hoc organizations — the shared
+// test org is managed by TestMain and not subject to CheckDestroy.
+func testAccCheckOrganizationDestroy(s *terraform.State) error {
+	client := testAccNewClient()
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "balena_organization" {
+			continue
+		}
+		id, _ := parseID(rs.Primary.ID)
+		_, err := client.GetOrganization(context.Background(), id)
+		if err == nil {
+			return fmt.Errorf("organization %s still exists", rs.Primary.ID)
+		}
+		if !balena.IsNotFound(err) {
+			return fmt.Errorf("error checking organization %s: %s", rs.Primary.ID, err)
+		}
+	}
+	return nil
+}
+
+// TestAccOrganization_basic exercises balena_organization directly and
+// verifies that hyphenated handles (which were previously rejected by the
+// handle validator regex) are accepted.
+func TestAccOrganization_basic(t *testing.T) {
+	testAccPreCheck(t)
+	handle := fmt.Sprintf("tf-acc-org-%d", rand.Int63())
+	name := fmt.Sprintf("TF Acc Org %s", handle)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckOrganizationDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_organization" "test" {
+  name   = "%s"
+  handle = "%s"
+}
+`, name, handle),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_organization.test", "name", name),
+					resource.TestCheckResourceAttr("balena_organization.test", "handle", handle),
+					resource.TestCheckResourceAttrSet("balena_organization.test", "id"),
+				),
+			},
+			{
+				ResourceName:      "balena_organization.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// testAccCheckSSHKeyDestroy verifies that ssh keys created by a test have
+// been deleted.
+func testAccCheckSSHKeyDestroy(s *terraform.State) error {
+	client := testAccNewClient()
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "balena_ssh_key" {
+			continue
+		}
+		id, _ := parseID(rs.Primary.ID)
+		_, err := client.GetSSHKey(context.Background(), id)
+		if err == nil {
+			return fmt.Errorf("ssh key %s still exists", rs.Primary.ID)
+		}
+		if !balena.IsNotFound(err) {
+			return fmt.Errorf("error checking ssh key %s: %s", rs.Primary.ID, err)
+		}
+	}
+	return nil
+}
+
+// TestAccSSHKey_basic creates an SSH key, then re-applies the same config to
+// exercise the Update path (which must be a no-op, not an error), and finally
+// verifies ImportState.
+func TestAccSSHKey_basic(t *testing.T) {
+	testAccPreCheck(t)
+	title := acctest.RandomWithPrefix("tf_acc_ssh")
+	// Any valid SSH public key works for the Balena API; this is a throwaway
+	// key with no matching private key.
+	pubKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGj+J6N3rJLf0bW1Xs5PrkqRXq2y5+qGhKjZC1f5h0oT tf-acc-test@example.invalid"
+
+	config := fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_ssh_key" "test" {
+  title      = "%s"
+  public_key = "%s"
+}
+`, title, pubKey)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckSSHKeyDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_ssh_key.test", "title", title),
+					resource.TestCheckResourceAttrSet("balena_ssh_key.test", "id"),
+					resource.TestCheckResourceAttrSet("balena_ssh_key.test", "created_at"),
+				),
+			},
+			{
+				// Re-apply identical config. tf-plugin-testing runs a plan
+				// here, so any spurious drift would trigger Update — which
+				// must not return an error.
+				Config:   config,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:            "balena_ssh_key.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"public_key"},
 			},
 		},
 	})
