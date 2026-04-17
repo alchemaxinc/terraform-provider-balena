@@ -36,24 +36,29 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 // If BALENA_TEST_ORG_ID is set, that org is used directly (no creation).
 // Otherwise, a new org is created and best-effort deleted after tests.
 func TestMain(m *testing.M) {
+	os.Exit(runIntegrationTests(m))
+}
+
+// runIntegrationTests encapsulates setup + teardown so that deferred cleanup
+// runs even if a test panics. os.Exit is kept out of this function because it
+// bypasses deferred calls.
+func runIntegrationTests(m *testing.M) int {
 	token := os.Getenv("BALENA_API_TOKEN")
 	if token == "" {
 		log.Println("BALENA_API_TOKEN not set, skipping integration tests")
-		os.Exit(0)
+		return 0
 	}
 
-	// Allow using a pre-existing org to avoid rate limits on org creation.
 	if id := os.Getenv("BALENA_TEST_ORG_ID"); id != "" {
 		testAccOrgID = id
 		log.Printf("Using pre-existing test organization: ID=%s", testAccOrgID)
-		os.Exit(m.Run())
+		return m.Run()
 	}
 
 	client := balena.NewClient("", token, "test")
 	handle := fmt.Sprintf("tf_acc_%d", rand.Int63())
 	name := fmt.Sprintf("TF Acc Test %s", handle)
 
-	// Retry org creation with backoff to handle rate limits.
 	var org *balena.Organization
 	var err error
 	for attempt := 1; attempt <= 5; attempt++ {
@@ -77,17 +82,16 @@ func TestMain(m *testing.M) {
 	testAccOrgID = strconv.FormatInt(org.ID, 10)
 	log.Printf("Created shared test organization: ID=%s handle=%s", testAccOrgID, handle)
 
-	code := m.Run()
+	defer func() {
+		log.Printf("Attempting to clean up shared test organization %s", testAccOrgID)
+		if delErr := client.DeleteOrganization(context.Background(), org.ID); delErr != nil {
+			log.Printf("Warning: could not delete test organization %s: %v (manual cleanup may be required)", testAccOrgID, delErr)
+		} else {
+			log.Printf("Deleted shared test organization %s", testAccOrgID)
+		}
+	}()
 
-	// Best-effort cleanup — the Balena API may not support org deletion.
-	log.Printf("Attempting to clean up shared test organization %s", testAccOrgID)
-	if delErr := client.DeleteOrganization(context.Background(), org.ID); delErr != nil {
-		log.Printf("Warning: could not delete test organization %s: %v (manual cleanup may be required)", testAccOrgID, delErr)
-	} else {
-		log.Printf("Deleted shared test organization %s", testAccOrgID)
-	}
-
-	os.Exit(code)
+	return m.Run()
 }
 
 // testAccPreCheck validates that required environment variables are set.
