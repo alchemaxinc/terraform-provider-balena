@@ -79,12 +79,8 @@ func (r *SSHKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 }
 
 func (r *SSHKeyResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	client, ok := req.ProviderData.(*balena.Client)
+	client, ok := configureClient(req.ProviderData, &resp.Diagnostics, "Resource")
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", "Expected *balena.Client")
 		return
 	}
 	r.client = client
@@ -134,8 +130,16 @@ func (r *SSHKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
-func (r *SSHKeyResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Update not supported", "SSH keys cannot be updated. Delete and re-create instead.")
+// Update is a no-op: every user-settable attribute (title, public_key) uses
+// RequiresReplace, so Terraform will only call Update when nothing meaningful
+// has changed (e.g. a drift-only computed attribute refresh).
+func (r *SSHKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan SSHKeyResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (r *SSHKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

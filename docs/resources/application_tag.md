@@ -3,12 +3,12 @@
 page_title: "balena_application_tag Resource - balena"
 subcategory: ""
 description: |-
-  Manages a tag on a Balena application.
+  Manages a tag on a Balena application/fleet.
 ---
 
 # balena_application_tag (Resource)
 
-Manages a tag on a Balena application.
+Manages a tag on a Balena application/fleet.
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_application_tag" "environment" {
 
 ### Required
 
-- `application_id` (Number) ID of the application.
+- `application_id` (Number) Numeric ID of the parent application/fleet.
 - `tag_key` (String) Tag key.
 - `value` (String) Tag value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

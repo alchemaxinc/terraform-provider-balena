@@ -3,12 +3,12 @@
 page_title: "balena_application_service_env_var Resource - balena"
 subcategory: ""
 description: |-
-  Manages a service-level environment variable on a Balena application.
+  Manages a service-level environment variable on a Balena application service.
 ---
 
 # balena_application_service_env_var (Resource)
 
-Manages a service-level environment variable on a Balena application.
+Manages a service-level environment variable on a Balena application service.
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_application_service_env_var" "api_port" {
 
 ### Required
 
-- `name` (String) Variable name.
-- `service_id` (Number) ID of the service.
-- `value` (String, Sensitive) Variable value.
+- `name` (String) Environment variable name.
+- `service_id` (Number) Numeric ID of the application service.
+- `value` (String, Sensitive) Environment variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

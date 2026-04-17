@@ -6,6 +6,7 @@ Thank you for your interest in contributing! This document covers the process fo
 
 - [Go](https://golang.org/doc/install)
 - [Terraform](https://developer.hashicorp.com/terraform/downloads)
+- [Node.js](https://nodejs.org/) (used to run `prettier` via `npx` during lint/format/docs)
 - [golangci-lint](https://golangci-lint.run/welcome/install-local/)
 - [prettier](https://prettier.io/docs/en/install.html) (for formatting documentation)
 

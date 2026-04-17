@@ -79,12 +79,8 @@ func (r *OrganizationResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 func (r *OrganizationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	client, ok := req.ProviderData.(*balena.Client)
+	client, ok := configureClient(req.ProviderData, &resp.Diagnostics, "Resource")
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", "Expected *balena.Client")
 		return
 	}
 	r.client = client

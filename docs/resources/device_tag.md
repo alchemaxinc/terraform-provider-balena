@@ -26,10 +26,10 @@ resource "balena_device_tag" "role" {
 
 ### Required
 
-- `device_id` (Number) ID of the device.
+- `device_id` (Number) Numeric ID of the parent device.
 - `tag_key` (String) Tag key.
 - `value` (String) Tag value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

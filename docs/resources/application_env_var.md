@@ -3,12 +3,12 @@
 page_title: "balena_application_env_var Resource - balena"
 subcategory: ""
 description: |-
-  Manages an application-level environment variable.
+  Manages an application-level environment variable on a Balena fleet.
 ---
 
 # balena_application_env_var (Resource)
 
-Manages an application-level environment variable.
+Manages an application-level environment variable on a Balena fleet.
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_application_env_var" "mqtt_host" {
 
 ### Required
 
-- `application_id` (Number) ID of the application.
-- `name` (String) Variable name.
-- `value` (String, Sensitive) Variable value.
+- `application_id` (Number) Numeric ID of the parent application/fleet.
+- `name` (String) Environment variable name.
+- `value` (String, Sensitive) Environment variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

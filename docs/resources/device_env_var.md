@@ -26,10 +26,10 @@ resource "balena_device_env_var" "debug_mode" {
 
 ### Required
 
-- `device_id` (Number) ID of the device.
-- `name` (String) Variable name.
-- `value` (String, Sensitive) Variable value.
+- `device_id` (Number) Numeric ID of the parent device.
+- `name` (String) Environment variable name.
+- `value` (String, Sensitive) Environment variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

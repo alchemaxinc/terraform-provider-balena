@@ -4,6 +4,8 @@ package provider
 import (
 	"context"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/alchemaxinc/terraform-provider-balena/internal/balena"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -24,8 +26,10 @@ type BalenaProvider struct {
 
 // BalenaProviderModel describes the provider data model.
 type BalenaProviderModel struct {
-	APIToken types.String `tfsdk:"api_token"`
-	APIURL   types.String `tfsdk:"api_url"`
+	APIToken           types.String `tfsdk:"api_token"`
+	APIURL             types.String `tfsdk:"api_url"`
+	HTTPTimeoutSeconds types.Int64  `tfsdk:"http_timeout_seconds"`
+	MaxRetries         types.Int64  `tfsdk:"max_retries"`
 }
 
 // New returns a provider factory function.
@@ -51,6 +55,14 @@ func (p *BalenaProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 			},
 			"api_url": schema.StringAttribute{
 				Description: "Balena Cloud API URL. Defaults to https://api.balena-cloud.com. May also be set via BALENA_API_URL.",
+				Optional:    true,
+			},
+			"http_timeout_seconds": schema.Int64Attribute{
+				Description: "Per-request HTTP timeout in seconds. Defaults to 60. May also be set via BALENA_HTTP_TIMEOUT_SECONDS.",
+				Optional:    true,
+			},
+			"max_retries": schema.Int64Attribute{
+				Description: "Maximum number of retries for transient failures (409/429/5xx). Defaults to 5. May also be set via BALENA_MAX_RETRIES.",
 				Optional:    true,
 			},
 		},
@@ -83,11 +95,34 @@ func (p *BalenaProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		apiURL = config.APIURL.ValueString()
 	}
 
+	opts := []balena.ClientOption{}
+	if timeoutSecs := resolveInt64Setting(config.HTTPTimeoutSeconds, "BALENA_HTTP_TIMEOUT_SECONDS"); timeoutSecs > 0 {
+		opts = append(opts, balena.WithTimeout(time.Duration(timeoutSecs)*time.Second))
+	}
+	if maxRetries := resolveInt64Setting(config.MaxRetries, "BALENA_MAX_RETRIES"); maxRetries >= 0 {
+		opts = append(opts, balena.WithMaxRetries(int(maxRetries)))
+	}
+
 	tflog.Debug(ctx, "Creating Balena API client", map[string]interface{}{"api_url": apiURL})
 
-	client := balena.NewClient(apiURL, apiToken, p.version)
+	client := balena.NewClient(apiURL, apiToken, p.version, opts...)
 	resp.DataSourceData = client
 	resp.ResourceData = client
+}
+
+// resolveInt64Setting returns the config value if set, otherwise parses the
+// named environment variable. Returns -1 when neither is set (callers treat
+// negative as "unset" for max_retries) or when parsing fails.
+func resolveInt64Setting(v types.Int64, envVar string) int64 {
+	if !v.IsNull() && !v.IsUnknown() {
+		return v.ValueInt64()
+	}
+	if raw := os.Getenv(envVar); raw != "" {
+		if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil {
+			return parsed
+		}
+	}
+	return -1
 }
 
 func (p *BalenaProvider) Resources(_ context.Context) []func() resource.Resource {
@@ -115,6 +150,8 @@ func (p *BalenaProvider) DataSources(_ context.Context) []func() datasource.Data
 		NewDeviceDataSource,
 		NewOrganizationDataSource,
 		NewReleaseDataSource,
+		NewReleaseImageDataSource,
 		NewServiceDataSource,
+		NewServiceInstallDataSource,
 	}
 }

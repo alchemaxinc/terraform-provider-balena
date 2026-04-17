@@ -3,12 +3,12 @@
 page_title: "balena_device_config_var Resource - balena"
 subcategory: ""
 description: |-
-  Manages a device-level configuration variable.
+  Manages a device-level configuration variable (RESIN_/BALENA_ host config).
 ---
 
 # balena_device_config_var (Resource)
 
-Manages a device-level configuration variable.
+Manages a device-level configuration variable (RESIN*/BALENA* host config).
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_device_config_var" "gpu_memory" {
 
 ### Required
 
-- `device_id` (Number) ID of the device.
-- `name` (String) Variable name.
-- `value` (String) Variable value.
+- `device_id` (Number) Numeric ID of the parent device.
+- `name` (String) Configuration variable name (e.g. RESIN_HOST_CONFIG_gpu_mem).
+- `value` (String) Configuration variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

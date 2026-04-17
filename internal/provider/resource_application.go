@@ -80,7 +80,7 @@ func (r *ApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"is_public": schema.BoolAttribute{
-				Description: "Whether the application is public.",
+				Description: "Whether the application is publicly visible. Can be toggled. Defaults to the value returned by the API on creation.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{
@@ -88,8 +88,7 @@ func (r *ApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"is_archived": schema.BoolAttribute{
-				Description: "Whether the application is archived.",
-				Optional:    true,
+				Description: "Whether the application is archived. This attribute is read-only; archive/unarchive an application via the Balena dashboard or API.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
@@ -100,12 +99,8 @@ func (r *ApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 }
 
 func (r *ApplicationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	client, ok := req.ProviderData.(*balena.Client)
+	client, ok := configureClient(req.ProviderData, &resp.Diagnostics, "Resource")
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", "Expected *balena.Client")
 		return
 	}
 	r.client = client
@@ -190,11 +185,9 @@ func (r *ApplicationResource) Update(ctx context.Context, req resource.UpdateReq
 	if plan.AppName.ValueString() != state.AppName.ValueString() {
 		body["app_name"] = plan.AppName.ValueString()
 	}
-	if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() {
+	if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() &&
+		plan.IsPublic.ValueBool() != state.IsPublic.ValueBool() {
 		body["is_public"] = plan.IsPublic.ValueBool()
-	}
-	if !plan.IsArchived.IsNull() && !plan.IsArchived.IsUnknown() {
-		body["is_archived"] = plan.IsArchived.ValueBool()
 	}
 
 	if len(body) > 0 {

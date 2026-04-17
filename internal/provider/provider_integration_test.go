@@ -36,24 +36,29 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 // If BALENA_TEST_ORG_ID is set, that org is used directly (no creation).
 // Otherwise, a new org is created and best-effort deleted after tests.
 func TestMain(m *testing.M) {
+	os.Exit(runIntegrationTests(m))
+}
+
+// runIntegrationTests encapsulates setup + teardown so that deferred cleanup
+// runs even if a test panics. os.Exit is kept out of this function because it
+// bypasses deferred calls.
+func runIntegrationTests(m *testing.M) int {
 	token := os.Getenv("BALENA_API_TOKEN")
 	if token == "" {
 		log.Println("BALENA_API_TOKEN not set, skipping integration tests")
-		os.Exit(0)
+		return 0
 	}
 
-	// Allow using a pre-existing org to avoid rate limits on org creation.
 	if id := os.Getenv("BALENA_TEST_ORG_ID"); id != "" {
 		testAccOrgID = id
 		log.Printf("Using pre-existing test organization: ID=%s", testAccOrgID)
-		os.Exit(m.Run())
+		return m.Run()
 	}
 
 	client := balena.NewClient("", token, "test")
 	handle := fmt.Sprintf("tf_acc_%d", rand.Int63())
 	name := fmt.Sprintf("TF Acc Test %s", handle)
 
-	// Retry org creation with backoff to handle rate limits.
 	var org *balena.Organization
 	var err error
 	for attempt := 1; attempt <= 5; attempt++ {
@@ -77,17 +82,16 @@ func TestMain(m *testing.M) {
 	testAccOrgID = strconv.FormatInt(org.ID, 10)
 	log.Printf("Created shared test organization: ID=%s handle=%s", testAccOrgID, handle)
 
-	code := m.Run()
+	defer func() {
+		log.Printf("Attempting to clean up shared test organization %s", testAccOrgID)
+		if delErr := client.DeleteOrganization(context.Background(), org.ID); delErr != nil {
+			log.Printf("Warning: could not delete test organization %s: %v (manual cleanup may be required)", testAccOrgID, delErr)
+		} else {
+			log.Printf("Deleted shared test organization %s", testAccOrgID)
+		}
+	}()
 
-	// Best-effort cleanup — the Balena API may not support org deletion.
-	log.Printf("Attempting to clean up shared test organization %s", testAccOrgID)
-	if delErr := client.DeleteOrganization(context.Background(), org.ID); delErr != nil {
-		log.Printf("Warning: could not delete test organization %s: %v (manual cleanup may be required)", testAccOrgID, delErr)
-	} else {
-		log.Printf("Deleted shared test organization %s", testAccOrgID)
-	}
-
-	os.Exit(code)
+	return m.Run()
 }
 
 // testAccPreCheck validates that required environment variables are set.
@@ -188,9 +192,17 @@ resource "balena_application" "test" {
   organization_id = %s
 }
 `, appName, testAccOrgID),
-				Check: resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_public", "false"),
+				),
 			},
 			{
+				// Rename the application. This exercises the Update path,
+				// which must PATCH only changed fields — previously a bug
+				// caused is_archived to be sent on every update, which the
+				// API rejects for non-archived apps.
 				Config: fmt.Sprintf(`
 provider "balena" {}
 
@@ -200,7 +212,51 @@ resource "balena_application" "test" {
   organization_id = %s
 }
 `, updatedName, testAccOrgID),
-				Check: resource.TestCheckResourceAttr("balena_application.test", "app_name", updatedName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application.test", "app_name", updatedName),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOrganization_basic exercises balena_organization directly through
+// the Terraform CLI, covering create / read / import. The shared test org
+// used by other tests is created via the client, so this test is what
+// actually exercises the resource's Framework lifecycle.
+//
+// CheckDestroy is intentionally omitted: the Balena API does not permit
+// organization deletion with an API token, so the resource's Delete is a
+// best-effort no-op that removes the org from state only. The test org will
+// leak; manual cleanup may be required.
+func TestAccOrganization_basic(t *testing.T) {
+	testAccPreCheck(t)
+	handle := fmt.Sprintf("tf_acc_org_%d", rand.Int63())
+	name := fmt.Sprintf("TF Acc Org %s", handle)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_organization" "test" {
+  name   = "%s"
+  handle = "%s"
+}
+`, name, handle),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_organization.test", "name", name),
+					resource.TestCheckResourceAttr("balena_organization.test", "handle", handle),
+					resource.TestCheckResourceAttrSet("balena_organization.test", "id"),
+				),
+			},
+			{
+				ResourceName:      "balena_organization.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

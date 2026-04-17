@@ -33,10 +33,10 @@ resource "balena_application" "my_fleet" {
 
 ### Optional
 
-- `is_archived` (Boolean) Whether the application is archived.
-- `is_public` (Boolean) Whether the application is public.
+- `is_public` (Boolean) Whether the application is publicly visible. Can be toggled. Defaults to the value returned by the API on creation.
 
 ### Read-Only
 
 - `id` (Number) Numeric identifier of the application.
+- `is_archived` (Boolean) Whether the application is archived. This attribute is read-only; archive/unarchive an application via the Balena dashboard or API.
 - `slug` (String) Slug of the application (org/name).
