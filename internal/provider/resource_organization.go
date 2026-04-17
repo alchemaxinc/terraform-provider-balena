@@ -61,7 +61,7 @@ func (r *OrganizationResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 			},
 			"handle": schema.StringAttribute{
-				Description: "URL-safe handle of the organization. Only alphanumeric characters, underscores, and hyphens are allowed. Auto-generated from name if not set.",
+				Description: "URL-safe handle of the organization. Only alphanumeric characters and underscores are allowed. Auto-generated from name if not set.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -69,8 +69,8 @@ func (r *OrganizationResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-zA-Z0-9_-]+$`),
-						"handles can only contain alphanumeric characters, underscores, and hyphens",
+						regexp.MustCompile(`^[a-zA-Z0-9_]+$`),
+						"handles can only contain alphanumeric characters and underscores",
 					),
 				},
 			},
