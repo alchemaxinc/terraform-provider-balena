@@ -18,6 +18,15 @@ import (
 // DEFAULT_BASE_URL is the default Balena Cloud API endpoint.
 const DEFAULT_BASE_URL = "https://api.balena-cloud.com"
 
+// DEFAULT_HTTP_TIMEOUT is the default per-request HTTP timeout for the Balena client.
+const DEFAULT_HTTP_TIMEOUT = 60 * time.Second
+
+// DEFAULT_MAX_RETRIES is the default number of retries for transient failures (409/429/5xx).
+const DEFAULT_MAX_RETRIES = 5
+
+// DEFAULT_PAGE_SIZE is the Pine.js OData page size used when listing collections.
+const DEFAULT_PAGE_SIZE = 1000
+
 // APP_DEVICE_TYPE_EXPAND is the OData $expand clause to resolve the device type slug on applications.
 const APP_DEVICE_TYPE_EXPAND = "$expand=is_for__device_type($select=slug)"
 
@@ -59,15 +68,36 @@ type Client struct {
 	apiToken   string
 	userAgent  string
 	httpClient *http.Client
+	maxRetries int
 }
 
 // ClientOption configures a Client.
 type ClientOption func(*Client)
 
-// WithHTTPClient sets a custom HTTP client for the Balena client.
+// WithHTTPClient sets a custom HTTP client for the Balena client. When provided,
+// the caller is responsible for setting any desired timeout on the HTTP client.
 func WithHTTPClient(hc *http.Client) ClientOption {
 	return func(c *Client) {
 		c.httpClient = hc
+	}
+}
+
+// WithTimeout overrides the per-request HTTP timeout. Ignored when WithHTTPClient is used.
+func WithTimeout(d time.Duration) ClientOption {
+	return func(c *Client) {
+		if d > 0 {
+			c.httpClient.Timeout = d
+		}
+	}
+}
+
+// WithMaxRetries overrides the number of retries for transient failures (409/429/5xx).
+// A value of zero disables retries.
+func WithMaxRetries(n int) ClientOption {
+	return func(c *Client) {
+		if n >= 0 {
+			c.maxRetries = n
+		}
 	}
 }
 
@@ -77,12 +107,11 @@ func NewClient(baseURL, apiToken, version string, opts ...ClientOption) *Client 
 		baseURL = DEFAULT_BASE_URL
 	}
 	c := &Client{
-		baseURL:   baseURL,
-		apiToken:  apiToken,
-		userAgent: "terraform-provider-balena/" + version,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		baseURL:    baseURL,
+		apiToken:   apiToken,
+		userAgent:  "terraform-provider-balena/" + version,
+		httpClient: &http.Client{Timeout: DEFAULT_HTTP_TIMEOUT},
+		maxRetries: DEFAULT_MAX_RETRIES,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -133,7 +162,7 @@ type applicationCreatePayload struct {
 
 // ListApplications returns all applications visible to the authenticated user.
 func (c *Client) ListApplications(ctx context.Context) ([]Application, error) {
-	return doList[Application](ctx, c, "/v6/application?"+APP_DEVICE_TYPE_EXPAND)
+	return doListFiltered[Application](ctx, c, "/v6/application", APP_DEVICE_TYPE_EXPAND)
 }
 
 // GetApplication retrieves a single application by numeric ID.
@@ -718,6 +747,46 @@ func (c *Client) GetReleaseByCommit(ctx context.Context, appID int64, commit str
 	return &items[0], nil
 }
 
+// ServiceInstall represents a service_install pivot (device + service pair).
+type ServiceInstall struct {
+	ID              int64    `json:"id"`
+	Device          ODataRef `json:"device"`
+	InstallsService ODataRef `json:"installs__service"`
+}
+
+// GetServiceInstall retrieves the service_install linking a device to a service.
+func (c *Client) GetServiceInstall(ctx context.Context, deviceID, serviceID int64) (*ServiceInstall, error) {
+	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("device eq %d and installs__service eq %d", deviceID, serviceID))
+	items, err := doListFiltered[ServiceInstall](ctx, c, "/v6/service_install", filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("service_install not found for device %d and service %d", deviceID, serviceID)}
+	}
+	return &items[0], nil
+}
+
+// ReleaseImage represents a release_image pivot (release + image pair).
+type ReleaseImage struct {
+	ID                int64    `json:"id"`
+	IsPartOfRelease   ODataRef `json:"is_part_of__release"`
+	Image             ODataRef `json:"image"`
+}
+
+// GetReleaseImage retrieves the release_image linking a release to an image.
+func (c *Client) GetReleaseImage(ctx context.Context, releaseID, imageID int64) (*ReleaseImage, error) {
+	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("is_part_of__release eq %d and image eq %d", releaseID, imageID))
+	items, err := doListFiltered[ReleaseImage](ctx, c, "/v6/release_image", filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("release_image not found for release %d and image %d", releaseID, imageID)}
+	}
+	return &items[0], nil
+}
+
 // Organization (read-only, for data source)
 
 // Organization represents a Balena organization resource.
@@ -771,90 +840,162 @@ func escapeOData(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
 }
 
-func (c *Client) newRequest(ctx context.Context, method, rawPath string, body interface{}) (*http.Request, error) {
-	// rawPath may contain query strings (e.g. "/v6/app?$filter=...") or
-	// OData key predicates (e.g. "/v6/app(123)"), so we concatenate directly.
-	u := c.baseURL + rawPath
-
-	var bodyReader io.Reader
+// do builds, sends, and retries a single HTTP operation. Returns the response
+// body on 2xx and an *APIError otherwise. 409/429/5xx responses are retried
+// with exponential backoff honoring any Retry-After header, up to Client.maxRetries.
+func (c *Client) do(ctx context.Context, method, rawPath string, body interface{}) ([]byte, error) {
+	var bodyBytes []byte
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
+		var err error
+		bodyBytes, err = json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling request body: %w", err)
 		}
-		bodyReader = bytes.NewReader(jsonBody)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u, bodyReader)
-	if err != nil {
-		return nil, err
+	u := c.baseURL + rawPath
+
+	var lastErr error
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		var reqBody io.Reader
+		if bodyBytes != nil {
+			reqBody = bytes.NewReader(bodyBytes)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, u, reqBody)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+c.apiToken)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", c.userAgent)
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("executing request: %w", err)
+			if ctx.Err() != nil || attempt == c.maxRetries {
+				return nil, lastErr
+			}
+			if werr := waitBeforeRetry(ctx, "", attempt); werr != nil {
+				return nil, werr
+			}
+			continue
+		}
+
+		data, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("reading response body: %w", readErr)
+		}
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return data, nil
+		}
+
+		apiErr := &APIError{StatusCode: resp.StatusCode, Body: string(data)}
+		if !isRetryableStatus(resp.StatusCode) || attempt == c.maxRetries {
+			return nil, apiErr
+		}
+		if werr := waitBeforeRetry(ctx, resp.Header.Get("Retry-After"), attempt); werr != nil {
+			return nil, werr
+		}
+		lastErr = apiErr
 	}
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", c.userAgent)
-	return req, nil
+	return nil, lastErr
 }
 
-func (c *Client) do(req *http.Request) ([]byte, error) {
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
+// isRetryableStatus reports whether the given HTTP status code should trigger a retry.
+func isRetryableStatus(code int) bool {
+	switch code {
+	case http.StatusConflict,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return true
 	}
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(data)}
-	}
-	return data, nil
+	return false
 }
 
-func doList[T any](ctx context.Context, c *Client, path string) ([]T, error) {
-	req, err := c.newRequest(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
+// waitBeforeRetry sleeps before the next retry, honoring a Retry-After header
+// (either integer seconds or HTTP-date) and falling back to exponential backoff
+// capped at 30 seconds.
+func waitBeforeRetry(ctx context.Context, retryAfter string, attempt int) error {
+	delay := time.Duration(1<<attempt) * time.Second
+	if delay > 30*time.Second {
+		delay = 30 * time.Second
 	}
-	data, err := c.do(req)
-	if err != nil {
-		return nil, err
+	if retryAfter = strings.TrimSpace(retryAfter); retryAfter != "" {
+		if secs, err := strconv.Atoi(retryAfter); err == nil && secs >= 0 {
+			delay = time.Duration(secs) * time.Second
+		} else if t, err := http.ParseTime(retryAfter); err == nil {
+			if d := time.Until(t); d > 0 {
+				delay = d
+			}
+		}
 	}
-	var resp pineResponse[T]
-	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
 	}
-	return resp.D, nil
 }
 
-func doListFiltered[T any](ctx context.Context, c *Client, path, filter string) ([]T, error) {
-	req, err := c.newRequest(ctx, http.MethodGet, path+"?"+filter, nil)
-	if err != nil {
-		return nil, err
+// appendQuery appends an extra query fragment (without leading `?` or `&`) to a path.
+func appendQuery(path, extra string) string {
+	if extra == "" {
+		return path
 	}
-	data, err := c.do(req)
-	if err != nil {
-		return nil, err
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
 	}
-	var resp pineResponse[T]
-	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
-	}
-	return resp.D, nil
+	return path + sep + extra
 }
 
+// doListAll pages through a Pine.js collection using $top/$skip until a short page is returned.
+func doListAll[T any](ctx context.Context, c *Client, path, extraQuery string) ([]T, error) {
+	var out []T
+	for skip := 0; ; skip += DEFAULT_PAGE_SIZE {
+		pageQuery := fmt.Sprintf("$top=%d&$skip=%d", DEFAULT_PAGE_SIZE, skip)
+		combined := extraQuery
+		if combined == "" {
+			combined = pageQuery
+		} else {
+			combined = combined + "&" + pageQuery
+		}
+		data, err := c.do(ctx, http.MethodGet, appendQuery(path, combined), nil)
+		if err != nil {
+			return nil, err
+		}
+		var resp pineResponse[T]
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return nil, fmt.Errorf("decoding response: %w", err)
+		}
+		out = append(out, resp.D...)
+		if len(resp.D) < DEFAULT_PAGE_SIZE {
+			break
+		}
+	}
+	return out, nil
+}
+
+// doListFiltered lists all items matching the given OData filter/expand fragment.
+// extraQuery must be a pre-joined query fragment (no leading `?` or `&`).
+func doListFiltered[T any](ctx context.Context, c *Client, path, extraQuery string) ([]T, error) {
+	return doListAll[T](ctx, c, path, extraQuery)
+}
+
+// doGetByID retrieves a single item by numeric ID, optionally with extra query fragments.
 func doGetByID[T any](ctx context.Context, c *Client, path string, id int64, query ...string) (*T, error) {
 	u := path + "(" + strconv.FormatInt(id, 10) + ")"
 	if len(query) > 0 {
 		u += "?" + strings.Join(query, "&")
 	}
-	req, err := c.newRequest(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	data, err := c.do(req)
+	data, err := c.do(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -871,35 +1012,9 @@ func doGetByID[T any](ctx context.Context, c *Client, path string, id int64, que
 	return &resp.D[0], nil
 }
 
+// doCreate POSTs the body to path and decodes the response into T.
 func doCreate[T any](ctx context.Context, c *Client, path string, body interface{}) (*T, error) {
-	var data []byte
-	var err error
-
-	for attempt := 0; ; attempt++ {
-		var req *http.Request
-		req, err = c.newRequest(ctx, http.MethodPost, path, body)
-		if err != nil {
-			return nil, err
-		}
-		data, err = c.do(req)
-		// Retry on 409 Conflict — a concurrent delete of the same resource
-		// (e.g. Terraform renaming a resource) may not have propagated yet.
-		if err != nil && IsConflict(err) && attempt < 3 {
-			delay := time.Duration(attempt+1) * 2 * time.Second
-			timer := time.NewTimer(delay)
-			select {
-			case <-ctx.Done():
-				if !timer.Stop() {
-					<-timer.C
-				}
-				return nil, ctx.Err()
-			case <-timer.C:
-			}
-			continue
-		}
-		break
-	}
-
+	data, err := c.do(ctx, http.MethodPost, path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -910,20 +1025,14 @@ func doCreate[T any](ctx context.Context, c *Client, path string, body interface
 	return &result, nil
 }
 
+// doPatch issues a PATCH against the keyed resource.
 func doPatch(ctx context.Context, c *Client, path string, id int64, body interface{}) error {
-	req, err := c.newRequest(ctx, http.MethodPatch, path+"("+strconv.FormatInt(id, 10)+")", body)
-	if err != nil {
-		return err
-	}
-	_, err = c.do(req)
+	_, err := c.do(ctx, http.MethodPatch, path+"("+strconv.FormatInt(id, 10)+")", body)
 	return err
 }
 
+// doDelete issues a DELETE against the keyed resource.
 func doDelete(ctx context.Context, c *Client, path string, id int64) error {
-	req, err := c.newRequest(ctx, http.MethodDelete, path+"("+strconv.FormatInt(id, 10)+")", nil)
-	if err != nil {
-		return err
-	}
-	_, err = c.do(req)
+	_, err := c.do(ctx, http.MethodDelete, path+"("+strconv.FormatInt(id, 10)+")", nil)
 	return err
 }
