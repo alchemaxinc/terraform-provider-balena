@@ -221,31 +221,15 @@ resource "balena_application" "test" {
 	})
 }
 
-// testAccCheckOrganizationDestroy verifies that organizations created by a
-// test have been deleted. Only applies to ad-hoc organizations — the shared
-// test org is managed by TestMain and not subject to CheckDestroy.
-func testAccCheckOrganizationDestroy(s *terraform.State) error {
-	client := testAccNewClient()
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "balena_organization" {
-			continue
-		}
-		id, _ := parseID(rs.Primary.ID)
-		_, err := client.GetOrganization(context.Background(), id)
-		if err == nil {
-			return fmt.Errorf("organization %s still exists", rs.Primary.ID)
-		}
-		if !balena.IsNotFound(err) {
-			return fmt.Errorf("error checking organization %s: %s", rs.Primary.ID, err)
-		}
-	}
-	return nil
-}
-
 // TestAccOrganization_basic exercises balena_organization directly through
 // the Terraform CLI, covering create / read / import. The shared test org
 // used by other tests is created via the client, so this test is what
 // actually exercises the resource's Framework lifecycle.
+//
+// CheckDestroy is intentionally omitted: the Balena API does not permit
+// organization deletion with an API token, so the resource's Delete is a
+// best-effort no-op that removes the org from state only. The test org will
+// leak; manual cleanup may be required.
 func TestAccOrganization_basic(t *testing.T) {
 	testAccPreCheck(t)
 	handle := fmt.Sprintf("tf_acc_org_%d", rand.Int63())
@@ -253,7 +237,6 @@ func TestAccOrganization_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckOrganizationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
