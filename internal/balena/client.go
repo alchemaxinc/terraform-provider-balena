@@ -769,9 +769,9 @@ func (c *Client) GetServiceInstall(ctx context.Context, deviceID, serviceID int6
 
 // ReleaseImage represents a release_image pivot (release + image pair).
 type ReleaseImage struct {
-	ID                int64    `json:"id"`
-	IsPartOfRelease   ODataRef `json:"is_part_of__release"`
-	Image             ODataRef `json:"image"`
+	ID              int64    `json:"id"`
+	IsPartOfRelease ODataRef `json:"is_part_of__release"`
+	Image           ODataRef `json:"image"`
 }
 
 // GetReleaseImage retrieves the release_image linking a release to an image.
