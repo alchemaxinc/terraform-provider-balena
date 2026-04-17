@@ -3,12 +3,12 @@
 page_title: "balena_service_label Resource - balena"
 subcategory: ""
 description: |-
-  Manages a label on a Balena service.
+  Manages a label on a Balena application service.
 ---
 
 # balena_service_label (Resource)
 
-Manages a label on a Balena service.
+Manages a label on a Balena application service.
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_service_label" "restart_policy" {
 
 ### Required
 
-- `label_name` (String) Label name.
-- `service_id` (Number) ID of the service.
+- `label_name` (String) Label name (e.g. io.balena.features.dbus).
+- `service_id` (Number) Numeric ID of the parent service.
 - `value` (String) Label value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

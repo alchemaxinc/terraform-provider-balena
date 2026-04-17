@@ -3,12 +3,12 @@
 page_title: "balena_application_config_var Resource - balena"
 subcategory: ""
 description: |-
-  Manages an application-level configuration variable.
+  Manages an application-level configuration variable (RESIN_/BALENA_ host config) on a Balena fleet.
 ---
 
 # balena_application_config_var (Resource)
 
-Manages an application-level configuration variable.
+Manages an application-level configuration variable (RESIN*/BALENA* host config) on a Balena fleet.
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_application_config_var" "persistent_logging" {
 
 ### Required
 
-- `application_id` (Number) ID of the application.
-- `name` (String) Variable name.
-- `value` (String, Sensitive) Variable value.
+- `application_id` (Number) Numeric ID of the parent application/fleet.
+- `name` (String) Configuration variable name (e.g. RESIN_HOST_CONFIG_gpu_mem).
+- `value` (String) Configuration variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

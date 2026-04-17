@@ -29,7 +29,7 @@ resource "balena_organization" "my_org" {
 
 ### Optional
 
-- `handle` (String) URL-safe handle of the organization. Only alphanumeric characters and underscores are allowed. Auto-generated from name if not set.
+- `handle` (String) URL-safe handle of the organization. Only alphanumeric characters, underscores, and hyphens are allowed. Auto-generated from name if not set.
 
 ### Read-Only
 

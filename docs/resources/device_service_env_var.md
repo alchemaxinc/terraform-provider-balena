@@ -3,12 +3,12 @@
 page_title: "balena_device_service_env_var Resource - balena"
 subcategory: ""
 description: |-
-  Manages a per-service device environment variable.
+  Manages a device-service environment variable (scoped to a service_install on a device).
 ---
 
 # balena_device_service_env_var (Resource)
 
-Manages a per-service device environment variable.
+Manages a device-service environment variable (scoped to a service_install on a device).
 
 ## Example Usage
 
@@ -26,10 +26,10 @@ resource "balena_device_service_env_var" "log_level" {
 
 ### Required
 
-- `name` (String) Variable name.
-- `service_install_id` (Number) ID of the service install.
-- `value` (String, Sensitive) Variable value.
+- `name` (String) Environment variable name.
+- `service_install_id` (Number) Numeric ID of the parent service_install (device + service pair).
+- `value` (String, Sensitive) Environment variable value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

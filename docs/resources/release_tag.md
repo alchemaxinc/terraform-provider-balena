@@ -26,10 +26,10 @@ resource "balena_release_tag" "version" {
 
 ### Required
 
-- `release_id` (Number) ID of the release.
+- `release_id` (Number) Numeric ID of the parent release.
 - `tag_key` (String) Tag key.
 - `value` (String) Tag value.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier.
+- `id` (Number) Numeric identifier assigned by the Balena API.

@@ -35,3 +35,5 @@ provider "balena" {
 
 - `api_token` (String, Sensitive) Balena Cloud API token. May also be set via the BALENA_API_TOKEN environment variable.
 - `api_url` (String) Balena Cloud API URL. Defaults to https://api.balena-cloud.com. May also be set via BALENA_API_URL.
+- `http_timeout_seconds` (Number) Per-request HTTP timeout in seconds. Defaults to 60. May also be set via BALENA_HTTP_TIMEOUT_SECONDS.
+- `max_retries` (Number) Maximum number of retries for transient failures (409/429/5xx). Defaults to 5. May also be set via BALENA_MAX_RETRIES.
