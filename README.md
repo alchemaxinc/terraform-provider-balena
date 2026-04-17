@@ -38,6 +38,14 @@ provider "balena" {
 
 See the [`docs/`](docs/) directory for full schema documentation and the [`examples/`](examples/) directory for usage examples.
 
+## Repository Layout
+
+- `internal/balena/` — thin HTTP client for the Balena Cloud REST API (`/v6/...`).
+- `internal/provider/` — Terraform Plugin Framework provider, resources, and data sources.
+- `schema/` — reference copy of the upstream Balena Pine.js SBVR schema (`balena.sbvr`), used when authoring new resources to confirm field names and relationships. Not consumed at runtime.
+- `docs/` — auto-generated provider documentation (do not edit manually; regenerate with `make docs`).
+- `examples/` — Terraform example snippets for every resource and data source.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, build commands, and release process.

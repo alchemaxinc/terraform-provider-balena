@@ -29,6 +29,9 @@ test-unit: ## Run unit tests
 test-integration: ## Run integration tests (requires BALENA_API_TOKEN)
 	TF_ACC=1 TF_LOG=INFO go test -v -count=1 -timeout 120m -tags=integration ./...
 
+.PHONY: testacc
+testacc: test-integration ## Alias for test-integration (Terraform convention)
+
 .PHONY: test
 test: test-unit ## Alias for test-unit
 
