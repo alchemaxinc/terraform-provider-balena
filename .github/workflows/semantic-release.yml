@@ -19,7 +19,8 @@ jobs:
       version: ${{ steps.release.outputs.version }}
 
     steps:
-      - name: Create temporary GitHub App Token
+      - &create-app-token
+        name: Create temporary GitHub App Token
         id: app
         uses: actions/create-github-app-token@v3
         with:
@@ -46,14 +47,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Create temporary GitHub App Token
-        id: app
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
-          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
+      - *create-app-token
 
       - &checkout-code-full
         name: Checkout code (full)

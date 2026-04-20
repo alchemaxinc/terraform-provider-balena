@@ -170,6 +170,7 @@ jobs:
       - *checkout-code
       - *setup-go
       - *cache-tfplugindocs
+      - *setup-terraform
 
       - name: Generate and format docs
         run: |
