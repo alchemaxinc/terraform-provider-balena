@@ -56,6 +56,11 @@ jobs:
       - *checkout-code
       - *setup-go
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
       - name: Run integration tests
         env:
           TF_ACC: "1"
