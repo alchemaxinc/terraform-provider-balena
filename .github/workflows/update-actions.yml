@@ -21,12 +21,11 @@ jobs:
           repositories: ${{ github.event.repository.name }}
 
       - name: Update GitHub Actions
-        uses: alchemaxinc/update-deps/actions@v1
+        uses: alchemaxinc/update-deps/actions@v2
         with:
           token: ${{ steps.app.outputs.token }}
           auto-merge: "true"
           base-branch: "main"
-          prefixes: "actions,golangci,goreleaser,crazy-max,hashicorp"
           file-glob: ".github/**/*.yml"
           branch-prefix: "update-actions"
           pr-title: "chore: update GitHub Actions"
