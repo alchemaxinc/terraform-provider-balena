@@ -96,8 +96,10 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           LATEST="${{ steps.latest.outputs.tag }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          APP_SLUG="${{ steps.app.outputs.app-slug }}"
+          APP_USER_ID=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq ".id")
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           echo "$LATEST" > schema/VERSION
           git add schema/VERSION
           git commit -m "chore: bump schema VERSION to ${LATEST} (no schema changes)"
