@@ -27,7 +27,7 @@ jobs:
       - &cache-commitlint
         name: Cache Commitlint
         id: cache-commitlint
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: v4-commitlint-${{ env.COMMITLINT_CLI_VERSION }}
@@ -61,7 +61,7 @@ jobs:
       - &cache-prettier
         name: Cache Prettier
         id: cache-prettier
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: v1-prettier-${{ env.PRETTIER_VERSION }}
@@ -154,7 +154,7 @@ jobs:
       - &cache-tfplugindocs
         name: Cache tfplugindocs
         id: cache-tfplugindocs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/go/bin/tfplugindocs
           key: v1-tfplugindocs-${{ env.TFPLUGINDOCS_VERSION }}
