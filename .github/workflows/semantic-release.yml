@@ -89,7 +89,22 @@ jobs:
       contents: write
 
     steps:
-      - *checkout-code-full
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-workflows: write
+
+      - name: Checkout code (full)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ steps.app.outputs.token }}
 
       - name: Extract version tag
         id: major-minor-tags
@@ -104,7 +119,7 @@ jobs:
 
       - name: Push major tag
         env: &github-token-env
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           TAG="${{ needs.semantic-release.outputs.tag }}"
           MAJOR="${{ steps.major-minor-tags.outputs.major }}"
