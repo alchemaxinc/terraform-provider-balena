@@ -11,16 +11,24 @@ set -euo pipefail
 OLD="${1:?Usage: $0 <old-sbvr> <new-sbvr>}"
 NEW="${2:?Usage: $0 <old-sbvr> <new-sbvr>}"
 
+# Schema text comes from a third-party repository and is rendered into a pull
+# request body that a coding agent reads. Drop control characters and backticks
+# so a crafted line cannot escape the fenced block it is printed in, and bound
+# the line length.
+sanitize() {
+  LC_ALL=C tr -d '\000-\010\013\014\016-\037\177\140' | cut -c1-300
+}
+
 extract_terms() {
-  grep -n '^Term:' "$1" | sed 's/^[0-9]*://' | sort
+  grep -n '^Term:' "$1" | sed 's/^[0-9]*://' | sanitize | sort
 }
 
 extract_facts() {
-  grep -n 'Fact type:' "$1" | sed 's/^[0-9]*://' | sed 's/^[[:space:]]*//' | sort
+  grep -n 'Fact type:' "$1" | sed 's/^[0-9]*://' | sed 's/^[[:space:]]*//' | sanitize | sort
 }
 
 extract_necessities() {
-  grep -n 'Necessity:' "$1" | sed 's/^[0-9]*://' | sed 's/^[[:space:]]*//' | sort
+  grep -n 'Necessity:' "$1" | sed 's/^[0-9]*://' | sed 's/^[[:space:]]*//' | sanitize | sort
 }
 
 has_changes=0
