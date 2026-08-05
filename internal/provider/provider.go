@@ -127,6 +127,7 @@ func resolveInt64Setting(v types.Int64, envVar string) int64 {
 
 func (p *BalenaProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewApplicationProfileResource,
 		NewApplicationResource,
 		NewApplicationEnvVarResource,
 		NewApplicationConfigVarResource,
@@ -137,6 +138,7 @@ func (p *BalenaProvider) Resources(_ context.Context) []func() resource.Resource
 		NewDeviceServiceEnvVarResource,
 		NewDeviceTagResource,
 		NewImageEnvVarResource,
+		NewImageProfileResource,
 		NewOrganizationResource,
 		NewReleaseTagResource,
 		NewSSHKeyResource,

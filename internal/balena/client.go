@@ -787,6 +787,66 @@ func (c *Client) GetReleaseImage(ctx context.Context, releaseID, imageID int64) 
 	return &items[0], nil
 }
 
+// ImageProfile represents an image_profile entity (release_image has profile_name).
+type ImageProfile struct {
+	ID           int64    `json:"id"`
+	ReleaseImage ODataRef `json:"release_image"`
+	ProfileName  string   `json:"profile_name"`
+}
+
+type imageProfileCreatePayload struct {
+	ReleaseImage int64  `json:"release_image"`
+	ProfileName  string `json:"profile_name"`
+}
+
+// GetImageProfile retrieves a single image profile by ID.
+func (c *Client) GetImageProfile(ctx context.Context, id int64) (*ImageProfile, error) {
+	return doGetByID[ImageProfile](ctx, c, "/v6/image_profile", id)
+}
+
+// CreateImageProfile creates a new image profile for the given release image.
+func (c *Client) CreateImageProfile(ctx context.Context, releaseImageID int64, profileName string) (*ImageProfile, error) {
+	payload := imageProfileCreatePayload{ReleaseImage: releaseImageID, ProfileName: profileName}
+	return doCreate[ImageProfile](ctx, c, "/v6/image_profile", payload)
+}
+
+// DeleteImageProfile removes an image profile by ID.
+func (c *Client) DeleteImageProfile(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/image_profile", id)
+}
+
+// ApplicationProfile represents an application_profile entity
+// (application1 activates profile_name on application2).
+type ApplicationProfile struct {
+	ID           int64    `json:"id"`
+	Application1 ODataRef `json:"application"`
+	Application2 ODataRef `json:"is_activated_by__application"`
+	ProfileName  string   `json:"profile_name"`
+}
+
+type applicationProfileCreatePayload struct {
+	Application1 int64  `json:"application"`
+	Application2 int64  `json:"is_activated_by__application"`
+	ProfileName  string `json:"profile_name"`
+}
+
+// GetApplicationProfile retrieves a single application profile by ID.
+func (c *Client) GetApplicationProfile(ctx context.Context, id int64) (*ApplicationProfile, error) {
+	return doGetByID[ApplicationProfile](ctx, c, "/v6/application_profile", id)
+}
+
+// CreateApplicationProfile creates a new application profile linking a fleet
+// application to a host application via a profile name.
+func (c *Client) CreateApplicationProfile(ctx context.Context, fleetAppID, hostAppID int64, profileName string) (*ApplicationProfile, error) {
+	payload := applicationProfileCreatePayload{Application1: fleetAppID, Application2: hostAppID, ProfileName: profileName}
+	return doCreate[ApplicationProfile](ctx, c, "/v6/application_profile", payload)
+}
+
+// DeleteApplicationProfile removes an application profile by ID.
+func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/application_profile", id)
+}
+
 // Organization (read-only, for data source)
 
 // Organization represents a Balena organization resource.
