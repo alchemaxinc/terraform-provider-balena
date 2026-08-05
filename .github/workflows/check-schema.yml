@@ -33,6 +33,15 @@ jobs:
           token: ${{ steps.app.outputs.token }}
           ref: main
 
+      - name: Configure git identity
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          APP_SLUG="${{ steps.app.outputs.app-slug }}"
+          APP_USER_ID=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq ".id")
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
       - name: Read current pinned version
         id: current
         run: |
@@ -92,14 +101,8 @@ jobs:
 
       - name: Update VERSION only (no schema diff)
         if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'false'
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           LATEST="${{ steps.latest.outputs.tag }}"
-          APP_SLUG="${{ steps.app.outputs.app-slug }}"
-          APP_USER_ID=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq ".id")
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           echo "$LATEST" > schema/VERSION
           git add schema/VERSION
           git commit -m "chore: bump schema VERSION to ${LATEST} (no schema changes)"
