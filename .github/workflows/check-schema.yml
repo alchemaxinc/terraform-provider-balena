@@ -18,7 +18,7 @@ jobs:
       pull-requests: write
 
     outputs:
-      pr_number: ${{ steps.create-pr.outputs.pr_number }}
+      pr_number: ${{ steps.create-pr.outputs.pr_number || steps.existing.outputs.pr_number }}
 
     steps:
       - name: Create temporary GitHub App Token
@@ -135,8 +135,27 @@ jobs:
           cp /tmp/balena-new.sbvr schema/balena.sbvr
           echo "$LATEST" > schema/VERSION
 
-      - name: Create schema update PR
+      - name: Look for an existing pull request
         if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          LATEST: ${{ steps.latest.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # create-pr pushes the branch but its `gh pr create` fails if a pull
+          # request is already open for it, so a re-run would break.
+          FOUND=$(gh pr list --head "feat/schema-update-${LATEST}" --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "$FOUND" ]; then
+            echo "::notice::Reusing open pull request #${FOUND}"
+          fi
+
+          echo "pr_number=$FOUND" >> "$GITHUB_OUTPUT"
+
+      - name: Create schema update PR
+        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true' && steps.existing.outputs.pr_number == ''
         id: create-pr
         uses: alchemaxinc/composite-toolbox/create-pr@v1
         with:
@@ -169,44 +188,34 @@ jobs:
     if: needs.check-schema.outputs.pr_number != ''
     runs-on: ubuntu-latest
 
-    # Scoping the PAT to an environment whose deployment branch rule is limited
-    # to `main` means the secret is unreachable from any other ref. Without it a
-    # plain repository secret would be readable by a modified copy of this
-    # workflow on any branch, since workflow_dispatch runs the definition from
-    # the ref it is dispatched against.
-    environment: copilot-agent
-
-    # This job holds a long-lived user PAT, because Copilot only acts on comments
-    # from a user with write access. It deliberately does not check out the
-    # repository, run third-party actions, or consume any upstream-controlled
-    # value, so no step here can be coerced into reading the token. GITHUB_TOKEN
-    # is dropped entirely.
-    permissions: {}
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Ask Copilot to update the provider
+        id: ask-copilot
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ needs.check-schema.outputs.pr_number }}
         run: |
           set -euo pipefail
-
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::Secret COPILOT_AGENT_TOKEN is not set. Copilot only acts on comments from a user with write access, so the GitHub App installation token cannot be used here."
-            exit 1
-          fi
 
           if [[ ! $PR_NUMBER =~ ^[0-9]+$ ]]; then
             echo "::error::Expected a numeric pull request number, got '$PR_NUMBER'."
             exit 1
           fi
 
-          # Mentioning @copilot in a pull request comment is the supported way to
-          # start work on an existing pull request. Starting an agent task against
-          # a head_ref that already has an open pull request instead puts the
-          # session into "respond to review comments" mode and the prompt is
-          # ignored.
           COMMENT=$(cat <<'COMMENT_EOF'
           @copilot the upstream Balena API schema on this branch has been updated, and
           the schema diff is summarised in the pull request description above.
@@ -241,18 +250,45 @@ jobs:
           COMMENT_EOF
           )
 
-          # Build the request body with jq so no value is interpolated into shell
-          # or JSON syntax, and pass it on stdin so the token stays in the
-          # environment rather than in a command line or URL.
+          # jq keeps values out of shell and JSON syntax; stdin keeps the token off
+          # the command line.
           RESPONSE=$(jq -n --arg body "$COMMENT" '{body: $body}' \
             | gh api \
               --method POST \
               -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
               "/repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" \
               --input -)
 
-          COMMENT_URL=$(printf '%s' "$RESPONSE" | jq -r '.html_url // empty')
+          COMMENT_ID=$(printf '%s' "$RESPONSE" | jq -r '.id // empty')
 
-          echo "Asked Copilot to update the provider on PR #${PR_NUMBER}"
-          echo "::notice::Copilot requested: ${COMMENT_URL}"
+          if [ -z "$COMMENT_ID" ]; then
+            echo "::error::Comment was not created."
+            exit 1
+          fi
+
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+          echo "::notice::Copilot requested: $(printf '%s' "$RESPONSE" | jq -r '.html_url')"
+
+      # GitHub documents that Copilot only responds to comments from people with
+      # write access, so this App-authored mention may be ignored. Copilot marks a
+      # mention it accepted with an eyes reaction, so poll for one rather than let
+      # a no-op look like success.
+      - name: Confirm Copilot picked up the request
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMENT_ID: ${{ steps.ask-copilot.outputs.comment_id }}
+        run: |
+          set -euo pipefail
+
+          for _ in $(seq 1 12); do
+            sleep 15
+            if gh api "/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" \
+              --jq '.[].content' | grep -qx 'eyes'; then
+              echo "::notice::Copilot acknowledged the request."
+              exit 0
+            fi
+          done
+
+          echo "::error::Copilot did not acknowledge within 3 minutes. A GitHub App is not a 'person with write access', so the mention was probably ignored."
+          exit 1
