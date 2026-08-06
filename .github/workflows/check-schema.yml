@@ -118,7 +118,9 @@ jobs:
             exit 1
           fi
 
-          if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" || "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
+          if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]]; then
+            echo "type=feat!" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
             echo "type=feat" >> "$GITHUB_OUTPUT"
           elif [[ "$CURRENT_PATCH" != "$LATEST_PATCH" ]]; then
             echo "type=fix" >> "$GITHUB_OUTPUT"
