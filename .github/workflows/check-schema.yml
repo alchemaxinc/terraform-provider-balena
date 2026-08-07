@@ -215,6 +215,12 @@ jobs:
     # reading it.
     permissions: {}
 
+    env:
+      # Identifiers the API accepts are not all published, and change as models
+      # are released. An unknown or disabled one fails the request outright with
+      # "model not found or not enabled for user".
+      COPILOT_MODEL: claude-opus-5
+
     steps:
       - name: Start Copilot cloud agent task
         env:
@@ -285,9 +291,10 @@ jobs:
           RESPONSE=$(jq -n \
             --arg prompt "$PROMPT" \
             --arg head "refs/heads/$BRANCH" \
+            --arg model "$COPILOT_MODEL" \
             '{
               prompt: $prompt,
-              model: "claude-opus-5",
+              model: $model,
               head_ref: $head,
               base_ref: "refs/heads/main",
               create_pull_request: true
@@ -305,4 +312,4 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::Copilot task ${TASK_ID} started on ${BRANCH} (claude-opus-5)"
+          echo "::notice::Copilot task ${TASK_ID} started on ${BRANCH} (${COPILOT_MODEL})"
