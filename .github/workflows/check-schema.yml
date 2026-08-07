@@ -84,6 +84,50 @@ jobs:
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Parse current schema version
+        if: steps.compare.outputs.needs_update == 'true'
+        id: current-semver
+        uses: apexskier/github-semver-parse@v1
+        with:
+          version: ${{ steps.current.outputs.tag }}
+
+      - name: Parse latest schema version
+        if: steps.compare.outputs.needs_update == 'true'
+        id: latest-semver
+        uses: apexskier/github-semver-parse@v1
+        with:
+          version: ${{ steps.latest.outputs.tag }}
+
+      - name: Determine semantic commit type
+        if: steps.compare.outputs.needs_update == 'true'
+        id: commit-type
+        env:
+          CURRENT_VERSION: ${{ steps.current-semver.outputs.version }}
+          CURRENT_MAJOR: ${{ steps.current-semver.outputs.major }}
+          CURRENT_MINOR: ${{ steps.current-semver.outputs.minor }}
+          CURRENT_PATCH: ${{ steps.current-semver.outputs.patch }}
+          LATEST_VERSION: ${{ steps.latest-semver.outputs.version }}
+          LATEST_MAJOR: ${{ steps.latest-semver.outputs.major }}
+          LATEST_MINOR: ${{ steps.latest-semver.outputs.minor }}
+          LATEST_PATCH: ${{ steps.latest-semver.outputs.patch }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$CURRENT_VERSION" || -z "$LATEST_VERSION" ]]; then
+            echo "::error::Schema versions must be valid semantic versions."
+            exit 1
+          fi
+
+          if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]]; then
+            echo "type=feat!" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
+            echo "type=feat" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_PATCH" != "$LATEST_PATCH" ]]; then
+            echo "type=fix" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=chore" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download new schema
         if: steps.compare.outputs.needs_update == 'true'
         env:
@@ -142,11 +186,11 @@ jobs:
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: main
-          branch-prefix: feat/schema-update
+          branch-prefix: ${{ steps.commit-type.outputs.type }}/schema-update
           branch-postfix: ${{ steps.latest.outputs.tag }}
           files: "schema/balena.sbvr schema/VERSION"
-          commit-message: "feat: update balena schema to ${{ steps.latest.outputs.tag }}"
-          pr-title: "feat: update balena schema to ${{ steps.latest.outputs.tag }}"
+          commit-message: "${{ steps.commit-type.outputs.type }}: update balena schema to ${{ steps.latest.outputs.tag }}"
+          pr-title: "${{ steps.commit-type.outputs.type }}: update balena schema to ${{ steps.latest.outputs.tag }}"
           pr-body: |
             ## Balena API Schema Update
 
