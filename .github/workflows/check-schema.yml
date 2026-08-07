@@ -48,6 +48,28 @@ jobs:
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
+      - name: Sweep orphaned schema branches
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Copilot copies the schema commit onto a branch of its own and never
+          # opens a pull request for the one pushed here, so it is left behind
+          # once its task finishes. Sweep before pushing a new one, so a branch
+          # still being read by a running task is never pulled out from under it.
+          gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
+            | { grep -E '^feat/schema-update-' || true; } \
+            | while read -r BRANCH; do
+                if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
+                  continue
+                fi
+
+                gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${BRANCH}"
+                echo "::notice::Deleted orphaned branch ${BRANCH}"
+              done
+
       - name: Read current pinned version
         id: current
         run: |
