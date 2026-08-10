@@ -38,7 +38,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           token: ${{ steps.app.outputs.token }}
-          ref: main
+          # Not a hardcoded `main`: a dispatch runs the workflow definition from
+          # the ref it was dispatched on, so pinning the checkout would pair new
+          # steps with old files. Scheduled runs get `main` from this anyway.
+          ref: ${{ github.ref }}
 
       - name: Configure git identity
         env:
@@ -110,45 +113,34 @@ jobs:
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Parse current schema version
-        if: steps.compare.outputs.needs_update == 'true'
-        id: current-semver
-        uses: apexskier/github-semver-parse@v1
-        with:
-          version: ${{ steps.current.outputs.tag }}
-
-      - name: Parse latest schema version
-        if: steps.compare.outputs.needs_update == 'true'
-        id: latest-semver
-        uses: apexskier/github-semver-parse@v1
-        with:
-          version: ${{ steps.latest.outputs.tag }}
-
       - name: Determine semantic commit type
         if: steps.compare.outputs.needs_update == 'true'
         id: commit-type
         env:
-          CURRENT_VERSION: ${{ steps.current-semver.outputs.version }}
-          CURRENT_MAJOR: ${{ steps.current-semver.outputs.major }}
-          CURRENT_MINOR: ${{ steps.current-semver.outputs.minor }}
-          CURRENT_PATCH: ${{ steps.current-semver.outputs.patch }}
-          LATEST_VERSION: ${{ steps.latest-semver.outputs.version }}
-          LATEST_MAJOR: ${{ steps.latest-semver.outputs.major }}
-          LATEST_MINOR: ${{ steps.latest-semver.outputs.minor }}
-          LATEST_PATCH: ${{ steps.latest-semver.outputs.patch }}
+          CURRENT_TAG: ${{ steps.current.outputs.tag }}
+          LATEST_TAG: ${{ steps.latest.outputs.tag }}
         run: |
           set -euo pipefail
 
-          if [[ -z "$CURRENT_VERSION" || -z "$LATEST_VERSION" ]]; then
-            echo "::error::Schema versions must be valid semantic versions."
+          SEMVER='^v?([0-9]+)\.([0-9]+)\.([0-9]+)$'
+
+          if [[ ! "$CURRENT_TAG" =~ $SEMVER ]]; then
+            echo "::error::Pinned version '${CURRENT_TAG}' is not a semantic version."
             exit 1
           fi
+          CURRENT=("${BASH_REMATCH[@]:1:3}")
 
-          if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]]; then
+          if [[ ! "$LATEST_TAG" =~ $SEMVER ]]; then
+            echo "::error::Upstream version '${LATEST_TAG}' is not a semantic version."
+            exit 1
+          fi
+          LATEST=("${BASH_REMATCH[@]:1:3}")
+
+          if [[ "${CURRENT[0]}" != "${LATEST[0]}" ]]; then
             TYPE="feat!"
-          elif [[ "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
+          elif [[ "${CURRENT[1]}" != "${LATEST[1]}" ]]; then
             TYPE="feat"
-          elif [[ "$CURRENT_PATCH" != "$LATEST_PATCH" ]]; then
+          elif [[ "${CURRENT[2]}" != "${LATEST[2]}" ]]; then
             TYPE="fix"
           else
             TYPE="chore"
