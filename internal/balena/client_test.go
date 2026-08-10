@@ -974,3 +974,102 @@ func TestGetOrganizationByHandle_NotFound(t *testing.T) {
 		t.Errorf("expected not-found, got %v", err)
 	}
 }
+
+func TestGetImageProfile_Success(t *testing.T) {
+	profile := ImageProfile{ID: 130, ReleaseImage: ODataRef{ID: 77}, ProfileName: "gpu"}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/v6/image_profile(130)") {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		_, _ = w.Write(pineWrap(profile))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetImageProfile(context.Background(), 130)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ProfileName != "gpu" || got.ReleaseImage.ID != 77 {
+		t.Errorf("unexpected image profile: %+v", got)
+	}
+}
+
+func TestCreateImageProfile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["release_image"] != float64(77) {
+			t.Errorf("release_image = %v", payload["release_image"])
+		}
+		if payload["profile_name"] != "gpu" {
+			t.Errorf("profile_name = %v", payload["profile_name"])
+		}
+		_, _ = w.Write(mustJSON(t, ImageProfile{ID: 131, ProfileName: "gpu"}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.CreateImageProfile(context.Background(), 77, "gpu")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != 131 {
+		t.Errorf("ID = %d", got.ID)
+	}
+}
+
+func TestGetApplicationProfile_Success(t *testing.T) {
+	profile := ApplicationProfile{ID: 140, Application: ODataRef{ID: 1}, ProfileName: "gpu", OnApplication: ODataRef{ID: 2}}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/v6/application_profile(140)") {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		_, _ = w.Write(pineWrap(profile))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetApplicationProfile(context.Background(), 140)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ProfileName != "gpu" || got.Application.ID != 1 || got.OnApplication.ID != 2 {
+		t.Errorf("unexpected application profile: %+v", got)
+	}
+}
+
+func TestCreateApplicationProfile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["application"] != float64(1) {
+			t.Errorf("application = %v", payload["application"])
+		}
+		if payload["activates__profile_name"] != "gpu" {
+			t.Errorf("activates__profile_name = %v", payload["activates__profile_name"])
+		}
+		if payload["on__application"] != float64(2) {
+			t.Errorf("on__application = %v", payload["on__application"])
+		}
+		_, _ = w.Write(mustJSON(t, ApplicationProfile{ID: 141, ProfileName: "gpu"}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.CreateApplicationProfile(context.Background(), 1, "gpu", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != 141 {
+		t.Errorf("ID = %d", got.ID)
+	}
+}

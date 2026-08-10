@@ -787,6 +787,70 @@ func (c *Client) GetReleaseImage(ctx context.Context, releaseID, imageID int64) 
 	return &items[0], nil
 }
 
+// ImageProfile represents a profile name activated on a release_image.
+type ImageProfile struct {
+	ID           int64    `json:"id"`
+	ReleaseImage ODataRef `json:"release_image"`
+	ProfileName  string   `json:"profile_name"`
+}
+
+type imageProfileCreatePayload struct {
+	ReleaseImage int64  `json:"release_image"`
+	ProfileName  string `json:"profile_name"`
+}
+
+// GetImageProfile retrieves a single image profile by ID.
+func (c *Client) GetImageProfile(ctx context.Context, id int64) (*ImageProfile, error) {
+	return doGetByID[ImageProfile](ctx, c, "/v6/image_profile", id)
+}
+
+// CreateImageProfile activates a profile name on a release image.
+func (c *Client) CreateImageProfile(ctx context.Context, releaseImageID int64, profileName string) (*ImageProfile, error) {
+	payload := imageProfileCreatePayload{ReleaseImage: releaseImageID, ProfileName: profileName}
+	return doCreate[ImageProfile](ctx, c, "/v6/image_profile", payload)
+}
+
+// DeleteImageProfile removes an image profile by ID.
+func (c *Client) DeleteImageProfile(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/image_profile", id)
+}
+
+// ApplicationProfile represents a profile name that one application (the
+// activator, which must be of class "fleet") activates on another application
+// (the target, which must be a host application that is not of class "block").
+type ApplicationProfile struct {
+	ID            int64    `json:"id"`
+	Application   ODataRef `json:"application"`
+	ProfileName   string   `json:"activates__profile_name"`
+	OnApplication ODataRef `json:"on__application"`
+}
+
+type applicationProfileCreatePayload struct {
+	Application   int64  `json:"application"`
+	ProfileName   string `json:"activates__profile_name"`
+	OnApplication int64  `json:"on__application"`
+}
+
+// GetApplicationProfile retrieves a single application profile by ID.
+func (c *Client) GetApplicationProfile(ctx context.Context, id int64) (*ApplicationProfile, error) {
+	return doGetByID[ApplicationProfile](ctx, c, "/v6/application_profile", id)
+}
+
+// CreateApplicationProfile activates a profile name of one application on another.
+func (c *Client) CreateApplicationProfile(ctx context.Context, applicationID int64, profileName string, onApplicationID int64) (*ApplicationProfile, error) {
+	payload := applicationProfileCreatePayload{
+		Application:   applicationID,
+		ProfileName:   profileName,
+		OnApplication: onApplicationID,
+	}
+	return doCreate[ApplicationProfile](ctx, c, "/v6/application_profile", payload)
+}
+
+// DeleteApplicationProfile removes an application profile by ID.
+func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/application_profile", id)
+}
+
 // Organization (read-only, for data source)
 
 // Organization represents a Balena organization resource.
