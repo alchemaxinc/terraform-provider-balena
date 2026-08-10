@@ -145,14 +145,19 @@ jobs:
           fi
 
           if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]]; then
-            echo "type=feat!" >> "$GITHUB_OUTPUT"
+            TYPE="feat!"
           elif [[ "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
-            echo "type=feat" >> "$GITHUB_OUTPUT"
+            TYPE="feat"
           elif [[ "$CURRENT_PATCH" != "$LATEST_PATCH" ]]; then
-            echo "type=fix" >> "$GITHUB_OUTPUT"
+            TYPE="fix"
           else
-            echo "type=chore" >> "$GITHUB_OUTPUT"
+            TYPE="chore"
           fi
+
+          echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
+          # Copilot derives its own branch from ours and strips the punctuation,
+          # turning `feat!/schema-update-v49.0.5` into `copilot/featschema-update-v4905`.
+          echo "slug=${TYPE%!}" >> "$GITHUB_OUTPUT"
 
       - name: Download new schema
         if: steps.compare.outputs.needs_update == 'true'
@@ -244,7 +249,7 @@ jobs:
         id: push-branch
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          BRANCH: ${{ steps.commit-type.outputs.type }}/schema-update-${{ steps.latest.outputs.tag }}
+          BRANCH: ${{ steps.commit-type.outputs.slug }}/schema-update-${{ steps.latest.outputs.tag }}
           COMMIT_TYPE: ${{ steps.commit-type.outputs.type }}
           LATEST: ${{ steps.latest.outputs.tag }}
         run: |
@@ -290,6 +295,7 @@ jobs:
 
     steps:
       - name: Start Copilot cloud agent task
+        id: task
         env:
           GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -394,3 +400,45 @@ jobs:
           fi
 
           echo "::notice::Copilot task ${TASK_ID} started on ${BRANCH} (${COPILOT_MODEL})"
+          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Retitle the pull request Copilot opened
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+          TITLE: "${{ needs.check-schema.outputs.commit_type }}: update balena schema to ${{ needs.check-schema.outputs.latest_tag }}"
+        run: |
+          set -euo pipefail
+
+          # The tasks API takes no title, and the agent cannot set one itself, so
+          # it opens the pull request as "[WIP] ...". Nothing else can fix it up:
+          # Actions runs on an agent's pull request stay blocked until a human
+          # presses "Approve and run workflows", so a pull_request job never fires.
+          for _ in $(seq 1 30); do
+            NODE_ID=$(gh api "agents/repos/${REPOSITORY}/tasks/${TASK_ID}" \
+              --jq '[.artifacts[] | select(.type == "pull") | .data.global_id | select(. != "")] | last // empty')
+
+            if [ -n "$NODE_ID" ]; then
+              break
+            fi
+
+            sleep 10
+          done
+
+          if [ -z "${NODE_ID:-}" ]; then
+            echo "::warning::Copilot has not opened a pull request yet. Retitle it to '${TITLE}' by hand."
+            exit 0
+          fi
+
+          # Leave it a draft: marking it ready would start CI on unfinished work.
+          gh api graphql \
+            -f query='mutation($id: ID!, $title: String!) {
+              updatePullRequest(input: { pullRequestId: $id, title: $title }) {
+                pullRequest { number }
+              }
+            }' \
+            -f id="$NODE_ID" \
+            -f title="$TITLE" \
+            --jq '.data.updatePullRequest.pullRequest.number' \
+            | xargs -I {} echo "::notice::Retitled pull request #{} to '${TITLE}'"
