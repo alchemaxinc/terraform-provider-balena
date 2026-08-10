@@ -19,6 +19,7 @@ jobs:
 
     outputs:
       branch: ${{ steps.push-branch.outputs.branch }}
+      commit_type: ${{ steps.commit-type.outputs.type }}
       summary: ${{ steps.diff.outputs.summary }}
       current_tag: ${{ steps.current.outputs.tag }}
       latest_tag: ${{ steps.latest.outputs.tag }}
@@ -60,7 +61,7 @@ jobs:
           # once its task finishes. Sweep before pushing a new one, so a branch
           # still being read by a running task is never pulled out from under it.
           gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
-            | { grep -E '^feat/schema-update-' || true; } \
+            | { grep -E '^(feat|fix|chore)!?/schema-update-' || true; } \
             | while read -r BRANCH; do
                 if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
                   continue
@@ -93,7 +94,6 @@ jobs:
           fi
 
           echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
-          echo "branch=feat/schema-update-$LATEST_TAG" >> "$GITHUB_OUTPUT"
           echo "Latest upstream tag: $LATEST_TAG"
 
       - name: Compare versions
@@ -108,6 +108,50 @@ jobs:
           else
             echo "Schema update available: $CURRENT → $LATEST"
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parse current schema version
+        if: steps.compare.outputs.needs_update == 'true'
+        id: current-semver
+        uses: apexskier/github-semver-parse@v1
+        with:
+          version: ${{ steps.current.outputs.tag }}
+
+      - name: Parse latest schema version
+        if: steps.compare.outputs.needs_update == 'true'
+        id: latest-semver
+        uses: apexskier/github-semver-parse@v1
+        with:
+          version: ${{ steps.latest.outputs.tag }}
+
+      - name: Determine semantic commit type
+        if: steps.compare.outputs.needs_update == 'true'
+        id: commit-type
+        env:
+          CURRENT_VERSION: ${{ steps.current-semver.outputs.version }}
+          CURRENT_MAJOR: ${{ steps.current-semver.outputs.major }}
+          CURRENT_MINOR: ${{ steps.current-semver.outputs.minor }}
+          CURRENT_PATCH: ${{ steps.current-semver.outputs.patch }}
+          LATEST_VERSION: ${{ steps.latest-semver.outputs.version }}
+          LATEST_MAJOR: ${{ steps.latest-semver.outputs.major }}
+          LATEST_MINOR: ${{ steps.latest-semver.outputs.minor }}
+          LATEST_PATCH: ${{ steps.latest-semver.outputs.patch }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$CURRENT_VERSION" || -z "$LATEST_VERSION" ]]; then
+            echo "::error::Schema versions must be valid semantic versions."
+            exit 1
+          fi
+
+          if [[ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]]; then
+            echo "type=feat!" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_MINOR" != "$LATEST_MINOR" ]]; then
+            echo "type=feat" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_PATCH" != "$LATEST_PATCH" ]]; then
+            echo "type=fix" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=chore" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Download new schema
@@ -200,7 +244,8 @@ jobs:
         id: push-branch
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          BRANCH: ${{ steps.latest.outputs.branch }}
+          BRANCH: ${{ steps.commit-type.outputs.type }}/schema-update-${{ steps.latest.outputs.tag }}
+          COMMIT_TYPE: ${{ steps.commit-type.outputs.type }}
           LATEST: ${{ steps.latest.outputs.tag }}
         run: |
           set -euo pipefail
@@ -215,7 +260,7 @@ jobs:
 
           git checkout -b "$BRANCH"
           git add schema/balena.sbvr schema/VERSION
-          git commit -m "feat: update balena schema to ${LATEST}"
+          git commit -m "${COMMIT_TYPE}: update balena schema to ${LATEST}"
           git push --force-with-lease origin "$BRANCH"
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -251,6 +296,7 @@ jobs:
           BRANCH: ${{ needs.check-schema.outputs.branch }}
           CURRENT_TAG: ${{ needs.check-schema.outputs.current_tag }}
           LATEST_TAG: ${{ needs.check-schema.outputs.latest_tag }}
+          COMMIT_TYPE: ${{ needs.check-schema.outputs.commit_type }}
           DIFF_SUMMARY: ${{ needs.check-schema.outputs.summary }}
         run: |
           set -euo pipefail
@@ -277,7 +323,7 @@ jobs:
           ```
           git fetch origin BRANCH_PLACEHOLDER
           git checkout FETCH_HEAD -- schema/balena.sbvr schema/VERSION
-          git commit -m "feat: update balena schema to VERSION_PLACEHOLDER"
+          git commit -m "TYPE_PLACEHOLDER: update balena schema to VERSION_PLACEHOLDER"
           ```
 
           Commit exactly those two files unchanged, as their own first commit, before
@@ -305,13 +351,15 @@ jobs:
           `schema/VERSION`. Do not modify anything under `.github/`, and do not add,
           change or remove any workflow, action or CI configuration.
 
-          Open a pull request titled exactly `feat: update balena schema to VERSION_PLACEHOLDER`.
-          The `feat:` prefix matters: acceptance tests are skipped for `chore` titles,
-          and the title becomes the squash commit message.
+          Open a pull request titled exactly
+          `TYPE_PLACEHOLDER: update balena schema to VERSION_PLACEHOLDER`. The prefix
+          matters: it is derived from the upstream version bump, acceptance tests are
+          skipped for `chore` titles, and the title becomes the squash commit message.
           PROMPT_EOF
           )
 
           PROMPT="${PROMPT//VERSION_PLACEHOLDER/$LATEST_TAG}"
+          PROMPT="${PROMPT//TYPE_PLACEHOLDER/$COMMIT_TYPE}"
           PROMPT="${PROMPT//BRANCH_PLACEHOLDER/$BRANCH}"
           PROMPT="${PROMPT}
 
