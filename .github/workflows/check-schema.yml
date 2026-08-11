@@ -38,9 +38,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           token: ${{ steps.app.outputs.token }}
-          # Not a hardcoded `main`: a dispatch runs the workflow definition from
-          # the ref it was dispatched on, so pinning the checkout would pair new
-          # steps with old files. Scheduled runs get `main` from this anyway.
+          # A dispatch runs the workflow definition from the ref it was dispatched
+          # on, so the files it reads come from that same ref. Scheduled runs
+          # resolve to `main`.
           ref: ${{ github.ref }}
 
       - name: Configure git identity
@@ -59,13 +59,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Copilot copies the schema commit onto a branch of its own and never
-          # opens a pull request for the one pushed here, so it is left behind
-          # once its task finishes.
-          #
-          # A task reads the branch minutes after this workflow pushes it, and the
-          # branch carries no pull request to signal that, so age is what protects
-          # an in-flight task from having its source deleted underneath it.
+          # Copilot copies the schema commit onto a branch of its own, leaving the
+          # one pushed here behind once its task finishes. A running task reads
+          # that branch minutes after the push, so keep recent ones.
           CUTOFF=$(date -u -d '6 hours ago' +%s)
 
           gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
@@ -164,8 +160,8 @@ jobs:
           fi
 
           echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
-          # Copilot derives its own branch from ours and strips the punctuation,
-          # turning `feat!/schema-update-v49.0.5` into `copilot/featschema-update-v4905`.
+          # Branch names drop the breaking-change marker: Copilot strips the
+          # punctuation when deriving its own branch from ours.
           echo "slug=${TYPE%!}" >> "$GITHUB_OUTPUT"
 
       - name: Download new schema
@@ -291,8 +287,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Built here rather than in the job that starts the task: that job holds
-          # the PAT, so it deliberately has no checkout to read this file with.
+          # The job that starts the task holds the PAT and has no checkout, so
+          # the prompt is assembled here and passed to it.
           PROMPT=$(cat .github/prompts/schema-update.md)
           PROMPT="${PROMPT//VERSION_PLACEHOLDER/$LATEST_TAG}"
           PROMPT="${PROMPT//TYPE_PLACEHOLDER/$COMMIT_TYPE}"
@@ -392,37 +388,43 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The tasks API takes no title, and the agent cannot set one itself, so
-          # it opens the pull request as "[WIP] ...". Nothing else can fix it up:
-          # Actions runs on an agent's pull request stay blocked until a human
-          # presses "Approve and run workflows", so a pull_request job never fires.
-          for _ in $(seq 1 30); do
-            # Tolerate a failed poll rather than abandoning the retitle: `artifacts`
-            # is absent until the pull request exists, and a transient API error
-            # would otherwise end the step on the spot under `set -e`.
-            NODE_ID=$(gh api "agents/repos/${REPOSITORY}/tasks/${TASK_ID}" \
-              --jq '[.artifacts[]? | select(.type == "pull") | .data.global_id? | select(. != "")] | last // empty' || true)
+          # The tasks API takes no title and the agent cannot set one itself, so
+          # it opens the pull request as "[WIP] ...". Actions runs on an agent's
+          # pull request stay blocked until a human presses "Approve and run
+          # workflows", so this cannot be done from a pull_request job.
+          OWNER="${REPOSITORY%%/*}"
 
-            if [ -n "$NODE_ID" ]; then
-              break
+          for _ in $(seq 1 30); do
+            # Artifacts are absent until the pull request exists, and a poll may
+            # fail transiently; both retry on the next tick.
+            TASK=$(gh api "agents/repos/${REPOSITORY}/tasks/${TASK_ID}" || true)
+
+            # `data.id` is the pull request's database id, set as soon as the
+            # pull request exists.
+            PR_ID=$(printf '%s' "$TASK" | jq -r '[.artifacts[]? | select(.type == "pull") | .data.id? | numbers] | last // empty')
+            HEAD_REF=$(printf '%s' "$TASK" | jq -r '[.artifacts[]? | select(.type == "branch") | .data.head_ref? | strings] | last // empty')
+
+            if [ -n "$PR_ID" ] && [ -n "$HEAD_REF" ]; then
+              # The agent reuses branch names across runs, so an earlier pull
+              # request can share this head.
+              PR_NUMBER=$(gh api "repos/${REPOSITORY}/pulls?state=open&head=${OWNER}:${HEAD_REF}" \
+                --jq "[.[] | select(.id == ${PR_ID}) | .number] | first // empty" || true)
+
+              if [ -n "$PR_NUMBER" ]; then
+                break
+              fi
             fi
 
             sleep 10
           done
 
-          if [ -z "${NODE_ID:-}" ]; then
+          if [ -z "${PR_NUMBER:-}" ]; then
             echo "::warning::Copilot has not opened a pull request yet. Retitle it to '${TITLE}' by hand."
             exit 0
           fi
 
           # Leave it a draft: marking it ready would start CI on unfinished work.
-          gh api graphql \
-            -f query='mutation($id: ID!, $title: String!) {
-              updatePullRequest(input: { pullRequestId: $id, title: $title }) {
-                pullRequest { number }
-              }
-            }' \
-            -f id="$NODE_ID" \
-            -f title="$TITLE" \
-            --jq '.data.updatePullRequest.pullRequest.number' \
-            | xargs -I {} echo "::notice::Retitled pull request #{} to '${TITLE}'"
+          gh api --method PATCH "repos/${REPOSITORY}/pulls/${PR_NUMBER}" \
+            -f title="$TITLE" > /dev/null
+
+          echo "::notice::Retitled pull request #${PR_NUMBER} to '${TITLE}'"
