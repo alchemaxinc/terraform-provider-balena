@@ -1,6 +1,22 @@
 {
   "branches": ["main"],
-  "plugins": ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "python3 scripts/sync_provider_version.py set ${nextRelease.version} && make docs && npx --yes prettier@$PRETTIER_VERSION --write docs/"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["README.md", "examples/provider/provider.tf", "docs/index.md"],
+        "message": "docs: update provider examples to v${nextRelease.version} [skip ci]"
+      }
+    ]
+  ],
   "repositoryUrl": "https://github.com/alchemaxinc/terraform-provider-balena",
   "tagFormat": "v${version}"
 }

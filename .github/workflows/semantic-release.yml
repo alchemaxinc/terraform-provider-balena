@@ -14,6 +14,13 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      # The release "prepare" step (scripts/sync_provider_version.py, `make
+      # docs`) needs Go, Terraform, tfplugindocs, and Prettier on PATH before
+      # semantic-release runs, since it all happens inside one job step.
+      TFPLUGINDOCS_VERSION: "0.24.0"
+      PRETTIER_VERSION: "3.3.3"
+
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
@@ -28,6 +35,26 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout code (for tool setup)
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Install tfplugindocs
+        run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v${{ env.TFPLUGINDOCS_VERSION }}
+
+      - name: Add Go bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Run semantic-release
         id: release
