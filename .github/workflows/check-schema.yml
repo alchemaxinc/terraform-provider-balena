@@ -61,12 +61,29 @@ jobs:
 
           # Copilot copies the schema commit onto a branch of its own and never
           # opens a pull request for the one pushed here, so it is left behind
-          # once its task finishes. Sweep before pushing a new one, so a branch
-          # still being read by a running task is never pulled out from under it.
+          # once its task finishes.
+          #
+          # A task reads the branch minutes after this workflow pushes it, and the
+          # branch carries no pull request to signal that, so age is what protects
+          # an in-flight task from having its source deleted underneath it.
+          CUTOFF=$(date -u -d '6 hours ago' +%s)
+
           gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
             | { grep -E '^(feat|fix|chore)!?/schema-update-' || true; } \
             | while read -r BRANCH; do
                 if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
+                  continue
+                fi
+
+                PUSHED=$(gh api "repos/${REPOSITORY}/commits/${BRANCH}" --jq '.commit.committer.date' || true)
+
+                if [ -z "$PUSHED" ]; then
+                  echo "Keeping ${BRANCH}: could not read when it was last pushed"
+                  continue
+                fi
+
+                if [ "$(date -u -d "$PUSHED" +%s)" -gt "$CUTOFF" ]; then
+                  echo "Keeping ${BRANCH}: pushed ${PUSHED}, a task may still be reading it"
                   continue
                 fi
 
