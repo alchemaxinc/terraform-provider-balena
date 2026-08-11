@@ -60,6 +60,10 @@ generate: ## Run go generate
 docs: ## Generate provider documentation
 	tfplugindocs generate --provider-name=balena
 
+.PHONY: check-provider-version
+check-provider-version: ## Verify README.md and examples/provider/provider.tf agree on the provider version constraint
+	python3 scripts/sync_provider_version.py check
+
 .PHONY: validate-examples
 validate-examples: install ## Validate all example Terraform configs
 	@for dir in $$(find examples -name '*.tf' -exec dirname {} \; | sort -u); do \
