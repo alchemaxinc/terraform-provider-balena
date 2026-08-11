@@ -380,8 +380,11 @@ jobs:
           # Actions runs on an agent's pull request stay blocked until a human
           # presses "Approve and run workflows", so a pull_request job never fires.
           for _ in $(seq 1 30); do
+            # Tolerate a failed poll rather than abandoning the retitle: `artifacts`
+            # is absent until the pull request exists, and a transient API error
+            # would otherwise end the step on the spot under `set -e`.
             NODE_ID=$(gh api "agents/repos/${REPOSITORY}/tasks/${TASK_ID}" \
-              --jq '[.artifacts[] | select(.type == "pull") | .data.global_id | select(. != "")] | last // empty')
+              --jq '[.artifacts[]? | select(.type == "pull") | .data.global_id? | select(. != "")] | last // empty' || true)
 
             if [ -n "$NODE_ID" ]; then
               break
