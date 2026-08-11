@@ -4,7 +4,8 @@ package balena
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -25,23 +26,47 @@ func newIntegrationClient(t *testing.T) *Client {
 	return NewClient(os.Getenv("BALENA_API_URL"), token, "test")
 }
 
-// assertSelectableFields queries the given Pine.js resource for a single row,
-// selecting exactly the named fields. Pine rejects an unknown property with a
-// 400, so a successful response proves every field name exists on the resource.
-func assertSelectableFields(t *testing.T, c *Client, path string, fields ...string) {
+// selectFields queries the given Pine.js resource for a single row, selecting
+// exactly the named fields, and returns the resulting error (nil on success).
+func selectFields(t *testing.T, c *Client, path string, fields ...string) error {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
 	defer cancel()
 
 	query := "$select=" + strings.Join(fields, ",") + "&$top=1"
-	data, err := c.do(ctx, "GET", appendQuery(path, query), nil)
-	if err != nil {
-		t.Fatalf("selecting %v on %s: %v", fields, path, err)
-	}
+	_, err := c.do(ctx, "GET", appendQuery(path, query), nil)
+	return err
+}
 
-	var resp pineResponse[map[string]any]
-	if err := json.Unmarshal(data, &resp); err != nil {
-		t.Fatalf("decoding %s response: %v", path, err)
+// assertSelectableFields fails when the API rejects any of the named fields.
+// Pine parses $select against its model before applying resource permissions,
+// so an unknown property yields a 400 while a well-formed query on a resource
+// the token may not read yields a 401. Only the former indicates a wrong field
+// name; the latter is reported as a skip.
+func assertSelectableFields(t *testing.T, c *Client, path string, fields ...string) {
+	t.Helper()
+
+	err := selectFields(t, c, path, fields...)
+	if err == nil {
+		return
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+		t.Skipf("token cannot read %s; field names %v parsed without a 400", path, fields)
+	}
+	t.Fatalf("selecting %v on %s: %v", fields, path, err)
+}
+
+// assertUnknownFieldRejected is the negative control for assertSelectableFields:
+// it proves that Pine still returns a 400 for a nonexistent property, so that a
+// skipped 401 subtest cannot silently hide a misspelled field name.
+func assertUnknownFieldRejected(t *testing.T, c *Client, path string) {
+	t.Helper()
+
+	err := selectFields(t, c, path, "id", "definitely_not_a_real_field")
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
+		t.Fatalf("selecting an unknown field on %s: got %v, want status 400", path, err)
 	}
 }
 
@@ -81,6 +106,7 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			assertUnknownFieldRejected(t, c, tt.path)
 			assertSelectableFields(t, c, tt.path, tt.fields...)
 		})
 	}
