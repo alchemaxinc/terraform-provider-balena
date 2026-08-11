@@ -4,7 +4,7 @@ package balena
 
 import (
 	"context"
-	"net/url"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -33,9 +33,15 @@ func assertSelectableFields(t *testing.T, c *Client, path string, fields ...stri
 	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
 	defer cancel()
 
-	query := "$select=" + url.QueryEscape(strings.Join(fields, ",")) + "&$top=1"
-	if _, err := c.do(ctx, "GET", appendQuery(path, query), nil); err != nil {
+	query := "$select=" + strings.Join(fields, ",") + "&$top=1"
+	data, err := c.do(ctx, "GET", appendQuery(path, query), nil)
+	if err != nil {
 		t.Fatalf("selecting %v on %s: %v", fields, path, err)
+	}
+
+	var resp pineResponse[map[string]any]
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("decoding %s response: %v", path, err)
 	}
 }
 
