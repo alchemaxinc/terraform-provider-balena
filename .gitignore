@@ -30,3 +30,7 @@ coverage.html
 
 # node_modules (for commitlint / prettier in CI)
 node_modules/
+
+# Python bytecode cache
+__pycache__/
+*.pyc
