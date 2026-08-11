@@ -184,10 +184,21 @@ jobs:
             exit 1
           fi
 
+  check-provider-version:
+    runs-on: ubuntu-latest
+    steps:
+      - *checkout-code
+
+      - name: Check provider version constraints are in sync
+        run: python3 scripts/sync_provider_version.py check
+
+      - name: Run sync_provider_version unit tests
+        run: python3 scripts/tests/test_sync_provider_version.py -v
+
   lint-passed:
     runs-on: ubuntu-latest
     if: always()
-    needs: [run-commitlint, run-prettier, go-lint, validate-examples, check-docs]
+    needs: [run-commitlint, run-prettier, go-lint, validate-examples, check-docs, check-provider-version]
     steps:
       - name: Verify all jobs passed or were skipped
         run: |
@@ -197,6 +208,7 @@ jobs:
             "${{ needs.go-lint.result }}"
             "${{ needs.validate-examples.result }}"
             "${{ needs.check-docs.result }}"
+            "${{ needs.check-provider-version.result }}"
           )
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
