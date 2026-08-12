@@ -1,8 +1,22 @@
 {
   "branches": ["main"],
   "plugins": [
-    ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
-    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }]
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "parserOpts": {
+          "breakingHeaderPattern": "^(\\w*)(?:\\((.*)\\))?!: (.*)$"
+        }
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "parserOpts": {
+          "breakingHeaderPattern": "^(\\w*)(?:\\((.*)\\))?!: (.*)$"
+        }
+      }
+    ]
   ],
   "repositoryUrl": "https://github.com/alchemaxinc/terraform-provider-balena",
   "tagFormat": "v${version}"
