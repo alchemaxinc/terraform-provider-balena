@@ -48,7 +48,11 @@ jobs:
     needs: [unit-test, build]
     if: >-
       github.event_name == 'workflow_call'
-      || !startsWith(github.event.pull_request.title, 'chore')
+      || !(startsWith(github.event.pull_request.title, 'chore')
+      || startsWith(github.event.pull_request.title, 'docs:')
+      || startsWith(github.event.pull_request.title, 'docs(')
+      || startsWith(github.event.pull_request.title, 'ci:')
+      || startsWith(github.event.pull_request.title, 'ci('))
 
     environment: ${{ github.event_name == 'workflow_call' && 'production' || 'development' }}
 
