@@ -37,12 +37,11 @@ This repository follows semantic versioning with an automated release pipeline:
 
 1. Development work happens on feature branches off `main`.
 2. PRs are opened against `main`.
-3. On merge to `main`, [semantic-release](https://github.com/semantic-release/semantic-release) analyses conventional commits and determines the next version.
-4. Before tagging, semantic-release runs `scripts/sync_provider_version.py set <version>`, which rewrites the `~> N` provider version constraint in `README.md` and `examples/provider/provider.tf` to match the new major version, regenerates `docs/` with `tfplugindocs`, and commits the result (`docs: update provider examples to vX.Y.Z`) before the release tag is created. This keeps the examples on the newly published major/minor floating tags in sync, without ever showing a stale (potentially breaking) version.
-5. semantic-release creates the version tag and GitHub release.
-6. [GoReleaser](https://goreleaser.com) builds multi-platform binaries and attaches them to the release.
+3. On merge to `main`, [semantic-release](https://github.com/semantic-release/semantic-release) analyses conventional commits, determines the next version, creates the version tag, and publishes a GitHub release.
+4. [GoReleaser](https://goreleaser.com) builds multi-platform binaries and attaches them to the release.
+5. After the release, a separate `update-provider-version-examples` workflow runs [`sync-terraform-version-in-docs`](https://github.com/alchemaxinc/composite-toolbox/tree/main/sync-terraform-version-in-docs) (from `alchemaxinc/composite-toolbox`) to rewrite the `~> N` provider version constraint in `README.md` and `examples/provider/provider.tf` to match the new major version, regenerates `docs/` with `tfplugindocs`, and opens an auto-merging pull request with the result. This keeps the examples on the newly published major version in sync, though the very next release after a major bump may briefly show a stale constraint until that pull request merges.
 
-`make check-provider-version` verifies `README.md` and `examples/provider/provider.tf` agree on the same version constraint; CI runs this on every pull request.
+CI runs `sync-terraform-version-in-docs` in `check` mode on every pull request, verifying `README.md` and `examples/provider/provider.tf` agree on the same version constraint.
 
 ### Commit Convention
 

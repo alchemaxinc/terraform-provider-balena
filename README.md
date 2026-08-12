@@ -45,7 +45,6 @@ See the [`docs/`](docs/) directory for full schema documentation and the [`examp
 - `schema/` — reference copy of the upstream Balena Pine.js SBVR schema (`balena.sbvr`), used when authoring new resources to confirm field names and relationships. Not consumed at runtime.
 - `docs/` — auto-generated provider documentation (do not edit manually; regenerate with `make docs`).
 - `examples/` — Terraform example snippets for every resource and data source.
-- `scripts/` — repository maintenance tooling, including `sync_provider_version.py`, which keeps the provider version constraint in `README.md` and `examples/provider/provider.tf` in sync with each release.
 
 ## Contributing
 

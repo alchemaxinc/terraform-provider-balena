@@ -190,10 +190,11 @@ jobs:
       - *checkout-code
 
       - name: Check provider version constraints are in sync
-        run: python3 scripts/sync_provider_version.py check
-
-      - name: Run sync_provider_version unit tests
-        run: python3 scripts/tests/test_sync_provider_version.py -v
+        uses: alchemaxinc/composite-toolbox/sync-terraform-version-in-docs@v1
+        with:
+          mode: check
+          provider-source: "alchemaxinc/balena"
+          files: "README.md examples/provider/provider.tf"
 
   lint-passed:
     runs-on: ubuntu-latest
