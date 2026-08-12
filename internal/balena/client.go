@@ -484,37 +484,6 @@ func (c *Client) DeleteApplicationTag(ctx context.Context, id int64) error {
 	return doDelete(ctx, c, "/v6/application_tag", id)
 }
 
-// ApplicationProfile represents a profile name activated by a fleet on a host
-// application (the `application profile` term form).
-type ApplicationProfile struct {
-	ID          int64    `json:"id"`
-	App         ODataRef `json:"application"`
-	ProfileName string   `json:"activates__profile_name"`
-	HostApp     ODataRef `json:"on__application"`
-}
-
-type appProfileCreatePayload struct {
-	App         int64  `json:"application"`
-	ProfileName string `json:"activates__profile_name"`
-	HostApp     int64  `json:"on__application"`
-}
-
-// GetApplicationProfile retrieves a single application profile by ID.
-func (c *Client) GetApplicationProfile(ctx context.Context, id int64) (*ApplicationProfile, error) {
-	return doGetByID[ApplicationProfile](ctx, c, "/v6/application_profile", id)
-}
-
-// CreateApplicationProfile activates a profile name of a host application on an application.
-func (c *Client) CreateApplicationProfile(ctx context.Context, appID int64, profileName string, hostAppID int64) (*ApplicationProfile, error) {
-	payload := appProfileCreatePayload{App: appID, ProfileName: profileName, HostApp: hostAppID}
-	return doCreate[ApplicationProfile](ctx, c, "/v6/application_profile", payload)
-}
-
-// DeleteApplicationProfile removes an application profile by ID.
-func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_profile", id)
-}
-
 // DeviceTag represents a tag on a device.
 type DeviceTag struct {
 	ID     int64    `json:"id"`
@@ -688,34 +657,6 @@ func (c *Client) UpdateImageEnvVar(ctx context.Context, id int64, value string) 
 // DeleteImageEnvVar removes an image environment variable by ID.
 func (c *Client) DeleteImageEnvVar(ctx context.Context, id int64) error {
 	return doDelete(ctx, c, "/v6/image_environment_variable", id)
-}
-
-// ImageProfile represents a profile name on a release image.
-type ImageProfile struct {
-	ID           int64    `json:"id"`
-	ReleaseImage ODataRef `json:"release_image"`
-	ProfileName  string   `json:"profile_name"`
-}
-
-type imageProfileCreatePayload struct {
-	ReleaseImage int64  `json:"release_image"`
-	ProfileName  string `json:"profile_name"`
-}
-
-// GetImageProfile retrieves a single image profile by ID.
-func (c *Client) GetImageProfile(ctx context.Context, id int64) (*ImageProfile, error) {
-	return doGetByID[ImageProfile](ctx, c, "/v6/image_profile", id)
-}
-
-// CreateImageProfile creates a new profile on a release image.
-func (c *Client) CreateImageProfile(ctx context.Context, releaseImageID int64, profileName string) (*ImageProfile, error) {
-	payload := imageProfileCreatePayload{ReleaseImage: releaseImageID, ProfileName: profileName}
-	return doCreate[ImageProfile](ctx, c, "/v6/image_profile", payload)
-}
-
-// DeleteImageProfile removes an image profile by ID.
-func (c *Client) DeleteImageProfile(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/image_profile", id)
 }
 
 // ServiceLabel represents a label on a service.
