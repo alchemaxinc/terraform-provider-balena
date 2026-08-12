@@ -23,7 +23,7 @@ terraform {
   required_providers {
     balena = {
       source  = "alchemaxinc/balena"
-      version = "~> 1"
+      version = "~> 2"
     }
   }
 }
