@@ -17,14 +17,23 @@ import (
 const INTEGRATION_TIMEOUT = 30 * time.Second
 
 // newIntegrationClient returns a client pointed at the live Balena API, or
-// skips the test when no API token is configured.
+// skips the test when no API token is configured. It also confirms the token
+// actually authenticates, so a bad or expired token fails loudly here rather
+// than being mistaken later for a per-resource permission gap.
 func newIntegrationClient(t *testing.T) *Client {
 	t.Helper()
 	token := os.Getenv("BALENA_API_TOKEN")
 	if token == "" {
 		t.Skip("BALENA_API_TOKEN must be set for acceptance tests")
 	}
-	return NewClient(os.Getenv("BALENA_API_URL"), token, "test")
+	c := NewClient(os.Getenv("BALENA_API_URL"), token, "test")
+
+	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
+	defer cancel()
+	if _, err := c.do(ctx, "GET", "/actor/v1/whoami", nil); err != nil {
+		t.Fatalf("BALENA_API_TOKEN does not authenticate: %v", err)
+	}
+	return c
 }
 
 // selectRow queries the given Pine.js resource for a single row, selecting
@@ -93,7 +102,8 @@ func keysOf(m map[string]any) []string {
 // not exist at all, so this status alone cannot distinguish "wrong field
 // name" from "not exposed to this account yet" — nothing this test (or this
 // provider) can do resolves that ambiguity, so it skips instead of failing
-// the build.
+// the build. Reserved for resources already known to 401 unconditionally, so
+// it can't mask a real regression on a resource that is normally readable.
 func skipIfResourceUnavailable(t *testing.T, c *Client, path string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
@@ -117,19 +127,26 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 	c := newIntegrationClient(t)
 
 	tests := []struct {
-		name   string
-		path   string
-		fields []string
+		name string
+		path string
+		// mayBeUnavailable marks resources already confirmed to 401
+		// unconditionally against production; only these are allowed to
+		// skip on a 401, so a real permission or URL regression on any
+		// other resource still fails the build.
+		mayBeUnavailable bool
+		fields           []string
 	}{
 		{
-			name:   "application_profile",
-			path:   "/v6/application_profile",
-			fields: []string{"id", "application", "activates__profile_name", "on__application"},
+			name:             "application_profile",
+			path:             "/v6/application_profile",
+			mayBeUnavailable: true,
+			fields:           []string{"id", "application", "activates__profile_name", "on__application"},
 		},
 		{
-			name:   "image_profile",
-			path:   "/v6/image_profile",
-			fields: []string{"id", "release_image", "profile_name"},
+			name:             "image_profile",
+			path:             "/v6/image_profile",
+			mayBeUnavailable: true,
+			fields:           []string{"id", "release_image", "profile_name"},
 		},
 		{
 			name:   "service_install",
@@ -145,7 +162,9 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			skipIfResourceUnavailable(t, c, tt.path)
+			if tt.mayBeUnavailable {
+				skipIfResourceUnavailable(t, c, tt.path)
+			}
 			assertSelectableFields(t, c, tt.path, tt.fields...)
 		})
 	}
