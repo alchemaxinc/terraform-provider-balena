@@ -37,6 +37,13 @@ var labelNameValidator = regexpStringValidator(
 	"must start with a letter or underscore and contain only letters, digits, underscores, dots, and hyphens",
 )
 
+// profileNameValidator enforces the schema's profile name length bounds:
+// greater than 1 and at most 100 characters.
+var profileNameValidator = regexpStringValidator(
+	regexp.MustCompile(`^.{2,100}$`),
+	"must be between 2 and 100 characters",
+)
+
 // regexpStringValidator builds a validator.String that enforces a regexp match.
 // The framework's built-in stringvalidator.RegexMatches would be preferable but
 // keeping this helper avoids an extra dependency module import.
