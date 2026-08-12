@@ -4,6 +4,7 @@ package balena
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -26,47 +27,85 @@ func newIntegrationClient(t *testing.T) *Client {
 	return NewClient(os.Getenv("BALENA_API_URL"), token, "test")
 }
 
-// selectFields queries the given Pine.js resource for a single row, selecting
-// exactly the named fields, and returns the resulting error (nil on success).
-func selectFields(t *testing.T, c *Client, path string, fields ...string) error {
+// selectRow queries the given Pine.js resource for a single row, selecting
+// exactly the named fields, and returns the decoded row (nil if the collection
+// is empty) or the request error.
+func selectRow(t *testing.T, c *Client, path string, fields ...string) (map[string]any, error) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
 	defer cancel()
 
 	query := "$select=" + strings.Join(fields, ",") + "&$top=1"
-	_, err := c.do(ctx, "GET", appendQuery(path, query), nil)
-	return err
+	data, err := c.do(ctx, "GET", appendQuery(path, query), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp pineResponse[map[string]any]
+	if jsonErr := json.Unmarshal(data, &resp); jsonErr != nil {
+		t.Fatalf("decoding %s response: %v", path, jsonErr)
+	}
+	if len(resp.D) == 0 {
+		return nil, nil
+	}
+	return resp.D[0], nil
 }
 
-// assertSelectableFields fails when the API rejects any of the named fields.
-// Pine parses $select against its model before applying resource permissions,
-// so an unknown property yields a 400 while a well-formed query on a resource
-// the token may not read yields a 401. Only the former indicates a wrong field
-// name; the latter is reported as a skip.
+// assertSelectableFields proves that every named field is a real, selectable
+// property on path by fetching one live row and checking that each field
+// name appears as a key in the decoded response. Pine.js silently drops
+// unknown $select properties instead of rejecting them, so presence in the
+// response — not the absence of an error — is the only reliable proof that a
+// field name is correct.
+//
+// A resource with no rows the caller can see cannot be verified this way; the
+// test skips rather than fails, since an empty result set says nothing about
+// field-name correctness.
 func assertSelectableFields(t *testing.T, c *Client, path string, fields ...string) {
 	t.Helper()
 
-	err := selectFields(t, c, path, fields...)
-	if err == nil {
-		return
+	row, err := selectRow(t, c, path, fields...)
+	if err != nil {
+		t.Fatalf("selecting %v on %s: %v", fields, path, err)
 	}
-	var apiErr *APIError
-	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
-		t.Skipf("token cannot read %s; field names %v parsed without a 400", path, fields)
+	if row == nil {
+		t.Skipf("no rows visible on %s to verify field names against", path)
 	}
-	t.Fatalf("selecting %v on %s: %v", fields, path, err)
+	for _, f := range fields {
+		if _, ok := row[f]; !ok {
+			t.Errorf("field %q missing from %s response: got keys %v", f, path, keysOf(row))
+		}
+	}
 }
 
-// assertUnknownFieldRejected is the negative control for assertSelectableFields:
-// it proves that Pine still returns a 400 for a nonexistent property, so that a
-// skipped 401 subtest cannot silently hide a misspelled field name.
-func assertUnknownFieldRejected(t *testing.T, c *Client, path string) {
-	t.Helper()
+// keysOf returns the keys of m, for diagnostic messages.
+func keysOf(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
 
-	err := selectFields(t, c, path, "id", "definitely_not_a_real_field")
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
-		t.Fatalf("selecting an unknown field on %s: got %v, want status 400", path, err)
+// skipIfResourceUnavailable skips the test when path is not readable at all,
+// even with $top=1 and no $select. Pine returns an identical 401 for a
+// resource the caller's role cannot see and for a resource name that does
+// not exist at all, so this status alone cannot distinguish "wrong field
+// name" from "not exposed to this account yet" — nothing this test (or this
+// provider) can do resolves that ambiguity, so it skips instead of failing
+// the build.
+func skipIfResourceUnavailable(t *testing.T, c *Client, path string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), INTEGRATION_TIMEOUT)
+	defer cancel()
+
+	if _, err := c.do(ctx, "GET", appendQuery(path, "$top=1"), nil); err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+			t.Skipf("%s is not readable by this token (401 on a bare, unfiltered request, "+
+				"identical to a nonexistent resource) — cannot verify field names until it is", path)
+		}
+		t.Fatalf("checking availability of %s: %v", path, err)
 	}
 }
 
@@ -106,7 +145,7 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertUnknownFieldRejected(t, c, tt.path)
+			skipIfResourceUnavailable(t, c, tt.path)
 			assertSelectableFields(t, c, tt.path, tt.fields...)
 		})
 	}
