@@ -37,8 +37,11 @@ This repository follows semantic versioning with an automated release pipeline:
 
 1. Development work happens on feature branches off `main`.
 2. PRs are opened against `main`.
-3. On merge to `main`, [semantic-release](https://github.com/semantic-release/semantic-release) analyses conventional commits and creates a version tag and GitHub release.
+3. On merge to `main`, [semantic-release](https://github.com/semantic-release/semantic-release) analyses conventional commits, determines the next version, creates the version tag, and publishes a GitHub release.
 4. [GoReleaser](https://goreleaser.com) builds multi-platform binaries and attaches them to the release.
+5. After the release, a separate `update-provider-version-examples` workflow runs [`sync-terraform-version-in-docs`](https://github.com/alchemaxinc/composite-toolbox/tree/main/sync-terraform-version-in-docs) (from `alchemaxinc/composite-toolbox`) to rewrite the `~> N` provider version constraint in `README.md` and `examples/provider/provider.tf` to match the new major version, regenerates `docs/` with `tfplugindocs`, and opens an auto-merging pull request with the result. This keeps the examples on the newly published major version in sync, though the very next release after a major bump may briefly show a stale constraint until that pull request merges.
+
+CI runs `sync-terraform-version-in-docs` in `check` mode on every pull request, verifying `README.md` and `examples/provider/provider.tf` agree on the same version constraint.
 
 ### Commit Convention
 
