@@ -149,6 +149,12 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 			fields:           []string{"id", "release_image", "profile_name"},
 		},
 		{
+			name:             "device_profile_override",
+			path:             "/v6/device_profile_override",
+			mayBeUnavailable: true,
+			fields:           []string{"id", "device", "overrides__profile_name", "on__application", "is_active"},
+		},
+		{
 			name:   "service_install",
 			path:   "/v6/service_install",
 			fields: []string{"id", "device", "installs__service"},

@@ -371,3 +371,80 @@ data "balena_application" "by_id" {
 		},
 	})
 }
+
+// TestAccDeviceProfileOverride_basic exercises balena_device_profile_override
+// against the live API. The resource needs a provisioned device running a
+// release of a host OS application, and neither can be created with an API
+// token, so the test needs BALENA_TEST_DEVICE_ID and BALENA_TEST_HOST_APP_ID
+// and skips when they are unset.
+func TestAccDeviceProfileOverride_basic(t *testing.T) {
+	testAccPreCheck(t)
+	deviceID := os.Getenv("BALENA_TEST_DEVICE_ID")
+	hostAppID := os.Getenv("BALENA_TEST_HOST_APP_ID")
+	profileName := os.Getenv("BALENA_TEST_PROFILE_NAME")
+	if deviceID == "" || hostAppID == "" || profileName == "" {
+		t.Skip("BALENA_TEST_DEVICE_ID, BALENA_TEST_HOST_APP_ID and BALENA_TEST_PROFILE_NAME must be set")
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDeviceProfileOverrideDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_device_profile_override" "test" {
+  device_id           = %s
+  profile_name        = "%s"
+  host_application_id = %s
+}
+`, deviceID, profileName, hostAppID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_device_profile_override.test", "device_id", deviceID),
+					resource.TestCheckResourceAttr("balena_device_profile_override.test", "profile_name", profileName),
+					resource.TestCheckResourceAttr("balena_device_profile_override.test", "host_application_id", hostAppID),
+					resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "true"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_device_profile_override" "test" {
+  device_id           = %s
+  profile_name        = "%s"
+  host_application_id = %s
+  is_active           = false
+}
+`, deviceID, profileName, hostAppID),
+				Check: resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "false"),
+			},
+			{
+				ResourceName:      "balena_device_profile_override.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// testAccCheckDeviceProfileOverrideDestroy verifies that the device profile
+// override has been deleted.
+func testAccCheckDeviceProfileOverrideDestroy(s *terraform.State) error {
+	client := testAccNewClient()
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "balena_device_profile_override" {
+			continue
+		}
+		id, _ := parseID(rs.Primary.ID)
+		_, err := client.GetDeviceProfileOverride(context.Background(), id)
+		if err == nil {
+			return fmt.Errorf("device profile override %s still exists", rs.Primary.ID)
+		}
+		if !balena.IsNotFound(err) {
+			return fmt.Errorf("error checking device profile override %s: %s", rs.Primary.ID, err)
+		}
+	}
+	return nil
+}
