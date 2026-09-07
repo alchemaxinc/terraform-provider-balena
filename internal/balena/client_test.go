@@ -884,6 +884,79 @@ func TestCreateApplicationProfile(t *testing.T) {
 	}
 }
 
+func TestGetDeviceProfileOverride_Success(t *testing.T) {
+	override := DeviceProfileOverride{ID: 150, Device: ODataRef{ID: 3}, ProfileName: "gpu", HostApp: ODataRef{ID: 2}, IsActive: true}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(pineWrap(override))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetDeviceProfileOverride(context.Background(), 150)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ProfileName != "gpu" || got.Device.ID != 3 || got.HostApp.ID != 2 || !got.IsActive {
+		t.Errorf("unexpected device profile override: %+v", got)
+	}
+}
+
+func TestCreateDeviceProfileOverride(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["device"] != float64(3) {
+			t.Errorf("device = %v", payload["device"])
+		}
+		if payload["overrides__profile_name"] != "gpu" {
+			t.Errorf("overrides__profile_name = %v", payload["overrides__profile_name"])
+		}
+		if payload["on__application"] != float64(2) {
+			t.Errorf("on__application = %v", payload["on__application"])
+		}
+		if payload["is_active"] != true {
+			t.Errorf("is_active = %v", payload["is_active"])
+		}
+		_, _ = w.Write(mustJSON(t, DeviceProfileOverride{ID: 151, ProfileName: "gpu"}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	isActive := true
+	got, err := c.CreateDeviceProfileOverride(context.Background(), 3, "gpu", 2, &isActive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != 151 {
+		t.Errorf("ID = %d", got.ID)
+	}
+}
+
+func TestUpdateDeviceProfileOverride(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["is_active"] != false {
+			t.Errorf("is_active = %v", payload["is_active"])
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if err := c.UpdateDeviceProfileOverride(context.Background(), 151, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetServiceLabel_Success(t *testing.T) {
 	label := ServiceLabel{ID: 120, Service: ODataRef{ID: 10}, LabelName: "io.balena.features.dbus", Value: "1"}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

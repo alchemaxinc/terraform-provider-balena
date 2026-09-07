@@ -515,6 +515,44 @@ func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
 	return doDelete(ctx, c, "/v6/application_profile", id)
 }
 
+// DeviceProfileOverride represents a profile name a device overrides on a host
+// application (the `device profile override` term form).
+type DeviceProfileOverride struct {
+	ID          int64    `json:"id"`
+	Device      ODataRef `json:"device"`
+	ProfileName string   `json:"overrides__profile_name"`
+	HostApp     ODataRef `json:"on__application"`
+	IsActive    bool     `json:"is_active"`
+}
+
+type deviceProfileOverrideCreatePayload struct {
+	Device      int64  `json:"device"`
+	ProfileName string `json:"overrides__profile_name"`
+	HostApp     int64  `json:"on__application"`
+	IsActive    *bool  `json:"is_active,omitempty"`
+}
+
+// GetDeviceProfileOverride retrieves a single device profile override by ID.
+func (c *Client) GetDeviceProfileOverride(ctx context.Context, id int64) (*DeviceProfileOverride, error) {
+	return doGetByID[DeviceProfileOverride](ctx, c, "/v6/device_profile_override", id)
+}
+
+// CreateDeviceProfileOverride overrides a profile name of a host application on a device.
+func (c *Client) CreateDeviceProfileOverride(ctx context.Context, deviceID int64, profileName string, hostAppID int64, isActive *bool) (*DeviceProfileOverride, error) {
+	payload := deviceProfileOverrideCreatePayload{Device: deviceID, ProfileName: profileName, HostApp: hostAppID, IsActive: isActive}
+	return doCreate[DeviceProfileOverride](ctx, c, "/v6/device_profile_override", payload)
+}
+
+// UpdateDeviceProfileOverride updates the active flag of a device profile override.
+func (c *Client) UpdateDeviceProfileOverride(ctx context.Context, id int64, isActive bool) error {
+	return doPatch(ctx, c, "/v6/device_profile_override", id, map[string]interface{}{"is_active": isActive})
+}
+
+// DeleteDeviceProfileOverride removes a device profile override by ID.
+func (c *Client) DeleteDeviceProfileOverride(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/device_profile_override", id)
+}
+
 // DeviceTag represents a tag on a device.
 type DeviceTag struct {
 	ID     int64    `json:"id"`
