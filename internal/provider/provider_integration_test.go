@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
 	"testing"
@@ -108,6 +109,18 @@ func testAccPreCheck(t *testing.T) {
 // testAccNewClient creates a Balena API client for use in CheckDestroy functions.
 func testAccNewClient() *balena.Client {
 	return balena.NewClient("", os.Getenv("BALENA_API_TOKEN"), "test")
+}
+
+// testAccSkipIfResourceUnavailable skips the test when the live API refuses
+// the Pine.js resource to this token. Pine answers 401 both for a resource the
+// caller's role cannot see and for one that does not exist yet, so a resource
+// that is not exposed to the account cannot be created or verified here.
+func testAccSkipIfResourceUnavailable(t *testing.T, name string, probe func() error) {
+	t.Helper()
+	var apiErr *balena.APIError
+	if errors.As(probe(), &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+		t.Skipf("%s is not accessible to this token (401 on a plain read, identical to a nonexistent resource)", name)
+	}
 }
 
 // testAccCheckApplicationDestroy verifies that the application has been deleted.
@@ -450,9 +463,15 @@ func testAccCheckDeviceProfileOverrideDestroy(s *terraform.State) error {
 }
 
 // TestAccApplicationProfileCatalog_basic exercises balena_application_profile_catalog
-// against the live API, including updating the optional description.
+// against the live API, including updating the optional description. It skips
+// when the resource is not exposed to the token, as is the case for the other
+// profile resources.
 func TestAccApplicationProfileCatalog_basic(t *testing.T) {
 	testAccPreCheck(t)
+	testAccSkipIfResourceUnavailable(t, "application_profile_catalog", func() error {
+		_, err := testAccNewClient().GetApplicationProfileCatalog(context.Background(), 0)
+		return err
+	})
 	appName := acctest.RandomWithPrefix("tf_acc_catalog")
 
 	resource.Test(t, resource.TestCase{
