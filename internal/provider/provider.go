@@ -131,6 +131,7 @@ func (p *BalenaProvider) Resources(_ context.Context) []func() resource.Resource
 		NewApplicationEnvVarResource,
 		NewApplicationConfigVarResource,
 		NewApplicationProfileResource,
+		NewApplicationProfileCatalogResource,
 		NewApplicationServiceEnvVarResource,
 		NewApplicationTagResource,
 		NewDeviceConfigVarResource,

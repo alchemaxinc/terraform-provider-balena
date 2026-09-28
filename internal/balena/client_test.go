@@ -884,6 +884,96 @@ func TestCreateApplicationProfile(t *testing.T) {
 	}
 }
 
+func TestGetApplicationProfileCatalog_Success(t *testing.T) {
+	description := "GPU acceleration"
+	entry := ApplicationProfileCatalog{ID: 160, App: ODataRef{ID: 1}, ProfileName: "gpu", Description: &description}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(pineWrap(entry))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetApplicationProfileCatalog(context.Background(), 160)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ProfileName != "gpu" || got.App.ID != 1 || got.Description == nil || *got.Description != description {
+		t.Errorf("unexpected application profile catalog: %+v", got)
+	}
+}
+
+func TestCreateApplicationProfileCatalog(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["application"] != float64(1) {
+			t.Errorf("application = %v", payload["application"])
+		}
+		if payload["catalogs__profile_name"] != "gpu" {
+			t.Errorf("catalogs__profile_name = %v", payload["catalogs__profile_name"])
+		}
+		if payload["description"] != "GPU acceleration" {
+			t.Errorf("description = %v", payload["description"])
+		}
+		_, _ = w.Write(mustJSON(t, ApplicationProfileCatalog{ID: 161, ProfileName: "gpu"}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	description := "GPU acceleration"
+	got, err := c.CreateApplicationProfileCatalog(context.Background(), 1, "gpu", &description)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != 161 {
+		t.Errorf("ID = %d", got.ID)
+	}
+}
+
+func TestCreateApplicationProfileCatalog_OmitsNilDescription(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if _, ok := payload["description"]; ok {
+			t.Errorf("description should be omitted, got %v", payload["description"])
+		}
+		_, _ = w.Write(mustJSON(t, ApplicationProfileCatalog{ID: 162, ProfileName: "gpu"}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if _, err := c.CreateApplicationProfileCatalog(context.Background(), 1, "gpu", nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUpdateApplicationProfileCatalog(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %s", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		_ = json.Unmarshal(body, &payload)
+		if payload["description"] != "updated" {
+			t.Errorf("description = %v", payload["description"])
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	description := "updated"
+	if err := c.UpdateApplicationProfileCatalog(context.Background(), 161, &description); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetDeviceProfileOverride_Success(t *testing.T) {
 	override := DeviceProfileOverride{ID: 150, Device: ODataRef{ID: 3}, ProfileName: "gpu", HostApp: ODataRef{ID: 2}, IsActive: true}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

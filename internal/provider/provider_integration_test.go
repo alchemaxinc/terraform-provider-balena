@@ -448,3 +448,82 @@ func testAccCheckDeviceProfileOverrideDestroy(s *terraform.State) error {
 	}
 	return nil
 }
+
+// TestAccApplicationProfileCatalog_basic exercises balena_application_profile_catalog
+// against the live API, including updating the optional description.
+func TestAccApplicationProfileCatalog_basic(t *testing.T) {
+	testAccPreCheck(t)
+	appName := acctest.RandomWithPrefix("tf_acc_catalog")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckApplicationProfileCatalogDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_application" "test" {
+  app_name        = "%s"
+  device_type     = "raspberrypi4-64"
+  organization_id = %s
+}
+
+resource "balena_application_profile_catalog" "test" {
+  application_id = balena_application.test.id
+  profile_name   = "gpu"
+  description    = "GPU acceleration"
+}
+`, appName, testAccOrgID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "profile_name", "gpu"),
+					resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "description", "GPU acceleration"),
+					resource.TestCheckResourceAttrPair("balena_application_profile_catalog.test", "application_id", "balena_application.test", "id"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_application" "test" {
+  app_name        = "%s"
+  device_type     = "raspberrypi4-64"
+  organization_id = %s
+}
+
+resource "balena_application_profile_catalog" "test" {
+  application_id = balena_application.test.id
+  profile_name   = "gpu"
+  description    = "GPU acceleration, updated"
+}
+`, appName, testAccOrgID),
+				Check: resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "description", "GPU acceleration, updated"),
+			},
+			{
+				ResourceName:      "balena_application_profile_catalog.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// testAccCheckApplicationProfileCatalogDestroy verifies that the application
+// profile catalog entry has been deleted.
+func testAccCheckApplicationProfileCatalogDestroy(s *terraform.State) error {
+	client := testAccNewClient()
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "balena_application_profile_catalog" {
+			continue
+		}
+		id, _ := parseID(rs.Primary.ID)
+		_, err := client.GetApplicationProfileCatalog(context.Background(), id)
+		if err == nil {
+			return fmt.Errorf("application profile catalog %s still exists", rs.Primary.ID)
+		}
+		if !balena.IsNotFound(err) {
+			return fmt.Errorf("error checking application profile catalog %s: %s", rs.Primary.ID, err)
+		}
+	}
+	return nil
+}

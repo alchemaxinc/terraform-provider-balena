@@ -515,6 +515,43 @@ func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
 	return doDelete(ctx, c, "/v6/application_profile", id)
 }
 
+// ApplicationProfileCatalog represents a profile name catalogued by an
+// application (the `application profile catalog` term form).
+type ApplicationProfileCatalog struct {
+	ID          int64    `json:"id"`
+	App         ODataRef `json:"application"`
+	ProfileName string   `json:"catalogs__profile_name"`
+	Description *string  `json:"description"`
+}
+
+type appProfileCatalogCreatePayload struct {
+	App         int64   `json:"application"`
+	ProfileName string  `json:"catalogs__profile_name"`
+	Description *string `json:"description,omitempty"`
+}
+
+// GetApplicationProfileCatalog retrieves a single application profile catalog entry by ID.
+func (c *Client) GetApplicationProfileCatalog(ctx context.Context, id int64) (*ApplicationProfileCatalog, error) {
+	return doGetByID[ApplicationProfileCatalog](ctx, c, "/v6/application_profile_catalog", id)
+}
+
+// CreateApplicationProfileCatalog catalogs a profile name on an application.
+func (c *Client) CreateApplicationProfileCatalog(ctx context.Context, appID int64, profileName string, description *string) (*ApplicationProfileCatalog, error) {
+	payload := appProfileCatalogCreatePayload{App: appID, ProfileName: profileName, Description: description}
+	return doCreate[ApplicationProfileCatalog](ctx, c, "/v6/application_profile_catalog", payload)
+}
+
+// UpdateApplicationProfileCatalog updates the description of an application
+// profile catalog entry. A nil description clears it.
+func (c *Client) UpdateApplicationProfileCatalog(ctx context.Context, id int64, description *string) error {
+	return doPatch(ctx, c, "/v6/application_profile_catalog", id, map[string]interface{}{"description": description})
+}
+
+// DeleteApplicationProfileCatalog removes an application profile catalog entry by ID.
+func (c *Client) DeleteApplicationProfileCatalog(ctx context.Context, id int64) error {
+	return doDelete(ctx, c, "/v6/application_profile_catalog", id)
+}
+
 // DeviceProfileOverride represents a profile name a device overrides on a host
 // application (the `device profile override` term form).
 type DeviceProfileOverride struct {
