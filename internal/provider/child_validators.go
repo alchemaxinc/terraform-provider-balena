@@ -4,6 +4,7 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
@@ -43,6 +44,10 @@ var profileNameValidator = regexpStringValidator(
 	regexp.MustCompile(`^.{2,100}$`),
 	"must be between 2 and 100 characters",
 )
+
+// profileDescriptionValidator enforces the schema's profile description length
+// bound of at most 4000 characters.
+var profileDescriptionValidator = stringvalidator.LengthAtMost(4000)
 
 // regexpStringValidator builds a validator.String that enforces a regexp match.
 // The framework's built-in stringvalidator.RegexMatches would be preferable but
