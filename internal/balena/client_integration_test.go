@@ -143,6 +143,12 @@ func TestIntegrationResourceFieldNames(t *testing.T) {
 			fields:           []string{"id", "application", "activates__profile_name", "on__application"},
 		},
 		{
+			name:             "application_profile_catalog",
+			path:             "/v6/application_profile_catalog",
+			mayBeUnavailable: true,
+			fields:           []string{"id", "application", "catalogs__profile_name", "description"},
+		},
+		{
 			name:             "image_profile",
 			path:             "/v6/image_profile",
 			mayBeUnavailable: true,
