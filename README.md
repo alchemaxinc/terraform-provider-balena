@@ -50,6 +50,10 @@ See the [`docs/`](docs/) directory for full schema documentation and the [`examp
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, build commands, and release process.
 
+## Looking for a Balena MCP provider?
+
+Check out the [Balena MCP client](https://github.com/kieksme/mcp-balena) from 👉[kieks.me](https://kieks.me/).
+
 ## License
 
 [MIT](LICENSE)
