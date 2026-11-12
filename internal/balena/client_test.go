@@ -1230,3 +1230,102 @@ func TestGetOrganizationByHandle_NotFound(t *testing.T) {
 		t.Errorf("expected not-found, got %v", err)
 	}
 }
+
+func TestGetDeviceByUUID_ReadsPinnedAndHostOSReleases(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.RawQuery, DEVICE_EXPAND) {
+			t.Errorf("expected %s in query, got %s", DEVICE_EXPAND, r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`{"d":[{"id":7,"uuid":"abc","device_name":"pinned",` +
+			`"should_be_running__release":[{"commit":"f2a97d43"}],` +
+			`"should_be_operated_by__release":[{"raw_version":"6.0.10+rev1"}]}]}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetDeviceByUUID(context.Background(), "abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit := got.PinnedReleaseCommit(); commit == nil || *commit != "f2a97d43" {
+		t.Errorf("PinnedReleaseCommit() = %v", commit)
+	}
+	if version := got.HostOSVersion(); version == nil || *version != "6.0.10+rev1" {
+		t.Errorf("HostOSVersion() = %v", version)
+	}
+}
+
+func TestGetDeviceByUUID_TrackingDeviceHasNoPinnedRelease(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"d":[{"id":7,"uuid":"abc","should_be_running__release":[],"should_be_operated_by__release":[]}]}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetDeviceByUUID(context.Background(), "abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit := got.PinnedReleaseCommit(); commit != nil {
+		t.Errorf("PinnedReleaseCommit() = %q, want nil", *commit)
+	}
+	if version := got.HostOSVersion(); version != nil {
+		t.Errorf("HostOSVersion() = %q, want nil", *version)
+	}
+}
+
+func TestUpdateDevice_SendsNullToUnpin(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %s", r.Method)
+		}
+		if r.URL.Path != "/v6/device(7)" {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if string(body) != `{"should_be_running__release":null}` {
+			t.Errorf("body = %s", body)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if err := c.UpdateDevice(context.Background(), 7, map[string]interface{}{"should_be_running__release": nil}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetHostOSRelease_KeepsNavigationUnencoded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		want := "$filter=raw_version%20eq%20%276.0.10%2Brev1%27%20and%20status%20eq%20%27success%27%20and%20" +
+			"belongs_to__application/any(a:a/is_host%20eq%20true%20and%20a/is_for__device_type/any(dt:dt/slug%20eq%20%27raspberrypi5%27))"
+		if !strings.HasPrefix(r.URL.RawQuery, want) {
+			t.Errorf("query = %s, want prefix %s", r.URL.RawQuery, want)
+		}
+		_, _ = w.Write(pineWrap(Release{ID: 4371882}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	got, err := c.GetHostOSRelease(context.Background(), "raspberrypi5", "6.0.10+rev1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != 4371882 {
+		t.Errorf("ID = %d", got.ID)
+	}
+}
+
+func TestGetHostOSRelease_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(pineWrap[Release]())
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	_, err := c.GetHostOSRelease(context.Background(), "raspberrypi5", "1.0.0")
+	if !IsNotFound(err) {
+		t.Errorf("expected not-found, got %v", err)
+	}
+}

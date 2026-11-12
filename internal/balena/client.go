@@ -30,8 +30,14 @@ const DEFAULT_PAGE_SIZE = 1000
 // APP_DEVICE_TYPE_EXPAND is the OData $expand clause to resolve the device type slug on applications.
 const APP_DEVICE_TYPE_EXPAND = "$expand=is_for__device_type($select=slug)"
 
-// DEVICE_DEVICE_TYPE_EXPAND is the OData $expand clause to resolve the device type slug on devices.
-const DEVICE_DEVICE_TYPE_EXPAND = "$expand=is_of__device_type($select=slug)"
+// DEVICE_EXPAND is the OData $expand clause to resolve, on devices, the device type slug, the commit of the pinned
+// release and the version of the host OS release. In /v6, should_be_running__release is the pin: /v7 names it
+// is_pinned_on__release.
+const DEVICE_EXPAND = "$expand=is_of__device_type($select=slug),should_be_running__release($select=commit),should_be_operated_by__release($select=raw_version)"
+
+// LAMBDA_FILTER_ESCAPER percent-encodes an OData $filter that navigates relations. The API rejects a filter whose
+// `/`, `(`, `)` or `:` are percent-encoded, as url.QueryEscape does.
+var LAMBDA_FILTER_ESCAPER = strings.NewReplacer("%", "%25", " ", "%20", "+", "%2B", "&", "%26", "#", "%23", "'", "%27")
 
 // APIError represents an error response from the Balena API.
 type APIError struct {
@@ -251,6 +257,14 @@ type Device struct {
 	IPAddress         string          `json:"ip_address"`
 	OSVersion         string          `json:"os_version"`
 	SupervisorVersion string          `json:"supervisor_version"`
+	PinnedRelease     []ReleaseRef    `json:"should_be_running__release"`
+	HostOSRelease     []ReleaseRef    `json:"should_be_operated_by__release"`
+}
+
+// ReleaseRef represents an expanded release navigation property.
+type ReleaseRef struct {
+	Commit     string `json:"commit"`
+	RawVersion string `json:"raw_version"`
 }
 
 // DeviceTypeSlug returns the resolved device type slug from the expanded navigation property.
@@ -261,15 +275,54 @@ func (d *Device) DeviceTypeSlug() string {
 	return ""
 }
 
+// PinnedReleaseCommit returns the commit of the release that the device is pinned to, or nil when the device tracks
+// the release of its fleet.
+func (d *Device) PinnedReleaseCommit() *string {
+	if len(d.PinnedRelease) > 0 {
+		return &d.PinnedRelease[0].Commit
+	}
+	return nil
+}
+
+// HostOSVersion returns the version of the host OS release that should operate the device, or nil when none is set.
+func (d *Device) HostOSVersion() *string {
+	if len(d.HostOSRelease) > 0 {
+		return &d.HostOSRelease[0].RawVersion
+	}
+	return nil
+}
+
 // GetDeviceByUUID retrieves a single device by its UUID.
 func (c *Client) GetDeviceByUUID(ctx context.Context, uuid string) (*Device, error) {
-	filter := "$filter=" + url.QueryEscape("uuid eq '"+escapeOData(uuid)+"'") + "&" + DEVICE_DEVICE_TYPE_EXPAND
+	filter := "$filter=" + url.QueryEscape("uuid eq '"+escapeOData(uuid)+"'") + "&" + DEVICE_EXPAND
 	items, err := doListFiltered[Device](ctx, c, "/v6/device", filter)
 	if err != nil {
 		return nil, err
 	}
 	if len(items) == 0 {
 		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("device with uuid %q not found", uuid)}
+	}
+	return &items[0], nil
+}
+
+// UpdateDevice patches an existing device with the given fields.
+func (c *Client) UpdateDevice(ctx context.Context, id int64, body map[string]interface{}) error {
+	return doPatch(ctx, c, "/v6/device", id, body)
+}
+
+// GetHostOSRelease retrieves the successful release of the given version, among the host OS applications for the
+// given device type.
+func (c *Client) GetHostOSRelease(ctx context.Context, deviceTypeSlug, rawVersion string) (*Release, error) {
+	filter := "$filter=" + LAMBDA_FILTER_ESCAPER.Replace(fmt.Sprintf(
+		"raw_version eq '%s' and status eq 'success' and belongs_to__application/any(a:a/is_host eq true and a/is_for__device_type/any(dt:dt/slug eq '%s'))",
+		escapeOData(rawVersion), escapeOData(deviceTypeSlug),
+	))
+	items, err := doListFiltered[Release](ctx, c, "/v6/release", filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("host OS release %q not found for device type %q", rawVersion, deviceTypeSlug)}
 	}
 	return &items[0], nil
 }
