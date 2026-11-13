@@ -174,7 +174,7 @@ func (r *DeviceResource) apply(ctx context.Context, plan *DeviceResourceModel, d
 	case commit == nil && currentCommit != nil:
 		body["should_be_running__release"] = nil
 	case commit != nil && (currentCommit == nil || *commit != *currentCommit):
-		release, err := r.client.GetReleaseByCommit(ctx, device.BelongsToApp.ID, *commit)
+		release, err := r.client.GetSuccessfulReleaseByCommit(ctx, device.BelongsToApp.ID, *commit)
 		if err != nil {
 			diags.AddAttributeError(path.Root("pinned_release"), "Error finding the release to pin", err.Error())
 			return

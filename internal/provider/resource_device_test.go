@@ -106,7 +106,7 @@ func (f *fakeDeviceAPI) patchDevice(w http.ResponseWriter, r *http.Request) {
 func (f *fakeDeviceAPI) writeRelease(w http.ResponseWriter, filter string) {
 	releases := []map[string]int64{}
 	for id, commit := range f.releaseCommits {
-		if strings.Contains(filter, "commit eq '"+commit+"'") {
+		if strings.Contains(filter, "belongs_to__application eq 3 and commit eq '"+commit+"' and status eq 'success'") {
 			releases = append(releases, map[string]int64{"id": id})
 		}
 	}

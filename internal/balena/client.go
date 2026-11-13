@@ -923,7 +923,17 @@ func (c *Client) GetRelease(ctx context.Context, id int64) (*Release, error) {
 
 // GetReleaseByCommit retrieves a release by application ID and commit hash.
 func (c *Client) GetReleaseByCommit(ctx context.Context, appID int64, commit string) (*Release, error) {
-	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("belongs_to__application eq %d and commit eq '%s'", appID, escapeOData(commit)))
+	return c.getReleaseByCommit(ctx, appID, commit, "")
+}
+
+// GetSuccessfulReleaseByCommit retrieves the successful release with the given commit in the given application. A
+// failed release can share its commit with a successful one, and only a successful release can be pinned.
+func (c *Client) GetSuccessfulReleaseByCommit(ctx context.Context, appID int64, commit string) (*Release, error) {
+	return c.getReleaseByCommit(ctx, appID, commit, " and status eq 'success'")
+}
+
+func (c *Client) getReleaseByCommit(ctx context.Context, appID int64, commit, extraFilter string) (*Release, error) {
+	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("belongs_to__application eq %d and commit eq '%s'", appID, escapeOData(commit))+extraFilter)
 	items, err := doListFiltered[Release](ctx, c, "/v6/release", filter)
 	if err != nil {
 		return nil, err
