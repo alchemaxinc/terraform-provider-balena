@@ -1179,6 +1179,22 @@ func TestGetReleaseByCommit_NotFound(t *testing.T) {
 	}
 }
 
+func TestGetSuccessfulReleaseByCommit_FiltersOnStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		want := "belongs_to__application eq 42 and commit eq 'def456' and status eq 'success'"
+		if got := r.URL.Query().Get("$filter"); got != want {
+			t.Errorf("$filter = %q, want %q", got, want)
+		}
+		_, _ = w.Write(pineWrap(Release{ID: 301}))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if _, err := c.GetSuccessfulReleaseByCommit(context.Background(), 42, "def456"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // Organization (data source)
 
 func TestGetOrganization_Success(t *testing.T) {

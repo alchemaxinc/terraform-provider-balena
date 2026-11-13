@@ -462,6 +462,85 @@ func testAccCheckDeviceProfileOverrideDestroy(s *terraform.State) error {
 	return nil
 }
 
+// TestAccDevice_basic exercises balena_device against the live API: rename, pin, unpin and import. An API token
+// cannot create a device, so the test needs BALENA_TEST_DEVICE_UUID and BALENA_TEST_RELEASE_COMMIT, a successful
+// release of the fleet of that device, and skips when they are unset. Use the release that the fleet already runs, so
+// that the pin does not change what the device runs. The test does not set os_version, so the device does not reboot.
+func TestAccDevice_basic(t *testing.T) {
+	testAccPreCheck(t)
+	uuid := os.Getenv("BALENA_TEST_DEVICE_UUID")
+	commit := os.Getenv("BALENA_TEST_RELEASE_COMMIT")
+	if uuid == "" || commit == "" {
+		t.Skip("BALENA_TEST_DEVICE_UUID and BALENA_TEST_RELEASE_COMMIT must be set")
+	}
+	testAccRestoreDeviceOnCleanup(t, uuid)
+	deviceName := acctest.RandomWithPrefix("tf-acc-device")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDeviceConfig(uuid, deviceName, fmt.Sprintf("pinned_release = %q", commit)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("balena_device.test", "id"),
+					resource.TestCheckResourceAttr("balena_device.test", "device_name", deviceName),
+					resource.TestCheckResourceAttr("balena_device.test", "pinned_release", commit),
+				),
+			},
+			{
+				Config: testAccDeviceConfig(uuid, deviceName, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_device.test", "device_name", deviceName),
+					resource.TestCheckNoResourceAttr("balena_device.test", "pinned_release"),
+				),
+			},
+			{
+				ResourceName:      "balena_device.test",
+				ImportState:       true,
+				ImportStateId:     uuid,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccDeviceConfig(uuid, deviceName, extra string) string {
+	return fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_device" "test" {
+  uuid        = %q
+  device_name = %q
+  %s
+}
+`, uuid, deviceName, extra)
+}
+
+// testAccRestoreDeviceOnCleanup restores the name and the pin of the device when the test ends, because destroying
+// balena_device leaves the device untouched.
+func testAccRestoreDeviceOnCleanup(t *testing.T, uuid string) {
+	ctx := context.Background()
+	client := testAccNewClient()
+	original, err := client.GetDeviceByUUID(ctx, uuid)
+	if err != nil {
+		t.Fatalf("error reading device %s: %s", uuid, err)
+	}
+	var pinnedReleaseID interface{}
+	if commit := original.PinnedReleaseCommit(); commit != nil {
+		release, err := client.GetSuccessfulReleaseByCommit(ctx, original.BelongsToApp.ID, *commit)
+		if err != nil {
+			t.Fatalf("error reading the pinned release of device %s: %s", uuid, err)
+		}
+		pinnedReleaseID = release.ID
+	}
+	t.Cleanup(func() {
+		body := map[string]interface{}{"device_name": original.DeviceName, "should_be_running__release": pinnedReleaseID}
+		if err := client.UpdateDevice(ctx, original.ID, body); err != nil {
+			t.Errorf("error restoring device %s: %s", uuid, err)
+		}
+	})
+}
+
 // TestAccApplicationProfileCatalog_basic exercises balena_application_profile_catalog
 // against the live API, including updating the optional description. It skips
 // when the resource is not exposed to the token, as is the case for the other
