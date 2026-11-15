@@ -89,7 +89,9 @@ func isEnvName(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if !(c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_') {
+		upper := c >= 'A' && c <= 'Z'
+		digit := c >= '0' && c <= '9'
+		if !upper && !digit && c != '_' {
 			return false
 		}
 	}
