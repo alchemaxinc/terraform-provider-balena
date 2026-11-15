@@ -230,16 +230,9 @@ jobs:
             changes to `schema/balena.sbvr`, so only the pinned version is bumped
             from `${{ steps.current.outputs.tag }}`.
 
-            No provider changes are needed, so this pull request auto-merges once
-            CI passes.
-
-      - name: Enable auto-merge on the VERSION bump PR
-        if: steps.create-version-pr.outputs.pr_number != ''
-        uses: alchemaxinc/composite-toolbox/merge-pr@v1
-        with:
-          token: ${{ steps.app.outputs.token }}
-          pull-request-number: ${{ steps.create-version-pr.outputs.pr_number }}
-          merge-method: squash
+            The SBVR text is unchanged, but the `/v6` API is also shaped by upstream
+            translations, hooks and permissions that this check does not compare.
+            Review before merging.
 
       - name: Update schema files
         if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
