@@ -343,7 +343,7 @@ type appEnvVarCreatePayload struct {
 
 // ListApplicationEnvVars returns all environment variables for an application.
 func (c *Client) ListApplicationEnvVars(ctx context.Context, appID int64) ([]ApplicationEnvVar, error) {
-	filter := fmt.Sprintf("$filter=application eq %d", appID)
+	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("application eq %d", appID))
 	return doListFiltered[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", filter)
 }
 
