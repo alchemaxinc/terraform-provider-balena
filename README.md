@@ -42,7 +42,8 @@ See the [`docs/`](docs/) directory for full schema documentation and the [`examp
 
 - `internal/balena/` — thin HTTP client for the Balena Cloud REST API (`/v6/...`).
 - `internal/provider/` — Terraform Plugin Framework provider, resources, and data sources.
-- `schema/` — reference copy of the upstream Balena Pine.js SBVR schema (`balena.sbvr`), used when authoring new resources to confirm field names and relationships. Not consumed at runtime.
+- `schema/` — the pinned upstream release (`VERSION`), the extraction script and the normalized `/v6` API model (`api/`) that code is generated from. See [`schema/README.md`](schema/README.md).
+- `internal/schemagen/`, `internal/engine/`, `internal/generated/` — the generator, the generic resource engine and the generated descriptors.
 - `docs/` — auto-generated provider documentation (do not edit manually; regenerate with `make docs`).
 - `examples/` — Terraform example snippets for every resource and data source.
 

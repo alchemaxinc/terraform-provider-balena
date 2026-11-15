@@ -29,7 +29,11 @@ make test           # Unit tests
 make testacc        # Acceptance tests (requires BALENA_API_TOKEN)
 make lint           # Run linters
 make docs           # Generate documentation
+make generate       # Regenerate internal/generated from schema/api
+make api-spec       # Re-extract the API model for schema/VERSION (needs Docker)
 ```
+
+Resources and data sources are moving to code generated from the Balena API model. See [`schema/README.md`](schema/README.md) for the pipeline and the files you must not edit by hand.
 
 ## Release Process
 
