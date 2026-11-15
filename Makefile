@@ -53,8 +53,17 @@ vet: ## Run go vet
 	go vet ./...
 
 .PHONY: generate
-generate: ## Run go generate
+generate: ## Regenerate code from the committed API spec
 	go generate ./...
+
+SPEC_WORK ?= .schema-work
+
+.PHONY: api-spec
+api-spec: ## Re-extract the API model for schema/VERSION (needs docker), then regenerate
+	bash schema/extract.sh "$$(tr -d '[:space:]' < schema/VERSION)" $(SPEC_WORK)
+	go run ./cmd/schemagen normalize $(SPEC_WORK)/config.json schema/api/v6.json
+	cp $(SPEC_WORK)/provenance.json schema/api/provenance.json
+	$(MAKE) generate
 
 .PHONY: docs
 docs: ## Generate provider documentation

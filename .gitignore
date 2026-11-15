@@ -30,3 +30,6 @@ coverage.html
 
 # node_modules (for commitlint / prettier in CI)
 node_modules/
+
+# Scratch output of schema/extract.sh
+.schema-work/

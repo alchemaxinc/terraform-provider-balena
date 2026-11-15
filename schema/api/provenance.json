@@ -1,0 +1,11 @@
+{
+  "commit": "41efdad03c50ba5ae0aa5fa571f0e418753c591f",
+  "node": "v26.13.1",
+  "node_image": "node@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1",
+  "npm": "11.20.0",
+  "package_lock_sha256": "2ce1c8b559d4dec80c5a1376803764d52e3ecc050e5433ddc4939661a35bacee",
+  "pinejs": "25.0.4",
+  "raw_config_sha256": "8b4dff6720fd98e723e9fe49fef25827b8c4be43a537ec94a140a036b1cb0d87",
+  "tag": "v52.2.35",
+  "upstream": "https://github.com/balena-io/open-balena-api"
+}

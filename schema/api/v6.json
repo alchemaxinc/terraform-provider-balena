@@ -1,0 +1,3094 @@
+{
+  "format": 1,
+  "api_root": "v6",
+  "resources": [
+    {
+      "name": "actor",
+      "term": "actor",
+      "key": "actor",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        }
+      ]
+    },
+    {
+      "name": "api_key",
+      "term": "api key",
+      "key": "api key",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "description",
+          "term": "description",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "expiry_date",
+          "term": "expiry date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_of__actor",
+          "term": "is of-actor",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "actor"
+        },
+        {
+          "name": "key",
+          "term": "key",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "api_key__has__permission",
+      "term": "api key-has-permission",
+      "key": "api key-has-permission",
+      "fields": [
+        {
+          "name": "api_key",
+          "term": "api key",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "api_key"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "permission",
+          "term": "permission",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "permission"
+        }
+      ]
+    },
+    {
+      "name": "api_key__has__role",
+      "term": "api key-has-role",
+      "key": "api key-has-role",
+      "fields": [
+        {
+          "name": "api_key",
+          "term": "api key",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "api_key"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "role",
+          "term": "role",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "role"
+        }
+      ]
+    },
+    {
+      "name": "application",
+      "term": "application",
+      "key": "application",
+      "fields": [
+        {
+          "name": "actor",
+          "term": "actor",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "app_name",
+          "term": "app name",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        },
+        {
+          "name": "application_type",
+          "term": "application type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application_type"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "depends_on__application",
+          "term": "depends on-application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "read_only": true,
+          "references": "application"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_archived",
+          "term": "is archived",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_for__device_type",
+          "term": "is for-device type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device_type"
+        },
+        {
+          "name": "is_host",
+          "term": "is host",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_of__class",
+          "term": "is of-class",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "enum": [
+            "fleet",
+            "block",
+            "app"
+          ]
+        },
+        {
+          "name": "is_public",
+          "term": "is public",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "organization",
+          "term": "organization",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "organization"
+        },
+        {
+          "name": "should_be_running__release",
+          "term": "should be running-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "release"
+        },
+        {
+          "name": "should_track_latest_release",
+          "term": "should track latest release",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "uuid",
+          "term": "uuid",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "application_config_variable",
+      "term": "application config variable",
+      "key": "application-has-name",
+      "fields": [
+        {
+          "name": "application",
+          "term": "application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "application_environment_variable",
+      "term": "application environment variable",
+      "key": "application-has-env var name",
+      "fields": [
+        {
+          "name": "application",
+          "term": "application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "application_tag",
+      "term": "application tag",
+      "key": "application-has-tag key",
+      "fields": [
+        {
+          "name": "application",
+          "term": "application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "tag_key",
+          "term": "tag key",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "application_type",
+      "term": "application type",
+      "key": "application type",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "description",
+          "term": "description",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_legacy",
+          "term": "is legacy",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "maximum_device_count",
+          "term": "maximum device count",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "needs__os_version_range",
+          "term": "needs-os version range",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "requires_payment",
+          "term": "requires payment",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "supports_gateway_mode",
+          "term": "supports gateway mode",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "supports_multicontainer",
+          "term": "supports multicontainer",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "supports_web_url",
+          "term": "supports web url",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "config",
+      "term": "config",
+      "key": "config",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "description",
+          "term": "description",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "key",
+          "term": "key",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "scope",
+          "term": "scope",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cpu_architecture",
+      "term": "cpu architecture",
+      "key": "cpu architecture",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device",
+      "term": "device",
+      "key": "device",
+      "fields": [
+        {
+          "name": "actor",
+          "term": "actor",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "api_heartbeat_state",
+          "term": "api heartbeat state",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "enum": [
+            "online",
+            "offline",
+            "timeout",
+            "unknown"
+          ]
+        },
+        {
+          "name": "api_port",
+          "term": "api port",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "api_secret",
+          "term": "api secret",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "belongs_to__application",
+          "term": "belongs to-application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "application"
+        },
+        {
+          "name": "cpu_id",
+          "term": "cpu id",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "cpu_temp",
+          "term": "cpu temp",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "cpu_usage",
+          "term": "cpu usage",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device_name",
+          "term": "device name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "download_progress",
+          "term": "download progress",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "ip_address",
+          "term": "ip address",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "is_connected_to_vpn",
+          "term": "is connected to vpn",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_locked_until__date",
+          "term": "is locked until-date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "is_managed_by__device",
+          "term": "is managed by-device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "read_only": true,
+          "references": "device"
+        },
+        {
+          "name": "is_managed_by__service_instance",
+          "term": "is managed by-service instance",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "service_instance"
+        },
+        {
+          "name": "is_of__device_type",
+          "term": "is of-device type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device_type"
+        },
+        {
+          "name": "is_online",
+          "term": "is online",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_running__release",
+          "term": "is running-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "release"
+        },
+        {
+          "name": "is_undervolted",
+          "term": "is undervolted",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_web_accessible",
+          "term": "is web accessible",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true,
+          "read_only": true
+        },
+        {
+          "name": "last_connectivity_event",
+          "term": "last connectivity event",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "last_update_status_event",
+          "term": "last update status event",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "last_vpn_event",
+          "term": "last vpn event",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "local_id",
+          "term": "local id",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "logs_channel",
+          "term": "logs channel",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false,
+          "read_only": true
+        },
+        {
+          "name": "mac_address",
+          "term": "mac address",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "memory_total",
+          "term": "memory total",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "memory_usage",
+          "term": "memory usage",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "note",
+          "term": "note",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "os_variant",
+          "term": "os variant",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "os_version",
+          "term": "os version",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "overall_progress",
+          "term": "overall progress",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false,
+          "read_only": true
+        },
+        {
+          "name": "overall_status",
+          "term": "overall status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "read_only": true
+        },
+        {
+          "name": "provisioning_progress",
+          "term": "provisioning progress",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "provisioning_state",
+          "term": "provisioning state",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "public_address",
+          "term": "public address",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "should_be_operated_by__release",
+          "term": "should be operated by-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "release"
+        },
+        {
+          "name": "should_be_running__release",
+          "term": "should be running-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "release"
+        },
+        {
+          "name": "status",
+          "term": "status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "storage_block_device",
+          "term": "storage block device",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "storage_total",
+          "term": "storage total",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "storage_usage",
+          "term": "storage usage",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "supervisor_version",
+          "term": "supervisor version",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "update_status",
+          "term": "update status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false,
+          "enum": [
+            "rejected",
+            "downloading",
+            "downloaded",
+            "applying changes",
+            "aborted",
+            "done"
+          ]
+        },
+        {
+          "name": "uuid",
+          "term": "uuid",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        },
+        {
+          "name": "vpn_address",
+          "term": "vpn address",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false,
+          "read_only": true
+        }
+      ]
+    },
+    {
+      "name": "device_config_variable",
+      "term": "device config variable",
+      "key": "device-has-name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device",
+          "term": "device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_environment_variable",
+      "term": "device environment variable",
+      "key": "device-has-env var name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device",
+          "term": "device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_family",
+      "term": "device family",
+      "key": "device family",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_manufactured_by__device_manufacturer",
+          "term": "is manufactured by-device manufacturer",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "device_manufacturer"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_manufacturer",
+      "term": "device manufacturer",
+      "key": "device manufacturer",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_service_environment_variable",
+      "term": "device service environment variable",
+      "key": "device-installs-application-has-service name-has-name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "service_install",
+          "term": "service install",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "service_install"
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_tag",
+      "term": "device tag",
+      "key": "device-has-tag key",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device",
+          "term": "device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "tag_key",
+          "term": "tag key",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_type",
+      "term": "device type",
+      "key": "device type",
+      "fields": [
+        {
+          "name": "belongs_to__device_family",
+          "term": "belongs to-device family",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "device_family"
+        },
+        {
+          "name": "contract",
+          "term": "contract",
+          "type": "json",
+          "sql_type": "JSON",
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_of__cpu_architecture",
+          "term": "is of-cpu architecture",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "cpu_architecture"
+        },
+        {
+          "name": "logo",
+          "term": "logo",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "device_type_alias",
+      "term": "device type alias",
+      "key": "device type-is referenced by-alias",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device_type",
+          "term": "device type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device_type"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_referenced_by__alias",
+          "term": "is referenced by-alias",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        }
+      ]
+    },
+    {
+      "name": "gateway_download",
+      "term": "gateway download",
+      "key": "image-is downloaded by-device",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "download_progress",
+          "term": "download progress",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "image",
+          "term": "image",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "read_only": true,
+          "references": "image"
+        },
+        {
+          "name": "is_downloaded_by__device",
+          "term": "is downloaded by-device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "read_only": true,
+          "references": "device"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "status",
+          "term": "status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "image",
+      "term": "image",
+      "key": "image",
+      "fields": [
+        {
+          "name": "build_log",
+          "term": "build log",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "content_hash",
+          "term": "content hash",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "contract",
+          "term": "contract",
+          "type": "json",
+          "sql_type": "JSON",
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "dockerfile",
+          "term": "dockerfile",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "end_timestamp",
+          "term": "end timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "error_message",
+          "term": "error message",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "image_size",
+          "term": "image size",
+          "type": "integer",
+          "sql_type": "Numeric Big Integer",
+          "required": false
+        },
+        {
+          "name": "is_a_build_of__service",
+          "term": "is a build of-service",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "service"
+        },
+        {
+          "name": "is_stored_at__image_location",
+          "term": "is stored at-image location",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "project_type",
+          "term": "project type",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "push_timestamp",
+          "term": "push timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "start_timestamp",
+          "term": "start timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true
+        },
+        {
+          "name": "status",
+          "term": "status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "image__is_part_of__release",
+      "term": "image-is part of-release",
+      "key": "image-is part of-release",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "image",
+          "term": "image",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "image"
+        },
+        {
+          "name": "is_part_of__release",
+          "term": "is part of-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "release"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        }
+      ]
+    },
+    {
+      "name": "image_environment_variable",
+      "term": "image environment variable",
+      "key": "image-is part of-release-has-name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "release_image",
+          "term": "release image",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "image__is_part_of__release"
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "image_install",
+      "term": "image install",
+      "key": "device-installs-image",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device",
+          "term": "device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device"
+        },
+        {
+          "name": "download_progress",
+          "term": "download progress",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "install_date",
+          "term": "install date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true
+        },
+        {
+          "name": "installs__image",
+          "term": "installs-image",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "image"
+        },
+        {
+          "name": "is_provided_by__release",
+          "term": "is provided by-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "release"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "status",
+          "term": "status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "image_label",
+      "term": "image label",
+      "key": "image-is part of-release-has-label name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "label_name",
+          "term": "label name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "release_image",
+          "term": "release image",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "image__is_part_of__release"
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "my_application",
+      "term": "my application",
+      "key": "my application",
+      "fields": [
+        {
+          "name": "actor",
+          "term": "actor",
+          "type": "integer",
+          "sql_type": "ConceptType",
+          "required": true
+        },
+        {
+          "name": "app_name",
+          "term": "app name",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        },
+        {
+          "name": "application_type",
+          "term": "application type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application_type"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "depends_on__application",
+          "term": "depends on-application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "read_only": true,
+          "references": "application"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_archived",
+          "term": "is archived",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_for__device_type",
+          "term": "is for-device type",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device_type"
+        },
+        {
+          "name": "is_host",
+          "term": "is host",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_of__class",
+          "term": "is of-class",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "enum": [
+            "fleet",
+            "block",
+            "app"
+          ]
+        },
+        {
+          "name": "is_public",
+          "term": "is public",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "organization",
+          "term": "organization",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "organization"
+        },
+        {
+          "name": "should_be_running__release",
+          "term": "should be running-release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": false,
+          "references": "release"
+        },
+        {
+          "name": "should_track_latest_release",
+          "term": "should track latest release",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "term": "slug",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "uuid",
+          "term": "uuid",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "term": "organization",
+      "key": "organization",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "handle",
+          "term": "handle",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "organization_membership",
+      "term": "organization membership",
+      "key": "user-is member of-organization",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "is_member_of__organization",
+          "term": "is member of-organization",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "organization"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "user",
+          "term": "user",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "user"
+        }
+      ]
+    },
+    {
+      "name": "permission",
+      "term": "permission",
+      "key": "permission",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "release",
+      "term": "release",
+      "key": "release",
+      "fields": [
+        {
+          "name": "belongs_to__application",
+          "term": "belongs to-application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "build_log",
+          "term": "build log",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "commit",
+          "term": "commit",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "composition",
+          "term": "composition",
+          "type": "json",
+          "sql_type": "JSON",
+          "required": true
+        },
+        {
+          "name": "contract",
+          "term": "contract",
+          "type": "json",
+          "sql_type": "JSON",
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "end_timestamp",
+          "term": "end timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "invalidation_reason",
+          "term": "invalidation reason",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "is_final",
+          "term": "is final",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true,
+          "read_only": true
+        },
+        {
+          "name": "is_finalized_at__date",
+          "term": "is finalized at-date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "is_invalidated",
+          "term": "is invalidated",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "is_passing_tests",
+          "term": "is passing tests",
+          "type": "boolean",
+          "sql_type": "Boolean",
+          "required": true
+        },
+        {
+          "name": "known_issue_list",
+          "term": "known issue list",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "note",
+          "term": "note",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "phase",
+          "term": "phase",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false,
+          "enum": [
+            "next",
+            "current",
+            "sunset",
+            "end-of-life"
+          ]
+        },
+        {
+          "name": "raw_version",
+          "term": "raw version",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "read_only": true
+        },
+        {
+          "name": "release_type",
+          "term": "release type",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "read_only": true,
+          "enum": [
+            "final",
+            "draft"
+          ]
+        },
+        {
+          "name": "release_version",
+          "term": "release version",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "revision",
+          "term": "revision",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": false
+        },
+        {
+          "name": "semver",
+          "term": "semver",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true,
+          "read_only": true
+        },
+        {
+          "name": "semver_build",
+          "term": "semver build",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "semver_major",
+          "term": "semver major",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "semver_minor",
+          "term": "semver minor",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "semver_patch",
+          "term": "semver patch",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "semver_prerelease",
+          "term": "semver prerelease",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "source",
+          "term": "source",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "start_timestamp",
+          "term": "start timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true
+        },
+        {
+          "name": "status",
+          "term": "status",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "update_timestamp",
+          "term": "update timestamp",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "term": "variant",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "version",
+          "term": "version",
+          "type": "json",
+          "sql_type": "JSON",
+          "required": true,
+          "read_only": true
+        }
+      ]
+    },
+    {
+      "name": "release_tag",
+      "term": "release tag",
+      "key": "release-has-tag key",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "release",
+          "term": "release",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "release"
+        },
+        {
+          "name": "tag_key",
+          "term": "tag key",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "role",
+      "term": "role",
+      "key": "role",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "role__has__permission",
+      "term": "role-has-permission",
+      "key": "role-has-permission",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "permission",
+          "term": "permission",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "permission"
+        },
+        {
+          "name": "role",
+          "term": "role",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "role"
+        }
+      ]
+    },
+    {
+      "name": "service",
+      "term": "service",
+      "key": "application-has-service name",
+      "fields": [
+        {
+          "name": "application",
+          "term": "application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "service_name",
+          "term": "service name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "service_environment_variable",
+      "term": "service environment variable",
+      "key": "application-has-service name-has-name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "name",
+          "term": "name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "service",
+          "term": "service",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "service"
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "service_install",
+      "term": "service install",
+      "key": "device-installs-application-has-service name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "device",
+          "term": "device",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "device"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "installs__service",
+          "term": "installs-service",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "service"
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        }
+      ]
+    },
+    {
+      "name": "service_instance",
+      "term": "service instance",
+      "key": "service instance",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "ip_address",
+          "term": "ip address",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "last_heartbeat",
+          "term": "last heartbeat",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "service_type",
+          "term": "service type",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "service_label",
+      "term": "service label",
+      "key": "application-has-service name-has-label name",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "label_name",
+          "term": "label name",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "service",
+          "term": "service",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "service"
+        },
+        {
+          "name": "value",
+          "term": "value",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "term": "user",
+      "key": "user",
+      "fields": [
+        {
+          "name": "actor",
+          "term": "actor",
+          "type": "integer",
+          "sql_type": "Integer",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "email",
+          "term": "email",
+          "type": "string",
+          "sql_type": "Text",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "jwt_secret",
+          "term": "jwt secret",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": false
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "password",
+          "term": "password",
+          "type": "hashed",
+          "sql_type": "Hashed",
+          "required": false
+        },
+        {
+          "name": "username",
+          "term": "username",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "user__has__permission",
+      "term": "user-has-permission",
+      "key": "user-has-permission",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "expiry_date",
+          "term": "expiry date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "permission",
+          "term": "permission",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "permission"
+        },
+        {
+          "name": "user",
+          "term": "user",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "user"
+        }
+      ]
+    },
+    {
+      "name": "user__has__public_key",
+      "term": "user-has-public key",
+      "key": "user-has-public key",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "public_key",
+          "term": "public key",
+          "type": "string",
+          "sql_type": "Text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "term": "title",
+          "type": "string",
+          "sql_type": "Short Text",
+          "required": true
+        },
+        {
+          "name": "user",
+          "term": "user",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "user"
+        }
+      ]
+    },
+    {
+      "name": "user__has__role",
+      "term": "user-has-role",
+      "key": "user-has-role",
+      "fields": [
+        {
+          "name": "created_at",
+          "term": "created at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "expiry_date",
+          "term": "expiry date",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": false
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Serial",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "modified_at",
+          "term": "modified at",
+          "type": "date_time",
+          "sql_type": "Date Time",
+          "required": true,
+          "server_default": true
+        },
+        {
+          "name": "role",
+          "term": "role",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "role"
+        },
+        {
+          "name": "user",
+          "term": "user",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "user"
+        }
+      ]
+    },
+    {
+      "name": "user__has_direct_access_to__application",
+      "term": "user-has direct access to-application",
+      "key": "user-has direct access to-application",
+      "fields": [
+        {
+          "name": "has_direct_access_to__application",
+          "term": "has direct access to-application",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "application"
+        },
+        {
+          "name": "id",
+          "term": "id",
+          "type": "integer",
+          "sql_type": "Big Integer",
+          "required": true
+        },
+        {
+          "name": "user",
+          "term": "user",
+          "type": "foreign_key",
+          "sql_type": "ForeignKey",
+          "required": true,
+          "references": "user"
+        }
+      ]
+    }
+  ]
+}
