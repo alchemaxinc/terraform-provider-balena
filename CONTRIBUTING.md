@@ -29,7 +29,15 @@ make test           # Unit tests
 make testacc        # Acceptance tests (requires BALENA_API_TOKEN)
 make lint           # Run linters
 make docs           # Generate documentation
+make generate       # Regenerate specs, examples and reports from schema/ (offline)
+make check-generate # Fail when generated files are stale or the sources disagree
+make contract       # Check the specs against the live API, read-only (requires BALENA_API_TOKEN)
 ```
+
+Resources, data sources and examples are generated. Do not edit `internal/provider/zz_generated_specs.go`, the
+examples under `examples/resources/balena_*` and `examples/data-sources/balena_*`, or the generated files in `schema/`
+by hand: change `schema/overrides.yaml` (or a hook in `internal/provider/hooks.go`) and run `make generate docs`. See
+[schema/README.md](schema/README.md).
 
 ## Release Process
 

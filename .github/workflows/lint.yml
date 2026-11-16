@@ -184,6 +184,45 @@ jobs:
             exit 1
           fi
 
+  check-schema-generated:
+    runs-on: ubuntu-latest
+    steps:
+      - *checkout-code
+      - *setup-go
+
+      # Offline and deterministic: verifies every vendored upstream file against schema/sources.lock.json,
+      # cross-checks the SBVR and TypeScript models, fails on any unclassified table or invalid override, and fails
+      # when regenerating would change a committed file.
+      - name: Check generated schema files
+        run: make check-generate
+
+  check-surface-compatibility:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code (full)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - *setup-go
+
+      # The Terraform surface change decides the smallest conventional commit type the pull request may use:
+      # breaking changes need a `!`.
+      - name: Compare the Terraform surface with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          BASE_SURFACE="$RUNNER_TEMP/base-surface.lock.json"
+          if git show "origin/${BASE_REF}:schema/surface.lock.json" > "$BASE_SURFACE" 2>/dev/null; then
+            go run ./cmd/balena-schema surface-diff -old "$BASE_SURFACE" -title "$PR_TITLE"
+          else
+            echo "::notice::The base branch has no schema/surface.lock.json yet; every type counts as added."
+            go run ./cmd/balena-schema surface-diff -old "$BASE_SURFACE.missing" -allow-missing-old -title "$PR_TITLE"
+          fi
+
   check-provider-version:
     runs-on: ubuntu-latest
     steps:
@@ -199,7 +238,17 @@ jobs:
   lint-passed:
     runs-on: ubuntu-latest
     if: always()
-    needs: [run-commitlint, run-prettier, go-lint, validate-examples, check-docs, check-provider-version]
+    needs:
+      [
+        run-commitlint,
+        run-prettier,
+        go-lint,
+        validate-examples,
+        check-docs,
+        check-schema-generated,
+        check-surface-compatibility,
+        check-provider-version,
+      ]
     steps:
       - name: Verify all jobs passed or were skipped
         run: |
@@ -209,6 +258,8 @@ jobs:
             "${{ needs.go-lint.result }}"
             "${{ needs.validate-examples.result }}"
             "${{ needs.check-docs.result }}"
+            "${{ needs.check-schema-generated.result }}"
+            "${{ needs.check-surface-compatibility.result }}"
             "${{ needs.check-provider-version.result }}"
           )
           for result in "${results[@]}"; do

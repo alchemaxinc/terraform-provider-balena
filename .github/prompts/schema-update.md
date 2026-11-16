@@ -20,21 +20,21 @@ git commit -m "TYPE_PLACEHOLDER: update balena schema to VERSION_PLACEHOLDER"
 Commit exactly those two files unchanged, as their own first commit, before
 you edit anything else. Then bring the provider in line with that schema:
 
-1. Update the structs in `internal/balena/client.go` to match added, removed
-   or changed Terms and Fact types.
-2. Update the affected resources and data sources in `internal/provider/`.
-3. Add or update Terraform schema attributes, and update the matching example
-   under `examples/` for anything whose schema changed.
-4. Extend the acceptance tests, which run against the live API and are the
-   only way to confirm that field names and constraints inferred from the
-   SBVR are real. Both test files are behind the `integration` build tag and
-   run via `make test-integration`. Add or update:
-   - client-level tests in `internal/balena/client_integration_test.go`,
-     covering every new or changed Pine.js resource and its field names;
-   - resource-level tests in
-     `internal/provider/provider_integration_test.go` for every new or
-     changed resource or data source, wherever the resource can be created
-     with an API token.
+1. Re-pin every upstream input to the new release with
+   `make fetch ARGS="-open-balena-api VERSION_PLACEHOLDER"`. It rewrites
+   `schema/sources.lock.json`, the files under `schema/upstream/` and
+   `schema/balena.sbvr` (to the same content as the first commit).
+2. Run `make generate`. Resources, data sources and examples are generated
+   (see `schema/README.md`). If generation fails, read the error: adjust
+   `schema/overrides.yaml` (every entry needs a reason) or, only for genuinely
+   bespoke behaviour, a hook in `internal/provider/hooks.go`. Do not edit
+   generated files by hand.
+3. Run `make check-generate` and make sure it passes.
+4. Extend the acceptance tests in
+   `internal/provider/provider_integration_test.go` (build tag
+   `integration`, run via `make test-integration`) for every new or changed
+   resource that can be created with an API token. `make contract` checks
+   every generated table and column against the live API.
 5. Regenerate documentation with `make docs`, then format it with
    `npx prettier --write docs/`. The `check-docs` CI job fails if the
    committed docs drift from the generated output.
@@ -45,9 +45,9 @@ commit, because commitlint runs over the whole branch in CI.
 
 If the schema change is purely additive, the existing tests should still
 pass. If fields were removed or constraints changed, update the tests
-accordingly. Never leave a new resource or field without acceptance test
-coverage: `make test-unit` only exercises mocked responses, so it cannot
-catch a misspelled Pine.js field name.
+accordingly. `make test-unit` only exercises mocked responses, so it cannot
+catch a misspelled Pine.js field name; `make contract` and the acceptance
+tests can.
 
 Apart from that first schema commit, restrict your changes to provider source,
 examples, docs and tests: do not otherwise edit `schema/balena.sbvr` or

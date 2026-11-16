@@ -1,6 +1,7 @@
 # Binaries
 terraform-provider-balena
 terraform-provider-balena_*
+/balena-schema
 
 # Build artifacts
 dist/

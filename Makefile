@@ -52,9 +52,25 @@ fmt: format ## Alias for format
 vet: ## Run go vet
 	go vet ./...
 
+.PHONY: fetch
+fetch: ## Re-pin the upstream models (network). ARGS="-latest" or ARGS="-open-balena-api vX -balena-sdk vY"
+	go run ./cmd/balena-schema fetch $(ARGS)
+
 .PHONY: generate
-generate: ## Run go generate
-	go generate ./...
+generate: ## Generate the IR, surface lock, coverage report, Go specs and examples from schema/ (offline)
+	go run ./cmd/balena-schema generate
+
+.PHONY: check-generate
+check-generate: ## Verify the lock, cross-check sources, gap-check tables and fail when generated files are stale
+	go run ./cmd/balena-schema check
+
+.PHONY: surface-diff
+surface-diff: ## Compare the Terraform surface with BASE (a surface lock file); TITLE checks the commit type
+	go run ./cmd/balena-schema surface-diff -old $(BASE) $(if $(TITLE),-title "$(TITLE)")
+
+.PHONY: contract
+contract: ## Check every spec against the live API with GETs only (needs BALENA_API_TOKEN); ROOT picks the API root
+	go run ./cmd/balena-schema contract $(if $(ROOT),-root $(ROOT))
 
 .PHONY: docs
 docs: ## Generate provider documentation

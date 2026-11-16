@@ -41,15 +41,14 @@
   output.
 - After regenerating docs with `make docs`, always format them with `npx prettier --write docs/` before committing.
 
-## Resource examples
+## Generated resources and examples
 
-- Every resource and data source **must** have a corresponding example Terraform snippet under `examples/`.
-- Resource examples go in `examples/resources/<resource_type>/resource.tf` (e.g.
-  `examples/resources/balena_application/resource.tf`).
-- Data source examples go in `examples/data-sources/<data_source_type>/data-source.tf`.
-- When adding a new resource or data source, always create its example file in the same PR.
-- When changing a resource or data source schema (adding/removing/renaming attributes), update its example to reflect the
-  current schema.
+- Resources, data sources and their examples are generated from the pinned balena models by `make generate` (see
+  `schema/README.md`). Do not hand-edit `internal/provider/zz_generated_specs.go`, `examples/resources/balena_*`,
+  `examples/data-sources/balena_*` or the generated files in `schema/`; change `schema/overrides.yaml` or a hook in
+  `internal/provider/hooks.go`, then run `make generate docs`. `make check-generate` fails on stale output.
+- Every override needs a `reason`. Prefer the generator's rules; add an override only when a rule gives an unacceptable
+  result.
 
 ## Logging
 

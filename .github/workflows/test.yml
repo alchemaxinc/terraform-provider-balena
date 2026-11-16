@@ -50,14 +50,31 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-  acceptance-test:
+  contract:
     runs-on: ubuntu-latest
     needs: [unit-test, build]
-    if: >-
+    if: &live-api-gate >-
       github.event_name == 'workflow_call'
       || !startsWith(github.event.pull_request.title, 'chore')
 
-    environment: ${{ github.event_name == 'workflow_call' && 'production' || 'development' }}
+    environment: &live-api-environment ${{ github.event_name == 'workflow_call' && 'production' || 'development' }}
+
+    steps:
+      - *checkout-code
+      - *setup-go
+
+      # Read-only GETs: every generated table and every column a spec or hook uses must exist on the live API root.
+      - name: Check the specs against the live API
+        env:
+          BALENA_API_TOKEN: ${{ secrets.BALENA_API_TOKEN }}
+        run: make contract
+
+  acceptance-test:
+    runs-on: ubuntu-latest
+    needs: [unit-test, build]
+    if: *live-api-gate
+
+    environment: *live-api-environment
 
     steps:
       - *checkout-code
@@ -77,13 +94,14 @@ jobs:
   tests-passed:
     runs-on: ubuntu-latest
     if: always()
-    needs: [unit-test, build, acceptance-test]
+    needs: [unit-test, build, contract, acceptance-test]
     steps:
       - name: Verify all jobs passed or were skipped
         run: |
           results=(
             "${{ needs.unit-test.result }}"
             "${{ needs.build.result }}"
+            "${{ needs.contract.result }}"
             "${{ needs.acceptance-test.result }}"
           )
           for result in "${results[@]}"; do
