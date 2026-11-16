@@ -125,7 +125,7 @@ func TestParseRejectsUnknownLines(t *testing.T) {
 }
 
 func TestParseVendoredSBVR(t *testing.T) {
-	for _, path := range []string{"../../../schema/balena.sbvr", "../../../schema/upstream/open-balena-api/src/translations/v7/v7.sbvr"} {
+	for _, path := range []string{"../../../schema/upstream/open-balena-api/src/balena.sbvr", "../../../schema/upstream/open-balena-api/src/translations/v7/v7.sbvr"} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)

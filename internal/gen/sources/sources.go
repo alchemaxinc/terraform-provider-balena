@@ -142,7 +142,7 @@ func (l *Lock) Validate() error {
 			if !UPSTREAM_PATH_RE.MatchString(f.Path) || !SHA256_RE.MatchString(f.SHA256) {
 				return fmt.Errorf("source %s: invalid file entry %q", s.Name, f.Path)
 			}
-			if !strings.HasPrefix(f.Local, "schema/") || path.Clean(f.Local) != f.Local || strings.Contains(f.Local, "..") {
+			if !strings.HasPrefix(f.Local, UPSTREAM_DIR+"/") || path.Clean(f.Local) != f.Local || strings.Contains(f.Local, "..") {
 				return fmt.Errorf("source %s: invalid local path %q", s.Name, f.Local)
 			}
 			if locals[f.Local] {
@@ -184,6 +184,12 @@ func (l *Lock) Root(name string) (Root, bool) {
 		}
 	}
 	return Root{}, false
+}
+
+// hasRoot reports whether the lock has the named root.
+func (l *Lock) hasRoot(name string) bool {
+	_, ok := l.Root(name)
+	return ok
 }
 
 // Source returns the named source.

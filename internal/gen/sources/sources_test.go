@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -89,12 +90,9 @@ func TestFetchDiscoversRootsAndPinsFiles(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "schema/upstream/open-balena-api/src/translations/v6/v6.sbvr")); !os.IsNotExist(err) {
 		t.Errorf("v6.sbvr should not be vendored")
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "schema/balena.sbvr"))
+	data, err := os.ReadFile(filepath.Join(dir, "schema/upstream/open-balena-api/src/balena.sbvr"))
 	if err != nil || string(data) != "sbvr" {
-		t.Errorf("schema/balena.sbvr = %q, %v", data, err)
-	}
-	if v, _ := os.ReadFile(filepath.Join(dir, "schema/VERSION")); string(v) != "v1.0.0\n" {
-		t.Errorf("schema/VERSION = %q", v)
+		t.Errorf("vendored balena.sbvr = %q, %v", data, err)
 	}
 	// The config vars snapshot is stored canonically.
 	if cv, _ := os.ReadFile(filepath.Join(dir, "schema/upstream/balena-cloud/config-vars.json")); !strings.Contains(string(cv), "\n  \"invalidRegex\": \"/\\\\W/\",\n") {
@@ -164,16 +162,51 @@ func TestValidateRejectsBadLocks(t *testing.T) {
 		t.Fatalf("good lock: %v", err)
 	}
 	for name, mutate := range map[string]func(*Lock){
-		"unknown default root": func(l *Lock) { l.DefaultRoot = "v9" },
-		"bad tag":              func(l *Lock) { l.Sources[0].Tag = "v1; rm -rf /" },
-		"escaping local path":  func(l *Lock) { l.Sources[0].Files[0].Local = "schema/../../etc/passwd" },
-		"shape is constraints": func(l *Lock) { l.Roots[1].Shape = "s:a.sbvr" },
-		"no unversioned root":  func(l *Lock) { l.Roots = l.Roots[1:] },
+		"unknown default root":   func(l *Lock) { l.DefaultRoot = "v9" },
+		"bad tag":                func(l *Lock) { l.Sources[0].Tag = "v1; rm -rf /" },
+		"escaping local path":    func(l *Lock) { l.Sources[0].Files[0].Local = "schema/../../etc/passwd" },
+		"local outside upstream": func(l *Lock) { l.Sources[0].Files[0].Local = "schema/a.ts" },
+		"shape is constraints":   func(l *Lock) { l.Roots[1].Shape = "s:a.sbvr" },
+		"no unversioned root":    func(l *Lock) { l.Roots = l.Roots[1:] },
 	} {
 		l := good()
 		mutate(l)
 		if err := l.Validate(); err == nil {
 			t.Errorf("%s: expected an error", name)
 		}
+	}
+}
+
+// TestFetchReplacesARetiredDefaultRoot covers upstream dropping the default root: the newest root becomes the default,
+// and files of an earlier lock layout are removed.
+func TestFetchReplacesARetiredDefaultRoot(t *testing.T) {
+	srv := fakeUpstream(t)
+	defer srv.Close()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "schema"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lock := fetchInto(t, dir, srv, "v7")
+	// Pretend the previous lock defaulted to a root upstream no longer publishes, and kept a file outside the
+	// vendored directory.
+	lock.DefaultRoot = "v6"
+	lock.Roots = append(lock.Roots, Root{Name: "v6", Shape: lock.Roots[1].Shape, Constraints: lock.Roots[1].Constraints})
+	lock.Sources[1].Files[0].Local = "schema/old-layout.sbvr"
+	if err := os.WriteFile(filepath.Join(dir, "schema/old-layout.sbvr"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, LOCK_PATH), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	again := fetchInto(t, dir, srv, "")
+	if again.DefaultRoot != "v8" {
+		t.Errorf("DefaultRoot = %s, want the newest root v8", again.DefaultRoot)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "schema/old-layout.sbvr")); !os.IsNotExist(err) {
+		t.Errorf("a file of the previous lock layout was left behind")
 	}
 }

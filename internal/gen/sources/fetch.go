@@ -43,7 +43,7 @@ const (
 var (
 	OPEN_BALENA_API_FILES = []File{
 		{Path: "src/balena-model.ts", Role: ROLE_SHAPE},
-		{Path: "src/balena.sbvr", Role: ROLE_CONSTRAINTS, Local: "schema/balena.sbvr"},
+		{Path: "src/balena.sbvr", Role: ROLE_CONSTRAINTS},
 		{Path: "src/lib/auth.ts", Role: ROLE_PERMISSIONS},
 	}
 )
@@ -95,8 +95,10 @@ func Fetch(ctx context.Context, opts FetchOptions) (*Lock, error) {
 	}
 	f := &fetcher{opts: opts, ctx: ctx}
 
-	old, err := ReadLock(opts.RepoDir)
-	if err != nil && !os.IsNotExist(err) {
+	// The previous lock is read without validation: it may predate the current layout, and only its tags, its default
+	// root and its local paths (for cleanup) are used.
+	old, err := readPreviousLock(opts.RepoDir)
+	if err != nil {
 		return nil, err
 	}
 	obaTag, sdkTag := opts.OpenBalenaAPITag, opts.BalenaSDKTag
@@ -207,8 +209,13 @@ func Fetch(ctx context.Context, opts FetchOptions) (*Lock, error) {
 	switch {
 	case opts.DefaultRoot != "":
 		lock.DefaultRoot = opts.DefaultRoot
-	case old != nil:
+	case old != nil && lock.hasRoot(old.DefaultRoot):
 		lock.DefaultRoot = old.DefaultRoot
+	case old != nil:
+		// The default root is no longer published: the newest root replaces it, and the contract gate decides whether
+		// that root is usable.
+		lock.DefaultRoot = "v" + strconv.Itoa(newest)
+		_, _ = fmt.Fprintf(opts.Log, "default root %s is no longer published; defaulting to %s\n", old.DefaultRoot, lock.DefaultRoot)
 	default:
 		lock.DefaultRoot = "v" + strconv.Itoa(newest)
 	}
@@ -219,6 +226,18 @@ func Fetch(ctx context.Context, opts FetchOptions) (*Lock, error) {
 	// Replace the vendored directory atomically enough for a developer tool: remove stale files, then write.
 	if err := os.RemoveAll(filepath.Join(opts.RepoDir, UPSTREAM_DIR)); err != nil {
 		return nil, err
+	}
+	if old != nil {
+		// Earlier lock layouts kept files outside the vendored directory.
+		for _, s := range old.Sources {
+			for _, f := range s.Files {
+				if _, kept := files[f.Local]; !kept && strings.HasPrefix(f.Local, "schema/") && path.Clean(f.Local) == f.Local && !strings.Contains(f.Local, "..") {
+					if err := os.Remove(filepath.Join(opts.RepoDir, filepath.FromSlash(f.Local))); err != nil && !os.IsNotExist(err) {
+						return nil, err
+					}
+				}
+			}
+		}
 	}
 	locals := make([]string, 0, len(files))
 	for local := range files {
@@ -241,11 +260,23 @@ func Fetch(ctx context.Context, opts FetchOptions) (*Lock, error) {
 	if err := os.WriteFile(filepath.Join(opts.RepoDir, LOCK_PATH), data, 0o644); err != nil {
 		return nil, err
 	}
-	// schema/VERSION is read by .github/workflows/check-schema.yml.
-	if err := os.WriteFile(filepath.Join(opts.RepoDir, "schema", "VERSION"), []byte(obaTag+"\n"), 0o644); err != nil {
+	return lock, nil
+}
+
+// readPreviousLock reads the current lock file, if any, without validating it.
+func readPreviousLock(repoDir string) (*Lock, error) {
+	data, err := os.ReadFile(filepath.Join(repoDir, LOCK_PATH))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
-	return lock, nil
+	var lock Lock
+	if err := json.Unmarshal(data, &lock); err != nil {
+		return nil, fmt.Errorf("%s: %w", LOCK_PATH, err)
+	}
+	return &lock, nil
 }
 
 func canonicalJSON(body []byte) ([]byte, error) {
