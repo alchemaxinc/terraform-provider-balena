@@ -1,5 +1,5 @@
-resource "balena_release_tag" "version" {
+resource "balena_release_tag" "example" {
   release_id = 123456
-  tag_key    = "version"
-  value      = "1.0.0"
+  tag_key    = "example-tag-key"
+  value      = "example-value"
 }

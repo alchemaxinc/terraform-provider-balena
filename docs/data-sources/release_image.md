@@ -3,23 +3,18 @@
 page_title: "balena_release_image Data Source - balena"
 subcategory: ""
 description: |-
-  Look up the release_image pivot linking a release to an image. Useful when managing balena_image_env_var.
+  Reads the one release image (the release_image resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_release_image (Data Source)
 
-Look up the release_image pivot linking a release to an image. Useful when managing balena_image_env_var.
+Reads the one release image (the `release_image` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_release_image" "api_build" {
-  release_id = 1234567
-  image_id   = 9876543
-}
-
-output "release_image_id" {
-  value = data.balena_release_image.api_build.id
+data "balena_release_image" "example" {
+  id = 123456
 }
 ```
 
@@ -27,11 +22,12 @@ output "release_image_id" {
 
 ## Schema
 
-### Required
+### Optional
 
-- `image_id` (Number) Numeric identifier of the image.
-- `release_id` (Number) Numeric identifier of the release.
+- `id` (Number) Numeric ID of the release image. Selects the row when configured.
+- `image_id` (Number) ID of the referenced `image` (API field `image`). Selects the row when configured.
+- `release_id` (Number) ID of the referenced `release` (API field `is_part_of__release`). Selects the row when configured.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the release_image.
+- `created_at` (String) API field `created_at` (date time).

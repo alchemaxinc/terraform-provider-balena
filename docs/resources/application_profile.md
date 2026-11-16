@@ -3,20 +3,20 @@
 page_title: "balena_application_profile Resource - balena"
 subcategory: ""
 description: |-
-  Activates a profile of a host OS application on a fleet.
+  Manages an application profile (the application_profile resource of the /resin API). Preview: uses the unversioned /resin API root and may change without notice.
 ---
 
 # balena_application_profile (Resource)
 
-Activates a profile of a host OS application on a fleet.
+Manages an application profile (the `application_profile` resource of the `/resin` API). Preview: uses the unversioned /resin API root and may change without notice.
 
 ## Example Usage
 
 ```terraform
-resource "balena_application_profile" "gpu" {
-  application_id      = 123456
-  profile_name        = "gpu"
-  host_application_id = 654321
+resource "balena_application_profile" "example" {
+  application_id    = 123456
+  on_application_id = 123456
+  profile_name      = "example-profile-name"
 }
 ```
 
@@ -26,10 +26,21 @@ resource "balena_application_profile" "gpu" {
 
 ### Required
 
-- `application_id` (Number) Numeric ID of the application activating the profile. Must be of class "fleet".
-- `host_application_id` (Number) Numeric ID of the host OS application that provides the profile. Must be a host application whose class is not "block".
-- `profile_name` (String) Profile name, between 2 and 100 characters.
+- `application_id` (Number) ID of the referenced `application` (API field `application`). Changing it replaces the resource.
+- `on_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
+- `profile_name` (String) API field `activates__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the application profile.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_application_profile.example 123456
+```

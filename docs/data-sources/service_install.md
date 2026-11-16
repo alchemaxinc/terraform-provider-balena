@@ -3,34 +3,18 @@
 page_title: "balena_service_install Data Source - balena"
 subcategory: ""
 description: |-
-  Look up the service_install pivot linking a device to a service. Useful when managing balena_device_service_env_var.
+  Reads the one service install (the service_install resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_service_install (Data Source)
 
-Look up the service_install pivot linking a device to a service. Useful when managing balena_device_service_env_var.
+Reads the one service install (the `service_install` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_device" "pi" {
-  uuid = "0123456789abcdef0123456789abcdef"
-}
-
-data "balena_service" "api" {
-  application_id = data.balena_device.pi.application_id
-  service_name   = "api"
-}
-
-data "balena_service_install" "pi_api" {
-  device_id  = data.balena_device.pi.id
-  service_id = data.balena_service.api.id
-}
-
-resource "balena_device_service_env_var" "log_level" {
-  service_install_id = data.balena_service_install.pi_api.id
-  name               = "LOG_LEVEL"
-  value              = "debug"
+data "balena_service_install" "example" {
+  id = 123456
 }
 ```
 
@@ -38,11 +22,12 @@ resource "balena_device_service_env_var" "log_level" {
 
 ## Schema
 
-### Required
+### Optional
 
-- `device_id` (Number) Numeric identifier of the device.
-- `service_id` (Number) Numeric identifier of the service (see the balena_service data source).
+- `device_id` (Number) ID of the referenced `device` (API field `device`). Selects the row when configured.
+- `id` (Number) Numeric ID of the service install. Selects the row when configured.
+- `service_id` (Number) ID of the referenced `service` (API field `installs__service`). Selects the row when configured.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the service_install.
+- `created_at` (String) API field `created_at` (date time).

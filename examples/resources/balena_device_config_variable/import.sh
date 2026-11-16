@@ -1,0 +1,1 @@
+terraform import balena_device_config_variable.example 123456

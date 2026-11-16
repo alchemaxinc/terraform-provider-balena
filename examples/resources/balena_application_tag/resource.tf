@@ -1,5 +1,5 @@
-resource "balena_application_tag" "environment" {
+resource "balena_application_tag" "example" {
   application_id = 123456
-  tag_key        = "environment"
-  value          = "production"
+  tag_key        = "example-tag-key"
+  value          = "example-value"
 }

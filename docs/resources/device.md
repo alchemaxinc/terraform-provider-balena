@@ -3,21 +3,20 @@
 page_title: "balena_device Resource - balena"
 subcategory: ""
 description: |-
-  Manages the name, the release and the host OS of an existing Balena device. A device joins Balena when it is provisioned, so creating this resource takes over a device and destroying it leaves the device untouched.
+  Manages a device (the device resource of the /v7 API). A device joins balena when it is provisioned, so creating this resource takes over the existing device with the given uuid, and destroying it leaves the device untouched.
 ---
 
 # balena_device (Resource)
 
-Manages the name, the release and the host OS of an existing Balena device. A device joins Balena when it is provisioned, so creating this resource takes over a device and destroying it leaves the device untouched.
+Manages a device (the `device` resource of the `/v7` API). A device joins balena when it is provisioned, so creating this resource takes over the existing device with the given uuid, and destroying it leaves the device untouched.
 
 ## Example Usage
 
 ```terraform
-resource "balena_device" "gateway" {
-  uuid           = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
-  device_name    = "gateway-1"
-  pinned_release = "f2a97d4338b09ef613a17961f4fafbc2"
-  os_version     = "6.0.10+rev1"
+resource "balena_device" "example" {
+  is_pinned_on_release          = "f2a97d4338b09ef613a17961f4fafbc2"
+  should_be_operated_by_release = "6.0.10+rev1"
+  uuid                          = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
 }
 ```
 
@@ -27,14 +26,24 @@ resource "balena_device" "gateway" {
 
 ### Required
 
-- `uuid` (String) UUID of the device.
+- `uuid` (String) API field `uuid` (text). At most 62 characters. Changing it replaces the resource. Unique. Note: the uuid selects the device to adopt.
 
 ### Optional
 
-- `device_name` (String) Name of the device. When null, the device keeps its current name.
-- `os_version` (String) Version of the host OS release that should operate the device, for example `6.0.10+rev1`. A new version starts a host OS update, and the device reboots at its end. The API refuses a downgrade. When null, the device keeps its current host OS release.
-- `pinned_release` (String) Commit of the release that the device is pinned to. The release must be successful and belong to the fleet of the device. When null, the device tracks the release of its fleet.
+- `device_name` (String) API field `device_name` (short text). The API sets a value when none is configured. Note: an adopted device keeps its name unless one is configured.
+- `is_pinned_on_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.
+- `should_be_operated_by_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the device.
+- `id` (Number) Numeric ID of the device.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_device.example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+```

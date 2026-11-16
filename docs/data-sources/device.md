@@ -3,26 +3,18 @@
 page_title: "balena_device Data Source - balena"
 subcategory: ""
 description: |-
-  Look up a Balena device by UUID.
+  Reads the one device (the device resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_device (Data Source)
 
-Look up a Balena device by UUID.
+Reads the one device (the `device` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_device" "my_device" {
+data "balena_device" "example" {
   uuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
-}
-
-output "device_name" {
-  value = data.balena_device.my_device.device_name
-}
-
-output "device_ip" {
-  value = data.balena_device.my_device.ip_address
 }
 ```
 
@@ -30,18 +22,62 @@ output "device_ip" {
 
 ## Schema
 
-### Required
+### Optional
 
-- `uuid` (String) UUID of the device.
+- `api_heartbeat_state` (String) API field `api_heartbeat_state` (short text). Selects the row when configured.
+- `application_id` (Number) ID of the referenced `application` (API field `belongs_to__application`). Selects the row when configured.
+- `cpu_id` (String) API field `cpu_id` (short text). Selects the row when configured.
+- `cpu_temp` (Number) API field `cpu_temp` (integer). Selects the row when configured.
+- `cpu_usage` (Number) API field `cpu_usage` (integer). Selects the row when configured.
+- `custom_latitude` (String) API field `custom_latitude` (short text). Selects the row when configured.
+- `custom_longitude` (String) API field `custom_longitude` (short text). Selects the row when configured.
+- `device_name` (String) API field `device_name` (short text). The API sets a value when none is configured. Note: an adopted device keeps its name unless one is configured. Selects the row when configured.
+- `download_progress` (Number) API field `download_progress` (integer). Selects the row when configured.
+- `id` (Number) Numeric ID of the device. Selects the row when configured.
+- `ip_address` (String) API field `ip_address` (short text). Selects the row when configured.
+- `is_active` (Boolean) API field `is_active` (boolean). Selects the row when configured.
+- `is_connected_to_vpn` (Boolean) API field `is_connected_to_vpn` (boolean). Selects the row when configured.
+- `is_frozen` (Boolean) API field `is_frozen` (boolean). Selects the row when configured.
+- `is_online` (Boolean) API field `is_online` (boolean). Selects the row when configured.
+- `is_running_release_id` (Number) ID of the referenced `release` (API field `is_running__release`). Selects the row when configured.
+- `is_undervolted` (Boolean) API field `is_undervolted` (boolean). Selects the row when configured.
+- `is_web_accessible` (Boolean) API field `is_web_accessible` (boolean). Selects the row when configured.
+- `latitude` (String) API field `latitude` (short text). Selects the row when configured.
+- `local_id` (String) API field `local_id` (short text). Selects the row when configured.
+- `location` (String) API field `location` (text). Selects the row when configured.
+- `longitude` (String) API field `longitude` (short text). Selects the row when configured.
+- `mac_address` (String) API field `mac_address` (short text). Selects the row when configured.
+- `memory_total` (Number) API field `memory_total` (integer). Selects the row when configured.
+- `memory_usage` (Number) API field `memory_usage` (integer). Selects the row when configured.
+- `note` (String) API field `note` (text). Selects the row when configured.
+- `os_variant` (String) API field `os_variant` (short text). Selects the row when configured.
+- `os_version` (String) API field `os_version` (short text). Selects the row when configured.
+- `overall_progress` (Number) API field `overall_progress` (integer). Selects the row when configured.
+- `overall_status` (String) API field `overall_status` (short text). Selects the row when configured.
+- `provisioning_progress` (Number) API field `provisioning_progress` (integer). Selects the row when configured.
+- `provisioning_state` (String) API field `provisioning_state` (short text). Selects the row when configured.
+- `public_address` (String) API field `public_address` (short text). Selects the row when configured.
+- `service_instance_id` (Number) ID of the referenced `service_instance` (API field `is_managed_by__service_instance`). Selects the row when configured.
+- `should_be_managed_by_release_id` (Number) ID of the referenced `release` (API field `should_be_managed_by__release`). Selects the row when configured.
+- `should_be_running_release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). Selects the row when configured.
+- `status` (String) API field `status` (short text). Selects the row when configured.
+- `storage_block_device` (String) API field `storage_block_device` (short text). Selects the row when configured.
+- `storage_total` (Number) API field `storage_total` (integer). Selects the row when configured.
+- `storage_usage` (Number) API field `storage_usage` (integer). Selects the row when configured.
+- `supervisor_version` (String) API field `supervisor_version` (short text). Selects the row when configured.
+- `update_status` (String) API field `update_status` (short text). Selects the row when configured.
+- `user_id` (Number) ID of the referenced `user` (API field `belongs_to__user`). Selects the row when configured.
+- `uuid` (String) API field `uuid` (text). At most 62 characters. Changing it replaces the resource. Unique. Note: the uuid selects the device to adopt. Selects the row when configured.
 
 ### Read-Only
 
-- `application_id` (Number) Application this device belongs to.
-- `device_name` (String) Name of the device.
-- `device_type` (String) Device type.
-- `id` (Number) Numeric identifier.
-- `ip_address` (String) IP address.
-- `is_online` (Boolean) Whether the device is online.
-- `os_version` (String) OS version.
-- `status` (String) Device status.
-- `supervisor_version` (String) Supervisor version.
+- `changed_api_heartbeat_state_on_date` (String) API field `changed_api_heartbeat_state_on__date` (date time).
+- `created_at` (String) API field `created_at` (date time).
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_of__device_type`, resolved to its ID). Note: device types are known by slug; their ids differ between balena environments.
+- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).
+- `is_locked_until_date` (String) API field `is_locked_until__date` (date time).
+- `is_pinned_on_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.
+- `last_connectivity_event` (String) API field `last_connectivity_event` (date time).
+- `last_update_status_event` (String) API field `last_update_status_event` (date time).
+- `last_vpn_event` (String) API field `last_vpn_event` (date time).
+- `should_be_operated_by_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.

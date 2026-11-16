@@ -1,0 +1,1 @@
+terraform import balena_service_label.example 123456

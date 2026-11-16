@@ -3,20 +3,20 @@
 page_title: "balena_device_tag Resource - balena"
 subcategory: ""
 description: |-
-  Manages a tag on a Balena device.
+  Manages a device tag (the device_tag resource of the /v7 API).
 ---
 
 # balena_device_tag (Resource)
 
-Manages a tag on a Balena device.
+Manages a device tag (the `device_tag` resource of the `/v7` API).
 
 ## Example Usage
 
 ```terraform
-resource "balena_device_tag" "role" {
+resource "balena_device_tag" "example" {
   device_id = 123456
-  tag_key   = "role"
-  value     = "gateway"
+  tag_key   = "example-tag-key"
+  value     = "example-value"
 }
 ```
 
@@ -26,10 +26,20 @@ resource "balena_device_tag" "role" {
 
 ### Required
 
-- `device_id` (Number) Numeric ID of the parent device.
-- `tag_key` (String) Tag key.
-- `value` (String) Tag value.
+- `device_id` (Number) ID of the referenced `device` (API field `device`). Changing it replaces the resource.
+- `tag_key` (String) API field `tag_key` (short text). Between 1 and 100 characters. Changing it replaces the resource.
+- `value` (String) API field `value` (text). At most 60158 characters.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `id` (Number) Numeric ID of the device tag.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_device_tag.example 123456
+```

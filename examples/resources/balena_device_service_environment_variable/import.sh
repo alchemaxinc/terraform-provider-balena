@@ -1,0 +1,1 @@
+terraform import balena_device_service_environment_variable.example 123456

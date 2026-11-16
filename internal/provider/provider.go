@@ -125,38 +125,26 @@ func resolveInt64Setting(v types.Int64, envVar string) int64 {
 	return -1
 }
 
+// Resources registers one generic resource per generated spec that has a resource.
 func (p *BalenaProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewApplicationResource,
-		NewApplicationEnvVarResource,
-		NewApplicationConfigVarResource,
-		NewApplicationProfileResource,
-		NewApplicationProfileCatalogResource,
-		NewApplicationServiceEnvVarResource,
-		NewApplicationTagResource,
-		NewDeviceResource,
-		NewDeviceConfigVarResource,
-		NewDeviceEnvVarResource,
-		NewDeviceProfileOverrideResource,
-		NewDeviceServiceEnvVarResource,
-		NewDeviceTagResource,
-		NewImageEnvVarResource,
-		NewImageProfileResource,
-		NewOrganizationResource,
-		NewReleaseTagResource,
-		NewSSHKeyResource,
-		NewServiceLabelResource,
+	var out []func() resource.Resource
+	for _, spec := range GENERATED_SPECS {
+		if spec.Resource {
+			s := spec
+			out = append(out, func() resource.Resource { return newODataResource(s) })
+		}
 	}
+	return out
 }
 
+// DataSources registers one generic data source per generated spec that has a data source.
 func (p *BalenaProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewApplicationDataSource,
-		NewDeviceDataSource,
-		NewOrganizationDataSource,
-		NewReleaseDataSource,
-		NewReleaseImageDataSource,
-		NewServiceDataSource,
-		NewServiceInstallDataSource,
+	var out []func() datasource.DataSource
+	for _, spec := range GENERATED_SPECS {
+		if spec.DataSource {
+			s := spec
+			out = append(out, func() datasource.DataSource { return newODataDataSource(s) })
+		}
 	}
+	return out
 }

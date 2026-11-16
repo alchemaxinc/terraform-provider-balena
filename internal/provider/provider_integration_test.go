@@ -4,11 +4,14 @@ package provider
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
-	"net/http"
+	mathrand "math/rand"
 	"os"
 	"strconv"
 	"testing"
@@ -22,80 +25,68 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-// testAccOrgID holds the shared organization ID used by all tests.
-// Created in TestMain, never deleted (Balena API doesn't support org deletion).
+// testAccOrgID holds the shared organization ID used by all tests. Created in TestMain unless BALENA_TEST_ORG_ID is
+// set; the API does not let an API token delete it.
 var testAccOrgID string
 
-// testAccProtoV6ProviderFactories is used to instantiate the provider during
-// acceptance testing. The factory function is invoked for every test step so
-// the provider is always freshly configured.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"balena": providerserver.NewProtocol6WithError(New("test")()),
 }
 
-// TestMain sets up a shared organization for all integration tests.
-// If BALENA_TEST_ORG_ID is set, that org is used directly (no creation).
-// Otherwise, a new org is created and best-effort deleted after tests.
+func specOf(table string) *TableSpec {
+	for _, s := range GENERATED_SPECS {
+		if s.Table == table {
+			return s
+		}
+	}
+	panic("no spec for " + table)
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(runIntegrationTests(m))
 }
 
-// runIntegrationTests encapsulates setup + teardown so that deferred cleanup
-// runs even if a test panics. os.Exit is kept out of this function because it
-// bypasses deferred calls.
 func runIntegrationTests(m *testing.M) int {
 	token := os.Getenv("BALENA_API_TOKEN")
 	if token == "" {
 		log.Println("BALENA_API_TOKEN not set, skipping integration tests")
 		return 0
 	}
-
 	if id := os.Getenv("BALENA_TEST_ORG_ID"); id != "" {
 		testAccOrgID = id
 		log.Printf("Using pre-existing test organization: ID=%s", testAccOrgID)
 		return m.Run()
 	}
-
-	client := balena.NewClient("", token, "test")
-	handle := fmt.Sprintf("tf_acc_%d", rand.Int63())
-	name := fmt.Sprintf("TF Acc Test %s", handle)
-
-	var org *balena.Organization
+	client := testAccNewClient()
+	org := specOf("organization")
+	handle := fmt.Sprintf("tf_acc_%d", mathrand.Int63())
+	var created balena.Row
 	var err error
 	for attempt := 1; attempt <= 5; attempt++ {
-		log.Printf("Creating shared test organization (attempt %d/5): %s (%s)", attempt, name, handle)
-		org, err = client.CreateOrganization(context.Background(), name, handle)
-		if err == nil {
+		created, err = client.Create(context.Background(), org.Root, org.Table, balena.Row{"name": "TF Acc Test " + handle, "handle": handle})
+		var apiErr *balena.APIError
+		if err == nil || !errors.As(err, &apiErr) || apiErr.StatusCode != 429 {
 			break
 		}
-		var apiErr *balena.APIError
-		if errors.As(err, &apiErr) && apiErr.StatusCode == 429 {
-			wait := time.Duration(attempt*30) * time.Second
-			log.Printf("Rate limited, waiting %s before retry...", wait)
-			time.Sleep(wait)
-			continue
-		}
-		log.Fatalf("Failed to create shared test organization: %v", err)
+		time.Sleep(time.Duration(attempt*30) * time.Second)
 	}
 	if err != nil {
-		log.Fatalf("Failed to create shared test organization after retries: %v", err)
+		log.Fatalf("Failed to create shared test organization: %v", err)
 	}
-	testAccOrgID = strconv.FormatInt(org.ID, 10)
+	id, err := balena.CreatedID(created)
+	if err != nil {
+		log.Fatal(err)
+	}
+	testAccOrgID = strconv.FormatInt(id, 10)
 	log.Printf("Created shared test organization: ID=%s handle=%s", testAccOrgID, handle)
-
 	defer func() {
-		log.Printf("Attempting to clean up shared test organization %s", testAccOrgID)
-		if delErr := client.DeleteOrganization(context.Background(), org.ID); delErr != nil {
+		if delErr := client.Delete(context.Background(), org.Root, org.Table, id); delErr != nil {
 			log.Printf("Warning: could not delete test organization %s: %v (manual cleanup may be required)", testAccOrgID, delErr)
-		} else {
-			log.Printf("Deleted shared test organization %s", testAccOrgID)
 		}
 	}()
-
 	return m.Run()
 }
 
-// testAccPreCheck validates that required environment variables are set.
 func testAccPreCheck(t *testing.T) {
 	t.Helper()
 	if os.Getenv("BALENA_API_TOKEN") == "" {
@@ -106,75 +97,62 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-// testAccNewClient creates a Balena API client for use in CheckDestroy functions.
 func testAccNewClient() *balena.Client {
-	return balena.NewClient("", os.Getenv("BALENA_API_TOKEN"), "test")
+	return balena.NewClient(os.Getenv("BALENA_API_URL"), os.Getenv("BALENA_API_TOKEN"), "test")
 }
 
-// testAccSkipIfResourceUnavailable skips the test when the live API refuses
-// the Pine.js resource to this token. Pine answers 401 both for a resource the
-// caller's role cannot see and for one that does not exist yet, so a resource
-// that is not exposed to the account cannot be created or verified here.
-func testAccSkipIfResourceUnavailable(t *testing.T, name string, probe func() error) {
-	t.Helper()
-	var apiErr *balena.APIError
-	if errors.As(probe(), &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
-		t.Skipf("%s is not accessible to this token (401 on a plain read, identical to a nonexistent resource)", name)
+// testAccCheckDestroyed verifies that no row of the given Terraform type is left.
+func testAccCheckDestroyed(typeName, table string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		spec := specOf(table)
+		client := testAccNewClient()
+		for _, rs := range s.RootModule().Resources {
+			if rs.Type != typeName {
+				continue
+			}
+			id, _ := strconv.ParseInt(rs.Primary.ID, 10, 64)
+			_, err := client.Get(context.Background(), spec.Root, spec.Table, id, balena.Query{Select: []string{"id"}})
+			if err == nil {
+				return fmt.Errorf("%s %s still exists", typeName, rs.Primary.ID)
+			}
+			if !balena.IsNotFound(err) {
+				return fmt.Errorf("checking %s %s: %w", typeName, rs.Primary.ID, err)
+			}
+		}
+		return nil
 	}
 }
 
-// testAccCheckApplicationDestroy verifies that the application has been deleted.
-func testAccCheckApplicationDestroy(s *terraform.State) error {
-	client := testAccNewClient()
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "balena_application" {
-			continue
-		}
-		id, _ := parseID(rs.Primary.ID)
-		_, err := client.GetApplication(context.Background(), id)
-		if err == nil {
-			return fmt.Errorf("application %s still exists", rs.Primary.ID)
-		}
-		if !balena.IsNotFound(err) {
-			return fmt.Errorf("error checking application %s: %s", rs.Primary.ID, err)
-		}
-	}
-	return nil
-}
-
-// testAccOrgConfig returns the Terraform data source config to reference the
-// shared test organization by ID.
-func testAccOrgConfig() string {
+func testAccApplicationConfig(appName string) string {
 	return fmt.Sprintf(`
-data "balena_organization" "test" {
-  id = %s
+provider "balena" {}
+
+resource "balena_application" "test" {
+  app_name        = %q
+  device_type     = "raspberrypi4-64"
+  organization_id = %s
 }
-`, testAccOrgID)
+`, appName, testAccOrgID)
 }
 
 func TestAccApplication_basic(t *testing.T) {
 	testAccPreCheck(t)
 	appName := acctest.RandomWithPrefix("tf_acc_app")
-
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationDestroy,
+		CheckDestroy:             testAccCheckDestroyed("balena_application", "application"),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-`, appName, testAccOrgID),
+				Config: testAccApplicationConfig(appName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
 					resource.TestCheckResourceAttrSet("balena_application.test", "id"),
 					resource.TestCheckResourceAttrSet("balena_application.test", "slug"),
+					resource.TestCheckResourceAttrSet("balena_application.test", "uuid"),
 					resource.TestCheckResourceAttr("balena_application.test", "device_type", "raspberrypi4-64"),
+					resource.TestCheckResourceAttr("balena_application.test", "class", "fleet"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
+					resource.TestCheckResourceAttr("balena_application.test", "is_public", "false"),
 				),
 			},
 			{
@@ -186,45 +164,19 @@ resource "balena_application" "test" {
 	})
 }
 
+// TestAccApplication_update renames a fleet: the update must PATCH only the changed field (sending is_archived=false
+// to a fleet that is not archived is rejected by the API).
 func TestAccApplication_update(t *testing.T) {
 	testAccPreCheck(t)
 	appName := acctest.RandomWithPrefix("tf_acc_app")
 	updatedName := acctest.RandomWithPrefix("tf_acc_app_upd")
-
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationDestroy,
+		CheckDestroy:             testAccCheckDestroyed("balena_application", "application"),
 		Steps: []resource.TestStep{
+			{Config: testAccApplicationConfig(appName)},
 			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-`, appName, testAccOrgID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_application.test", "app_name", appName),
-					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
-					resource.TestCheckResourceAttr("balena_application.test", "is_public", "false"),
-				),
-			},
-			{
-				// Rename the application. This exercises the Update path,
-				// which must PATCH only changed fields — previously a bug
-				// caused is_archived to be sent on every update, which the
-				// API rejects for non-archived apps.
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-`, updatedName, testAccOrgID),
+				Config: testAccApplicationConfig(updatedName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("balena_application.test", "app_name", updatedName),
 					resource.TestCheckResourceAttr("balena_application.test", "is_archived", "false"),
@@ -234,20 +186,16 @@ resource "balena_application" "test" {
 	})
 }
 
-// TestAccOrganization_basic exercises balena_organization directly through
-// the Terraform CLI, covering create / read / import. The shared test org
-// used by other tests is created via the client, so this test is what
-// actually exercises the resource's Framework lifecycle.
-//
-// CheckDestroy is intentionally omitted: the Balena API does not permit
-// organization deletion with an API token, so the resource's Delete is a
-// best-effort no-op that removes the org from state only. The test org will
-// leak; manual cleanup may be required.
+// TestAccOrganization_basic creates an organization through Terraform. The API does not let an API token delete
+// organizations, so destroying it only removes it from the state and the organization leaks; set
+// BALENA_SKIP_ORGANIZATION_TEST to skip it.
 func TestAccOrganization_basic(t *testing.T) {
 	testAccPreCheck(t)
-	handle := fmt.Sprintf("tf_acc_org_%d", rand.Int63())
-	name := fmt.Sprintf("TF Acc Org %s", handle)
-
+	if os.Getenv("BALENA_SKIP_ORGANIZATION_TEST") != "" {
+		t.Skip("BALENA_SKIP_ORGANIZATION_TEST is set")
+	}
+	handle := fmt.Sprintf("tf_acc_org_%d", mathrand.Int63())
+	name := "TF Acc Org " + handle
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -256,8 +204,8 @@ func TestAccOrganization_basic(t *testing.T) {
 provider "balena" {}
 
 resource "balena_organization" "test" {
-  name   = "%s"
-  handle = "%s"
+  name   = %q
+  handle = %q
 }
 `, name, handle),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -275,98 +223,75 @@ resource "balena_organization" "test" {
 	})
 }
 
-func TestAccApplicationEnvVar_basic(t *testing.T) {
+func TestAccApplicationVariablesAndTags(t *testing.T) {
 	testAccPreCheck(t)
 	appName := acctest.RandomWithPrefix("tf_acc_env")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-
-resource "balena_application_env_var" "test" {
+	config := func(value string) string {
+		return testAccApplicationConfig(appName) + fmt.Sprintf(`
+resource "balena_application_environment_variable" "test" {
   application_id = balena_application.test.id
   name           = "TEST_VAR"
-  value          = "test_value"
+  value          = %q
 }
 
-resource "balena_application_config_var" "test" {
+resource "balena_application_config_variable" "test" {
   application_id = balena_application.test.id
   name           = "RESIN_HOST_CONFIG_gpu_mem"
   value          = "128"
-}
-`, appName, testAccOrgID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_application_env_var.test", "name", "TEST_VAR"),
-					resource.TestCheckResourceAttr("balena_application_env_var.test", "value", "test_value"),
-					resource.TestCheckResourceAttr("balena_application_config_var.test", "name", "RESIN_HOST_CONFIG_gpu_mem"),
-					resource.TestCheckResourceAttr("balena_application_config_var.test", "value", "128"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccApplicationTag_basic(t *testing.T) {
-	testAccPreCheck(t)
-	appName := acctest.RandomWithPrefix("tf_acc_tag")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
 }
 
 resource "balena_application_tag" "test" {
   application_id = balena_application.test.id
   tag_key        = "env"
-  value          = "test"
+  value          = %q
 }
-`, appName, testAccOrgID),
+
+data "balena_application_environment_variable" "test" {
+  application_id = balena_application.test.id
+  name           = balena_application_environment_variable.test.name
+}
+`, value, value)
+	}
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckDestroyed("balena_application", "application"),
+			testAccCheckDestroyed("balena_application_environment_variable", "application_environment_variable"),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: config("first"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_application_tag.test", "tag_key", "env"),
-					resource.TestCheckResourceAttr("balena_application_tag.test", "value", "test"),
+					resource.TestCheckResourceAttr("balena_application_environment_variable.test", "value", "first"),
+					resource.TestCheckResourceAttr("balena_application_config_variable.test", "name", "RESIN_HOST_CONFIG_gpu_mem"),
+					resource.TestCheckResourceAttr("balena_application_tag.test", "value", "first"),
+					resource.TestCheckResourceAttrPair("data.balena_application_environment_variable.test", "id", "balena_application_environment_variable.test", "id"),
 				),
+			},
+			{
+				Config: config("second"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("balena_application_environment_variable.test", "value", "second"),
+					resource.TestCheckResourceAttr("balena_application_tag.test", "value", "second"),
+				),
+			},
+			{
+				ResourceName:      "balena_application_tag.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func TestAccDataSourceApplication(t *testing.T) {
+func TestAccDataSourceApplicationAndOrganization(t *testing.T) {
 	testAccPreCheck(t)
 	appName := acctest.RandomWithPrefix("tf_acc_ds")
-
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-
+		CheckDestroy:             testAccCheckDestroyed("balena_application", "application"),
+		Steps: []resource.TestStep{{
+			Config: testAccApplicationConfig(appName) + fmt.Sprintf(`
 data "balena_application" "by_name" {
   app_name = balena_application.test.app_name
 }
@@ -374,22 +299,88 @@ data "balena_application" "by_name" {
 data "balena_application" "by_id" {
   id = balena_application.test.id
 }
-`, appName, testAccOrgID),
+
+data "balena_organization" "test" {
+  id = %s
+}
+`, testAccOrgID),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttrPair("data.balena_application.by_name", "id", "balena_application.test", "id"),
+				resource.TestCheckResourceAttr("data.balena_application.by_name", "device_type", "raspberrypi4-64"),
+				resource.TestCheckResourceAttrPair("data.balena_application.by_id", "slug", "balena_application.test", "slug"),
+				resource.TestCheckResourceAttr("data.balena_organization.test", "id", testAccOrgID),
+				resource.TestCheckResourceAttrSet("data.balena_organization.test", "handle"),
+			),
+		}},
+	})
+}
+
+// testAccPublicKey returns a fresh OpenSSH ed25519 public key.
+func testAccPublicKey(t *testing.T) string {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := "ssh-ed25519"
+	blob := []byte{0, 0, 0, byte(len(name))}
+	blob = append(blob, name...)
+	blob = append(blob, 0, 0, 0, byte(len(pub)))
+	blob = append(blob, pub...)
+	return name + " " + base64.StdEncoding.EncodeToString(blob)
+}
+
+// testAccUserID returns the user id of the token.
+func testAccUserID(t *testing.T) int64 {
+	data, err := testAccNewClient().Do(context.Background(), "GET", "/actor/v1/whoami", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var who struct {
+		ActorType   string `json:"actorType"`
+		ActorTypeID int64  `json:"actorTypeId"`
+	}
+	if err := json.Unmarshal(data, &who); err != nil || who.ActorType != "user" {
+		t.Skipf("the token is not a user token (%v)", err)
+	}
+	return who.ActorTypeID
+}
+
+// TestAccUserPublicKey_basic registers an SSH key for the token's user.
+func TestAccUserPublicKey_basic(t *testing.T) {
+	testAccPreCheck(t)
+	title := acctest.RandomWithPrefix("tf-acc-key")
+	key := testAccPublicKey(t)
+	user := testAccUserID(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroyed("balena_user_public_key", "user_public_key"),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+provider "balena" {}
+
+resource "balena_user_public_key" "test" {
+  user_id    = %d
+  title      = %q
+  public_key = %q
+}
+`, user, title, key),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.balena_application.by_name", "app_name", appName),
-					resource.TestCheckResourceAttrPair("data.balena_application.by_name", "id", "balena_application.test", "id"),
-					resource.TestCheckResourceAttrPair("data.balena_application.by_id", "app_name", "balena_application.test", "app_name"),
+					resource.TestCheckResourceAttr("balena_user_public_key.test", "title", title),
+					resource.TestCheckResourceAttr("balena_user_public_key.test", "user_id", strconv.FormatInt(user, 10)),
 				),
+			},
+			{
+				ResourceName:      "balena_user_public_key.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-// TestAccDeviceProfileOverride_basic exercises balena_device_profile_override
-// against the live API. The resource needs a provisioned device running a
-// release of a host OS application, and neither can be created with an API
-// token, so the test needs BALENA_TEST_DEVICE_ID and BALENA_TEST_HOST_APP_ID
-// and skips when they are unset.
+// TestAccDeviceProfileOverride_basic needs a provisioned device running a release of a host OS application, which an
+// API token cannot create, so it needs BALENA_TEST_DEVICE_ID, BALENA_TEST_HOST_APP_ID and BALENA_TEST_PROFILE_NAME.
 func TestAccDeviceProfileOverride_basic(t *testing.T) {
 	testAccPreCheck(t)
 	deviceID := os.Getenv("BALENA_TEST_DEVICE_ID")
@@ -398,40 +389,29 @@ func TestAccDeviceProfileOverride_basic(t *testing.T) {
 	if deviceID == "" || hostAppID == "" || profileName == "" {
 		t.Skip("BALENA_TEST_DEVICE_ID, BALENA_TEST_HOST_APP_ID and BALENA_TEST_PROFILE_NAME must be set")
 	}
+	config := func(active string) string {
+		return fmt.Sprintf(`
+provider "balena" {}
 
+resource "balena_device_profile_override" "test" {
+  device_id      = %s
+  profile_name   = %q
+  application_id = %s
+  %s
+}
+`, deviceID, profileName, hostAppID, active)
+	}
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckDeviceProfileOverrideDestroy,
+		CheckDestroy:             testAccCheckDestroyed("balena_device_profile_override", "device_profile_override"),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_device_profile_override" "test" {
-  device_id           = %s
-  profile_name        = "%s"
-  host_application_id = %s
-}
-`, deviceID, profileName, hostAppID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_device_profile_override.test", "device_id", deviceID),
-					resource.TestCheckResourceAttr("balena_device_profile_override.test", "profile_name", profileName),
-					resource.TestCheckResourceAttr("balena_device_profile_override.test", "host_application_id", hostAppID),
-					resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "true"),
-				),
+				Config: config("is_active = true"),
+				Check:  resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "true"),
 			},
 			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_device_profile_override" "test" {
-  device_id           = %s
-  profile_name        = "%s"
-  host_application_id = %s
-  is_active           = false
-}
-`, deviceID, profileName, hostAppID),
-				Check: resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "false"),
+				Config: config("is_active = false"),
+				Check:  resource.TestCheckResourceAttr("balena_device_profile_override.test", "is_active", "false"),
 			},
 			{
 				ResourceName:      "balena_device_profile_override.test",
@@ -442,30 +422,9 @@ resource "balena_device_profile_override" "test" {
 	})
 }
 
-// testAccCheckDeviceProfileOverrideDestroy verifies that the device profile
-// override has been deleted.
-func testAccCheckDeviceProfileOverrideDestroy(s *terraform.State) error {
-	client := testAccNewClient()
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "balena_device_profile_override" {
-			continue
-		}
-		id, _ := parseID(rs.Primary.ID)
-		_, err := client.GetDeviceProfileOverride(context.Background(), id)
-		if err == nil {
-			return fmt.Errorf("device profile override %s still exists", rs.Primary.ID)
-		}
-		if !balena.IsNotFound(err) {
-			return fmt.Errorf("error checking device profile override %s: %s", rs.Primary.ID, err)
-		}
-	}
-	return nil
-}
-
-// TestAccDevice_basic exercises balena_device against the live API: rename, pin, unpin and import. An API token
-// cannot create a device, so the test needs BALENA_TEST_DEVICE_UUID and BALENA_TEST_RELEASE_COMMIT, a successful
-// release of the fleet of that device, and skips when they are unset. Use the release that the fleet already runs, so
-// that the pin does not change what the device runs. The test does not set os_version, so the device does not reboot.
+// TestAccDevice_basic adopts a device, renames, pins and unpins it. An API token cannot create a device, so the test
+// needs BALENA_TEST_DEVICE_UUID and BALENA_TEST_RELEASE_COMMIT (a successful release of the device's fleet, ideally the
+// one it already runs). It does not set should_be_operated_by_release, so the device does not reboot.
 func TestAccDevice_basic(t *testing.T) {
 	testAccPreCheck(t)
 	uuid := os.Getenv("BALENA_TEST_DEVICE_UUID")
@@ -475,24 +434,30 @@ func TestAccDevice_basic(t *testing.T) {
 	}
 	testAccRestoreDeviceOnCleanup(t, uuid)
 	deviceName := acctest.RandomWithPrefix("tf-acc-device")
+	config := func(extra string) string {
+		return fmt.Sprintf(`
+provider "balena" {}
 
+resource "balena_device" "test" {
+  uuid        = %q
+  device_name = %q
+  %s
+}
+`, uuid, deviceName, extra)
+	}
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeviceConfig(uuid, deviceName, fmt.Sprintf("pinned_release = %q", commit)),
+				Config: config(fmt.Sprintf("is_pinned_on_release = %q", commit)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("balena_device.test", "id"),
 					resource.TestCheckResourceAttr("balena_device.test", "device_name", deviceName),
-					resource.TestCheckResourceAttr("balena_device.test", "pinned_release", commit),
+					resource.TestCheckResourceAttr("balena_device.test", "is_pinned_on_release", commit),
 				),
 			},
 			{
-				Config: testAccDeviceConfig(uuid, deviceName, ""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_device.test", "device_name", deviceName),
-					resource.TestCheckNoResourceAttr("balena_device.test", "pinned_release"),
-				),
+				Config: config(""),
+				Check:  resource.TestCheckNoResourceAttr("balena_device.test", "is_pinned_on_release"),
 			},
 			{
 				ResourceName:      "balena_device.test",
@@ -504,124 +469,29 @@ func TestAccDevice_basic(t *testing.T) {
 	})
 }
 
-func testAccDeviceConfig(uuid, deviceName, extra string) string {
-	return fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_device" "test" {
-  uuid        = %q
-  device_name = %q
-  %s
-}
-`, uuid, deviceName, extra)
-}
-
-// testAccRestoreDeviceOnCleanup restores the name and the pin of the device when the test ends, because destroying
-// balena_device leaves the device untouched.
+// testAccRestoreDeviceOnCleanup restores the name and the pin of the device, because destroying balena_device leaves
+// the device untouched.
 func testAccRestoreDeviceOnCleanup(t *testing.T, uuid string) {
 	ctx := context.Background()
 	client := testAccNewClient()
-	original, err := client.GetDeviceByUUID(ctx, uuid)
-	if err != nil {
-		t.Fatalf("error reading device %s: %s", uuid, err)
+	spec := specOf("device")
+	rows, err := client.List(ctx, spec.Root, "device", balena.Query{
+		Select: []string{"id", "device_name", "is_pinned_on__release"},
+		Filter: balena.Eq("uuid", uuid),
+		Top:    1,
+	})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("reading device %s: %v", uuid, err)
 	}
-	var pinnedReleaseID interface{}
-	if commit := original.PinnedReleaseCommit(); commit != nil {
-		release, err := client.GetSuccessfulReleaseByCommit(ctx, original.BelongsToApp.ID, *commit)
-		if err != nil {
-			t.Fatalf("error reading the pinned release of device %s: %s", uuid, err)
-		}
-		pinnedReleaseID = release.ID
+	id, _, _ := balena.ToInt64(rows[0]["id"])
+	var pin any
+	if p, ok, _ := balena.RefID(rows[0]["is_pinned_on__release"]); ok {
+		pin = p
 	}
+	name := rows[0]["device_name"]
 	t.Cleanup(func() {
-		body := map[string]interface{}{"device_name": original.DeviceName, "should_be_running__release": pinnedReleaseID}
-		if err := client.UpdateDevice(ctx, original.ID, body); err != nil {
-			t.Errorf("error restoring device %s: %s", uuid, err)
+		if err := client.Patch(ctx, spec.Root, "device", id, balena.Row{"device_name": name, "is_pinned_on__release": pin}); err != nil {
+			t.Errorf("restoring device %s: %s", uuid, err)
 		}
 	})
-}
-
-// TestAccApplicationProfileCatalog_basic exercises balena_application_profile_catalog
-// against the live API, including updating the optional description. It skips
-// when the resource is not exposed to the token, as is the case for the other
-// profile resources.
-func TestAccApplicationProfileCatalog_basic(t *testing.T) {
-	testAccPreCheck(t)
-	testAccSkipIfResourceUnavailable(t, "application_profile_catalog", func() error {
-		_, err := testAccNewClient().GetApplicationProfileCatalog(context.Background(), 0)
-		return err
-	})
-	appName := acctest.RandomWithPrefix("tf_acc_catalog")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckApplicationProfileCatalogDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-
-resource "balena_application_profile_catalog" "test" {
-  application_id = balena_application.test.id
-  profile_name   = "gpu"
-  description    = "GPU acceleration"
-}
-`, appName, testAccOrgID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "profile_name", "gpu"),
-					resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "description", "GPU acceleration"),
-					resource.TestCheckResourceAttrPair("balena_application_profile_catalog.test", "application_id", "balena_application.test", "id"),
-				),
-			},
-			{
-				Config: fmt.Sprintf(`
-provider "balena" {}
-
-resource "balena_application" "test" {
-  app_name        = "%s"
-  device_type     = "raspberrypi4-64"
-  organization_id = %s
-}
-
-resource "balena_application_profile_catalog" "test" {
-  application_id = balena_application.test.id
-  profile_name   = "gpu"
-  description    = "GPU acceleration, updated"
-}
-`, appName, testAccOrgID),
-				Check: resource.TestCheckResourceAttr("balena_application_profile_catalog.test", "description", "GPU acceleration, updated"),
-			},
-			{
-				ResourceName:      "balena_application_profile_catalog.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-// testAccCheckApplicationProfileCatalogDestroy verifies that the application
-// profile catalog entry has been deleted.
-func testAccCheckApplicationProfileCatalogDestroy(s *terraform.State) error {
-	client := testAccNewClient()
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "balena_application_profile_catalog" {
-			continue
-		}
-		id, _ := parseID(rs.Primary.ID)
-		_, err := client.GetApplicationProfileCatalog(context.Background(), id)
-		if err == nil {
-			return fmt.Errorf("application profile catalog %s still exists", rs.Primary.ID)
-		}
-		if !balena.IsNotFound(err) {
-			return fmt.Errorf("error checking application profile catalog %s: %s", rs.Primary.ID, err)
-		}
-	}
-	return nil
 }

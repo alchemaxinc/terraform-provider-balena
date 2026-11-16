@@ -3,21 +3,20 @@
 page_title: "balena_application Resource - balena"
 subcategory: ""
 description: |-
-  Manages a Balena application (fleet).
+  Manages an application (the application resource of the /v7 API).
 ---
 
 # balena_application (Resource)
 
-Manages a Balena application (fleet).
+Manages an application (the `application` resource of the `/v7` API).
 
 ## Example Usage
 
 ```terraform
-resource "balena_application" "my_fleet" {
-  app_name        = "my-iot-fleet"
+resource "balena_application" "example" {
+  app_name        = "example-app-name"
   device_type     = "raspberrypi4-64"
   organization_id = 123456
-  is_public       = false
 }
 ```
 
@@ -27,16 +26,36 @@ resource "balena_application" "my_fleet" {
 
 ### Required
 
-- `app_name` (String) Name of the application.
-- `device_type` (String) Device type for the application (e.g. raspberrypi4-64).
-- `organization_id` (Number) ID of the organization that owns this application.
+- `app_name` (String) API field `app_name` (text). Between 4 and 100 characters.
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource. Note: device types are known by slug; their ids differ between balena environments.
+- `organization_id` (Number) ID of the referenced `organization` (API field `organization`). Changing it replaces the resource.
 
 ### Optional
 
-- `is_public` (Boolean) Whether the application is publicly visible. Can be toggled. Defaults to the value returned by the API on creation.
+- `application_type_id` (Number) ID of the referenced `application_type` (API field `application_type`). The API sets a value when none is configured. Note: a hook picks the application type.
+- `class` (String) API field `is_of__class` (short text). One of `fleet`, `block`, `app`. The API sets a value when none is configured. Note: a hook defaults the class to fleet.
+- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).
+- `is_archived` (Boolean) API field `is_archived` (boolean). The API sets a value when none is configured.
+- `is_public` (Boolean) API field `is_public` (boolean). The API sets a value when none is configured.
+- `release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured.
+- `repository_url` (String) API field `is_stored_at__repository_url` (text).
+- `should_track_latest_release` (Boolean) API field `should_track_latest_release` (boolean). The API sets a value when none is configured.
+- `slug` (String) API field `slug` (short text). Between 6 and 321 characters. The API sets a value when none is configured. Unique.
+- `uuid` (String) API field `uuid` (text). Exactly 32 characters. The API sets a value when none is configured. Unique.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the application.
-- `is_archived` (Boolean) Whether the application is archived. This attribute is read-only; archive/unarchive an application via the Balena dashboard or API.
-- `slug` (String) Slug of the application (org/name).
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the application.
+- `is_discoverable` (Boolean) API field `is_discoverable` (boolean).
+- `is_host` (Boolean) API field `is_host` (boolean).
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_application.example 123456
+```

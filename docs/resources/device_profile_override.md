@@ -3,21 +3,20 @@
 page_title: "balena_device_profile_override Resource - balena"
 subcategory: ""
 description: |-
-  Overrides the profile of a host OS application on a single device.
+  Manages a device profile override (the device_profile_override resource of the /resin API). Preview: uses the unversioned /resin API root and may change without notice.
 ---
 
 # balena_device_profile_override (Resource)
 
-Overrides the profile of a host OS application on a single device.
+Manages a device profile override (the `device_profile_override` resource of the `/resin` API). Preview: uses the unversioned /resin API root and may change without notice.
 
 ## Example Usage
 
 ```terraform
-resource "balena_device_profile_override" "gpu" {
-  device_id           = 987654
-  profile_name        = "gpu"
-  host_application_id = 654321
-  is_active           = true
+resource "balena_device_profile_override" "example" {
+  application_id = 123456
+  device_id      = 123456
+  profile_name   = "example-profile-name"
 }
 ```
 
@@ -27,14 +26,25 @@ resource "balena_device_profile_override" "gpu" {
 
 ### Required
 
-- `device_id` (Number) Numeric ID of the device overriding the profile. The device must run a release belonging to the host OS application.
-- `host_application_id` (Number) Numeric ID of the host OS application that provides the profile. Must be a host application whose class is not "block".
-- `profile_name` (String) Profile name, between 2 and 100 characters.
+- `application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
+- `device_id` (Number) ID of the referenced `device` (API field `device`). Changing it replaces the resource.
+- `profile_name` (String) API field `overrides__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource.
 
 ### Optional
 
-- `is_active` (Boolean) Whether the override is active. Defaults to true.
+- `is_active` (Boolean) API field `is_active` (boolean). The API sets a value when none is configured.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the device profile override.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_device_profile_override.example 123456
+```

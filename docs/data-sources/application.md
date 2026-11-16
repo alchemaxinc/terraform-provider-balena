@@ -3,22 +3,18 @@
 page_title: "balena_application Data Source - balena"
 subcategory: ""
 description: |-
-  Look up a Balena application by name or ID.
+  Reads the one application (the application resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_application (Data Source)
 
-Look up a Balena application by name or ID.
+Reads the one application (the `application` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_application" "my_app" {
-  app_name = "my-iot-fleet"
-}
-
-output "app_slug" {
-  value = data.balena_application.my_app.slug
+data "balena_application" "example" {
+  slug = "example-slug"
 }
 ```
 
@@ -28,13 +24,23 @@ output "app_slug" {
 
 ### Optional
 
-- `app_name` (String) Name of the application. Provide either app_name or id.
-- `id` (Number) Numeric identifier of the application. Provide either id or app_name.
+- `app_name` (String) API field `app_name` (text). Between 4 and 100 characters. Selects the row when configured.
+- `application_type_id` (Number) ID of the referenced `application_type` (API field `application_type`). The API sets a value when none is configured. Note: a hook picks the application type. Selects the row when configured.
+- `class` (String) API field `is_of__class` (short text). One of `fleet`, `block`, `app`. The API sets a value when none is configured. Note: a hook defaults the class to fleet. Selects the row when configured.
+- `id` (Number) Numeric ID of the application. Selects the row when configured.
+- `is_archived` (Boolean) API field `is_archived` (boolean). The API sets a value when none is configured. Selects the row when configured.
+- `is_discoverable` (Boolean) API field `is_discoverable` (boolean). Selects the row when configured.
+- `is_host` (Boolean) API field `is_host` (boolean). Selects the row when configured.
+- `is_public` (Boolean) API field `is_public` (boolean). The API sets a value when none is configured. Selects the row when configured.
+- `organization_id` (Number) ID of the referenced `organization` (API field `organization`). Changing it replaces the resource. Selects the row when configured.
+- `release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured. Selects the row when configured.
+- `repository_url` (String) API field `is_stored_at__repository_url` (text). Selects the row when configured.
+- `should_track_latest_release` (Boolean) API field `should_track_latest_release` (boolean). The API sets a value when none is configured. Selects the row when configured.
+- `slug` (String) API field `slug` (short text). Between 6 and 321 characters. The API sets a value when none is configured. Unique. Selects the row when configured.
+- `uuid` (String) API field `uuid` (text). Exactly 32 characters. The API sets a value when none is configured. Unique. Selects the row when configured.
 
 ### Read-Only
 
-- `device_type` (String) Device type.
-- `is_archived` (Boolean) Whether the application is archived.
-- `is_public` (Boolean) Whether the application is public.
-- `organization_id` (Number) Organization ID.
-- `slug` (String) Slug of the application.
+- `created_at` (String) API field `created_at` (date time).
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource. Note: device types are known by slug; their ids differ between balena environments.
+- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).

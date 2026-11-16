@@ -1,22 +1,25 @@
 package provider
 
 import (
-	"strconv"
+	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/alchemaxinc/terraform-provider-balena/internal/balena"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 )
 
-// parseID parses a string ID into an int64.
-func parseID(s string) (int64, error) {
-	return strconv.ParseInt(s, 10, 64)
-}
-
-// optionalString converts a framework string into a *string, returning nil for
-// null or unknown values so that optional API fields are omitted or cleared.
-func optionalString(v types.String) *string {
-	if v.IsNull() || v.IsUnknown() {
-		return nil
+// configureClient validates that provider data is a *balena.Client. On mismatch it appends a diagnostic and returns
+// ok=false. role is "Resource" or "Data Source" for the error message.
+func configureClient(providerData interface{}, diags *diag.Diagnostics, role string) (*balena.Client, bool) {
+	if providerData == nil {
+		return nil, false
 	}
-	s := v.ValueString()
-	return &s
+	client, ok := providerData.(*balena.Client)
+	if !ok {
+		diags.AddError(
+			fmt.Sprintf("Unexpected %s Configure Type", role),
+			fmt.Sprintf("Expected *balena.Client, got %T. This is a bug in the provider — please report it.", providerData),
+		)
+		return nil, false
+	}
+	return client, true
 }

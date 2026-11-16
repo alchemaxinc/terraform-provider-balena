@@ -1,0 +1,1 @@
+terraform import balena_application_profile.example 123456

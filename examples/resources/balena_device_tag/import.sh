@@ -1,0 +1,1 @@
+terraform import balena_device_tag.example 123456

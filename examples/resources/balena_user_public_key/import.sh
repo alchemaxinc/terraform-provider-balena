@@ -1,0 +1,1 @@
+terraform import balena_user_public_key.example 123456

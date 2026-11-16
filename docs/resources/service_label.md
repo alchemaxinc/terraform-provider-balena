@@ -3,20 +3,20 @@
 page_title: "balena_service_label Resource - balena"
 subcategory: ""
 description: |-
-  Manages a label on a Balena application service.
+  Manages a service label (the service_label resource of the /v7 API).
 ---
 
 # balena_service_label (Resource)
 
-Manages a label on a Balena application service.
+Manages a service label (the `service_label` resource of the `/v7` API).
 
 ## Example Usage
 
 ```terraform
-resource "balena_service_label" "restart_policy" {
+resource "balena_service_label" "example" {
+  label_name = "example-label-name"
   service_id = 123456
-  label_name = "io.balena.features.supervisor-api"
-  value      = "true"
+  value      = "example-value"
 }
 ```
 
@@ -26,10 +26,21 @@ resource "balena_service_label" "restart_policy" {
 
 ### Required
 
-- `label_name` (String) Label name (e.g. io.balena.features.dbus).
-- `service_id` (Number) Numeric ID of the parent service.
-- `value` (String) Label value.
+- `label_name` (String) API field `label_name` (short text). Changing it replaces the resource.
+- `service_id` (Number) ID of the referenced `service` (API field `service`). Changing it replaces the resource.
+- `value` (String) API field `value` (text). At most 300 characters.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the service label.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_service_label.example 123456
+```

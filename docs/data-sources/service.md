@@ -3,27 +3,18 @@
 page_title: "balena_service Data Source - balena"
 subcategory: ""
 description: |-
-  Look up a Balena service by application ID and service name.
+  Reads the one service (the service resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_service (Data Source)
 
-Look up a Balena service by application ID and service name.
+Reads the one service (the `service` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_application" "my_app" {
-  app_name = "my-iot-fleet"
-}
-
-data "balena_service" "api" {
-  application_id = data.balena_application.my_app.id
-  service_name   = "api"
-}
-
-output "service_id" {
-  value = data.balena_service.api.id
+data "balena_service" "example" {
+  id = 123456
 }
 ```
 
@@ -31,11 +22,12 @@ output "service_id" {
 
 ## Schema
 
-### Required
+### Optional
 
-- `application_id` (Number) ID of the application the service belongs to.
-- `service_name` (String) Name of the service.
+- `application_id` (Number) ID of the referenced `application` (API field `application`). Selects the row when configured.
+- `id` (Number) Numeric ID of the service. Selects the row when configured.
+- `service_name` (String) API field `service_name` (short text). Selects the row when configured.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the service.
+- `created_at` (String) API field `created_at` (date time).

@@ -1,4 +1,4 @@
-resource "balena_image_profile" "gpu" {
-  release_image_id = 789012
-  profile_name     = "gpu"
+resource "balena_image_profile" "example" {
+  profile_name     = "example-profile-name"
+  release_image_id = 123456
 }

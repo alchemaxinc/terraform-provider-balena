@@ -3,27 +3,18 @@
 page_title: "balena_release Data Source - balena"
 subcategory: ""
 description: |-
-  Look up a Balena release by ID or by application ID and commit.
+  Reads the one release (the release resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_release (Data Source)
 
-Look up a Balena release by ID or by application ID and commit.
+Reads the one release (the `release` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_application" "my_app" {
-  app_name = "my-iot-fleet"
-}
-
-data "balena_release" "current" {
-  application_id = data.balena_application.my_app.id
-  commit         = "abc1234def5678"
-}
-
-output "release_status" {
-  value = data.balena_release.current.status
+data "balena_release" "example" {
+  id = 123456
 }
 ```
 
@@ -33,13 +24,38 @@ output "release_status" {
 
 ### Optional
 
-- `application_id` (Number) ID of the application the release belongs to. Required when looking up by commit.
-- `commit` (String) Commit hash of the release. Required when looking up by application_id.
-- `id` (Number) Numeric identifier of the release. Provide either id or (application_id + commit).
+- `application_id` (Number) ID of the referenced `application` (API field `belongs_to__application`). Selects the row when configured.
+- `build_log` (String) API field `build_log` (text). Selects the row when configured.
+- `commit` (String) API field `commit` (short text). Selects the row when configured.
+- `id` (Number) Numeric ID of the release. Selects the row when configured.
+- `invalidation_reason` (String) API field `invalidation_reason` (text). Selects the row when configured.
+- `is_final` (Boolean) API field `is_final` (boolean). Selects the row when configured.
+- `is_invalidated` (Boolean) API field `is_invalidated` (boolean). Selects the row when configured.
+- `is_passing_tests` (Boolean) API field `is_passing_tests` (boolean). Selects the row when configured.
+- `known_issue_list` (String) API field `known_issue_list` (text). Selects the row when configured.
+- `note` (String) API field `note` (text). Selects the row when configured.
+- `phase` (String) API field `phase` (short text). Selects the row when configured.
+- `raw_version` (String) API field `raw_version` (short text). Selects the row when configured.
+- `release_version` (String) API field `release_version` (short text). Deprecated upstream. Selects the row when configured.
+- `revision` (Number) API field `revision` (integer). Selects the row when configured.
+- `semver` (String) API field `semver` (short text). Selects the row when configured.
+- `semver_build` (String) API field `semver_build` (short text). Selects the row when configured.
+- `semver_major` (Number) API field `semver_major` (integer). Selects the row when configured.
+- `semver_minor` (Number) API field `semver_minor` (integer). Selects the row when configured.
+- `semver_patch` (Number) API field `semver_patch` (integer). Selects the row when configured.
+- `semver_prerelease` (String) API field `semver_prerelease` (short text). Selects the row when configured.
+- `source` (String) API field `source` (short text). Selects the row when configured.
+- `status` (String) API field `status` (short text). Selects the row when configured.
+- `user_id` (Number) ID of the referenced `user` (API field `is_created_by__user`). Selects the row when configured.
+- `variant` (String) API field `variant` (short text). Selects the row when configured.
 
 ### Read-Only
 
-- `created_at` (String) Creation timestamp.
-- `release_version` (String) Release version.
-- `semver` (String) Semantic version.
-- `status` (String) Release status.
+- `composition` (String) API field `composition`, as a JSON string.
+- `contract` (String) API field `contract`, as a JSON string.
+- `created_at` (String) API field `created_at` (date time).
+- `end_timestamp` (String) API field `end_timestamp` (date time).
+- `is_finalized_at_date` (String) API field `is_finalized_at__date` (date time).
+- `start_timestamp` (String) API field `start_timestamp` (date time).
+- `update_timestamp` (String) API field `update_timestamp` (date time).
+- `version` (String) API field `version`, as a JSON string.

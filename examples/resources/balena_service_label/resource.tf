@@ -1,5 +1,5 @@
-resource "balena_service_label" "restart_policy" {
+resource "balena_service_label" "example" {
+  label_name = "example-label-name"
   service_id = 123456
-  label_name = "io.balena.features.supervisor-api"
-  value      = "true"
+  value      = "example-value"
 }

@@ -3,20 +3,20 @@
 page_title: "balena_release_tag Resource - balena"
 subcategory: ""
 description: |-
-  Manages a tag on a Balena release.
+  Manages a release tag (the release_tag resource of the /v7 API).
 ---
 
 # balena_release_tag (Resource)
 
-Manages a tag on a Balena release.
+Manages a release tag (the `release_tag` resource of the `/v7` API).
 
 ## Example Usage
 
 ```terraform
-resource "balena_release_tag" "version" {
+resource "balena_release_tag" "example" {
   release_id = 123456
-  tag_key    = "version"
-  value      = "1.0.0"
+  tag_key    = "example-tag-key"
+  value      = "example-value"
 }
 ```
 
@@ -26,10 +26,20 @@ resource "balena_release_tag" "version" {
 
 ### Required
 
-- `release_id` (Number) Numeric ID of the parent release.
-- `tag_key` (String) Tag key.
-- `value` (String) Tag value.
+- `release_id` (Number) ID of the referenced `release` (API field `release`). Changing it replaces the resource.
+- `tag_key` (String) API field `tag_key` (short text). Between 1 and 164 characters. Changing it replaces the resource.
+- `value` (String) API field `value` (text). At most 1000 characters.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `id` (Number) Numeric ID of the release tag.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_release_tag.example 123456
+```

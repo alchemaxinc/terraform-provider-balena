@@ -3,20 +3,20 @@
 page_title: "balena_application_tag Resource - balena"
 subcategory: ""
 description: |-
-  Manages a tag on a Balena application/fleet.
+  Manages an application tag (the application_tag resource of the /v7 API).
 ---
 
 # balena_application_tag (Resource)
 
-Manages a tag on a Balena application/fleet.
+Manages an application tag (the `application_tag` resource of the `/v7` API).
 
 ## Example Usage
 
 ```terraform
-resource "balena_application_tag" "environment" {
+resource "balena_application_tag" "example" {
   application_id = 123456
-  tag_key        = "environment"
-  value          = "production"
+  tag_key        = "example-tag-key"
+  value          = "example-value"
 }
 ```
 
@@ -26,10 +26,20 @@ resource "balena_application_tag" "environment" {
 
 ### Required
 
-- `application_id` (Number) Numeric ID of the parent application/fleet.
-- `tag_key` (String) Tag key.
-- `value` (String) Tag value.
+- `application_id` (Number) ID of the referenced `application` (API field `application`). Changing it replaces the resource.
+- `tag_key` (String) API field `tag_key` (short text). Between 1 and 100 characters. Changing it replaces the resource.
+- `value` (String) API field `value` (text). At most 1000 characters.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `id` (Number) Numeric ID of the application tag.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_application_tag.example 123456
+```

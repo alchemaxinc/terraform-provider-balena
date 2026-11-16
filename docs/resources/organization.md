@@ -3,19 +3,18 @@
 page_title: "balena_organization Resource - balena"
 subcategory: ""
 description: |-
-  Manages a Balena organization.
+  Manages an organization (the organization resource of the /v7 API). the API refuses to delete an organization with an API token, so destroying it only removes it from the state.
 ---
 
 # balena_organization (Resource)
 
-Manages a Balena organization.
+Manages an organization (the `organization` resource of the `/v7` API). the API refuses to delete an organization with an API token, so destroying it only removes it from the state.
 
 ## Example Usage
 
 ```terraform
-resource "balena_organization" "my_org" {
-  name   = "My Organization"
-  handle = "my_organization"
+resource "balena_organization" "example" {
+  name = "example-name"
 }
 ```
 
@@ -25,12 +24,28 @@ resource "balena_organization" "my_org" {
 
 ### Required
 
-- `name` (String) Display name of the organization.
+- `name` (String) API field `name` (short text). Between 1 and 220 characters.
 
 ### Optional
 
-- `handle` (String) URL-safe handle of the organization. Only alphanumeric characters and underscores are allowed. Auto-generated from name if not set.
+- `company_name` (String) API field `company_name` (text).
+- `handle` (String) API field `handle` (short text). Between 1 and 220 characters. The API sets a value when none is configured. Unique.
+- `industry` (String) API field `industry` (short text).
+- `is_enforcing_saml_login` (Boolean) API field `is_enforcing_saml_login` (boolean). The API sets a value when none is configured.
+- `website` (String) API field `website` (text).
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier of the organization.
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the organization.
+- `is_frozen` (Boolean) API field `is_frozen` (boolean).
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_organization.example 123456
+```

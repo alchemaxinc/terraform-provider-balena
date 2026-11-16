@@ -3,19 +3,19 @@
 page_title: "balena_image_profile Resource - balena"
 subcategory: ""
 description: |-
-  Manages a profile assigned to a specific release_image.
+  Manages an image profile (the image_profile resource of the /resin API). Preview: uses the unversioned /resin API root and may change without notice.
 ---
 
 # balena_image_profile (Resource)
 
-Manages a profile assigned to a specific release_image.
+Manages an image profile (the `image_profile` resource of the `/resin` API). Preview: uses the unversioned /resin API root and may change without notice.
 
 ## Example Usage
 
 ```terraform
-resource "balena_image_profile" "gpu" {
-  release_image_id = 789012
-  profile_name     = "gpu"
+resource "balena_image_profile" "example" {
+  profile_name     = "example-profile-name"
+  release_image_id = 123456
 }
 ```
 
@@ -25,9 +25,20 @@ resource "balena_image_profile" "gpu" {
 
 ### Required
 
-- `profile_name` (String) Profile name, between 2 and 100 characters.
-- `release_image_id` (Number) Numeric ID of the parent release_image (release + image pair).
+- `profile_name` (String) API field `profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource.
+- `release_image_id` (Number) ID of the referenced `release_image` (API field `release_image`). Changing it replaces the resource.
 
 ### Read-Only
 
-- `id` (Number) Numeric identifier assigned by the Balena API.
+- `created_at` (String) API field `created_at` (date time).
+- `id` (Number) Numeric ID of the image profile.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import balena_image_profile.example 123456
+```

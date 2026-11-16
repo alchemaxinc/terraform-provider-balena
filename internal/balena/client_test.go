@@ -5,1343 +5,317 @@ package balena
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
-// newTestClient creates a Client wired to the given httptest.Server.
-func newTestClient(t *testing.T, srv *httptest.Server) *Client {
-	t.Helper()
-	return NewClient(srv.URL, "test-token", "0.0.0-test", WithHTTPClient(srv.Client()))
+func newTestClient(srv *httptest.Server, retries int) *Client {
+	return NewClient(srv.URL, "test-token", "0.0.0-test", WithHTTPClient(srv.Client()), WithMaxRetries(retries))
 }
 
-// mustJSON marshals v to indented JSON for golden comparisons.
-func mustJSON(t *testing.T, v interface{}) []byte {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
+func pineWrap(rows ...string) string {
+	return `{"d":[` + strings.Join(rows, ",") + `]}`
 }
 
-// pineWrap wraps items in the standard Pine.js OData response envelope.
-func pineWrap[T any](items ...T) []byte {
-	resp := struct {
-		D []T `json:"d"`
-	}{D: items}
-	b, _ := json.Marshal(resp)
-	return b
-}
-
-func TestNewClient_Defaults(t *testing.T) {
+func TestNewClient(t *testing.T) {
 	c := NewClient("", "tok", "1.2.3")
-
-	if c.baseURL != DEFAULT_BASE_URL {
-		t.Errorf("baseURL = %q, want %q", c.baseURL, DEFAULT_BASE_URL)
+	if c.baseURL != DEFAULT_BASE_URL || c.userAgent != "terraform-provider-balena/1.2.3" || c.maxRetries != DEFAULT_MAX_RETRIES {
+		t.Errorf("defaults: %+v", c)
 	}
-	if c.userAgent != "terraform-provider-balena/1.2.3" {
-		t.Errorf("userAgent = %q", c.userAgent)
-	}
-	if c.apiToken != "tok" {
-		t.Errorf("apiToken = %q", c.apiToken)
-	}
-}
-
-func TestNewClient_CustomBaseURL(t *testing.T) {
-	c := NewClient("https://custom.example.com", "tok", "0.1.0")
-
-	if c.baseURL != "https://custom.example.com" {
+	if c := NewClient("https://custom.example.com/", "tok", "0"); c.baseURL != "https://custom.example.com" {
 		t.Errorf("baseURL = %q", c.baseURL)
 	}
-}
-
-func TestNewClient_WithHTTPClient(t *testing.T) {
 	custom := &http.Client{}
-	c := NewClient("", "tok", "1.0.0", WithHTTPClient(custom))
-
-	if c.httpClient != custom {
-		t.Error("expected custom HTTP client to be used")
+	if c := NewClient("", "tok", "0", WithHTTPClient(custom)); c.httpClient != custom {
+		t.Error("custom HTTP client not used")
 	}
 }
 
-func TestAPIError_Error(t *testing.T) {
-	e := &APIError{StatusCode: 500, Body: "boom"}
-	want := "API returned status 500: boom"
-	if e.Error() != want {
-		t.Errorf("Error() = %q, want %q", e.Error(), want)
-	}
-}
-
-func TestIsNotFound(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-		want bool
+func TestErrorHelpers(t *testing.T) {
+	for _, tc := range []struct {
+		err                         error
+		notFound, conflict, unauthd bool
 	}{
-		{"404 APIError", &APIError{StatusCode: 404, Body: "nope"}, true},
-		{"500 APIError", &APIError{StatusCode: 500, Body: "err"}, false},
-		{"nil error", nil, false},
-		{"generic error", io.EOF, false},
+		{&APIError{StatusCode: 404}, true, false, false},
+		{&APIError{StatusCode: 409}, false, true, false},
+		{&APIError{StatusCode: 401}, false, false, true},
+		{fmt.Errorf("wrapped: %w", &APIError{StatusCode: 404}), true, false, false},
+		{io.EOF, false, false, false},
+		{nil, false, false, false},
+	} {
+		if IsNotFound(tc.err) != tc.notFound || IsConflict(tc.err) != tc.conflict || IsUnauthorized(tc.err) != tc.unauthd {
+			t.Errorf("%v: helpers disagree", tc.err)
+		}
+	}
+	if got := (&APIError{StatusCode: 500, Body: "boom"}).Error(); got != "API returned status 500: boom" {
+		t.Errorf("Error() = %q", got)
+	}
+}
+
+// request records what the fake server received.
+type request struct {
+	Method, Path, RawQuery, Body string
+	Header                       http.Header
+}
+
+// TestClientRequests drives every operation against a fake Pine server and checks the request it sends and how it
+// reads the answer.
+func TestClientRequests(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   int
+		response string
+		call     func(c *Client) (any, error)
+		want     request
+		check    func(t *testing.T, got any, err error)
+	}{
+		{
+			name:     "get by id selects and expands",
+			response: pineWrap(`{"id":42,"app_name":"a","organization":{"__id":7},"is_for__device_type":[{"slug":"rpi"}]}`),
+			call: func(c *Client) (any, error) {
+				return c.Get(context.Background(), "v7", "application", 42, Query{
+					Select: []string{"id", "app_name", "organization"},
+					Expand: []Expand{{Field: "is_for__device_type", Select: []string{"slug"}}},
+				})
+			},
+			want: request{Method: "GET", Path: "/v7/application(42)", RawQuery: "$select=id,app_name,organization&$expand=is_for__device_type($select=slug)"},
+			check: func(t *testing.T, got any, err error) {
+				row := got.(Row)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if id, ok, _ := RefID(row["organization"]); !ok || id != 7 {
+					t.Errorf("organization = %v", row["organization"])
+				}
+				if dt, ok, _ := Expanded(row["is_for__device_type"]); !ok || dt["slug"] != "rpi" {
+					t.Errorf("is_for__device_type = %v", row["is_for__device_type"])
+				}
+			},
+		},
+		{
+			name:     "get by id of a missing row is a 404",
+			response: pineWrap(),
+			call: func(c *Client) (any, error) {
+				return c.Get(context.Background(), "resin", "image_profile", 9, Query{Select: []string{"id"}})
+			},
+			want: request{Method: "GET", Path: "/resin/image_profile(9)", RawQuery: "$select=id"},
+			check: func(t *testing.T, _ any, err error) {
+				if !IsNotFound(err) {
+					t.Errorf("err = %v, want not found", err)
+				}
+			},
+		},
+		{
+			name:     "list with a filter escapes quotes and keeps navigation",
+			response: pineWrap(`{"id":1}`),
+			call: func(c *Client) (any, error) {
+				return c.List(context.Background(), "v7", "release", Query{
+					Select: []string{"id"},
+					Filter: And(Eq("commit", "it's"), "belongs_to__application/any(a:a/is_host eq true)", Eq("raw_version", "6.0.10+rev1")),
+					Top:    2,
+				})
+			},
+			want: request{Method: "GET", Path: "/v7/release",
+				RawQuery: "$select=id&$filter=commit%20eq%20%27it%27%27s%27%20and%20belongs_to__application/any(a:a/is_host%20eq%20true)%20and%20raw_version%20eq%20%276.0.10%2Brev1%27&$top=2"},
+			check: func(t *testing.T, got any, err error) {
+				if err != nil || len(got.([]Row)) != 1 {
+					t.Errorf("rows = %v, err = %v", got, err)
+				}
+			},
+		},
+		{
+			name:     "create posts the body and reads the created row",
+			status:   201,
+			response: `{"id":5,"application":{"__id":3},"name":"A"}`,
+			call: func(c *Client) (any, error) {
+				return c.Create(context.Background(), "v7", "application_environment_variable", Row{"application": int64(3), "name": "A", "value": "b"})
+			},
+			want: request{Method: "POST", Path: "/v7/application_environment_variable", Body: `{"application":3,"name":"A","value":"b"}`},
+			check: func(t *testing.T, got any, err error) {
+				if id, err2 := CreatedID(got.(Row)); err != nil || err2 != nil || id != 5 {
+					t.Errorf("id = %d, %v, %v", id, err, err2)
+				}
+			},
+		},
+		{
+			name:   "patch sends only the given fields, null included",
+			status: 200,
+			call: func(c *Client) (any, error) {
+				return nil, c.Patch(context.Background(), "v7", "device", 7, Row{"is_pinned_on__release": nil})
+			},
+			want: request{Method: "PATCH", Path: "/v7/device(7)", Body: `{"is_pinned_on__release":null}`},
+		},
+		{
+			name:   "delete",
+			status: 200,
+			call: func(c *Client) (any, error) {
+				return nil, c.Delete(context.Background(), "v7", "device_tag", 3)
+			},
+			want: request{Method: "DELETE", Path: "/v7/device_tag(3)"},
+		},
+		{
+			name:     "401 is an error, never not found",
+			status:   401,
+			response: "Unauthorized",
+			call: func(c *Client) (any, error) {
+				return c.Get(context.Background(), "v7", "nonexistent", 1, Query{})
+			},
+			want: request{Method: "GET", Path: "/v7/nonexistent(1)"},
+			check: func(t *testing.T, _ any, err error) {
+				if !IsUnauthorized(err) || IsNotFound(err) {
+					t.Errorf("err = %v", err)
+				}
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := IsNotFound(tc.err); got != tc.want {
-				t.Errorf("IsNotFound() = %v, want %v", got, tc.want)
+			var got request
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, _ := io.ReadAll(r.Body)
+				got = request{Method: r.Method, Path: r.URL.Path, RawQuery: r.URL.RawQuery, Body: string(body), Header: r.Header}
+				if tc.status != 0 {
+					w.WriteHeader(tc.status)
+				}
+				_, _ = w.Write([]byte(tc.response))
+			}))
+			defer srv.Close()
+			result, err := tc.call(newTestClient(srv, 0))
+			if got.Method != tc.want.Method || got.Path != tc.want.Path || got.RawQuery != tc.want.RawQuery || got.Body != tc.want.Body {
+				t.Errorf("request = %s %s?%s %s\nwant      %s %s?%s %s", got.Method, got.Path, got.RawQuery, got.Body,
+					tc.want.Method, tc.want.Path, tc.want.RawQuery, tc.want.Body)
+			}
+			if got.Header.Get("Authorization") != "Bearer test-token" || got.Header.Get("User-Agent") != "terraform-provider-balena/0.0.0-test" {
+				t.Errorf("headers = %v", got.Header)
+			}
+			if tc.check != nil {
+				tc.check(t, result, err)
+			} else if err != nil {
+				t.Errorf("err = %v", err)
 			}
 		})
 	}
 }
 
-// Headers (User-Agent, Authorization)
-
-func TestHeaders(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("User-Agent"); got != "terraform-provider-balena/0.0.0-test" {
-			t.Errorf("User-Agent = %q", got)
-		}
-		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
-			t.Errorf("Authorization = %q", got)
-		}
-		_, _ = w.Write(pineWrap[Application]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, _ = c.ListApplications(context.Background())
+func TestRetries(t *testing.T) {
+	tests := []struct {
+		name      string
+		statuses  []int
+		retries   int
+		wantCalls int32
+		wantErr   bool
+	}{
+		{"429 with Retry-After", []int{429, 429, 200}, 5, 3, false},
+		{"5xx", []int{502, 503, 200}, 5, 3, false},
+		{"409", []int{409, 200}, 5, 2, false},
+		{"gives up after max retries", []int{503, 503, 503, 503}, 2, 3, true},
+		{"404 is not retried", []int{404, 200}, 5, 1, true},
+		{"401 is not retried", []int{401, 200}, 5, 1, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				n := atomic.AddInt32(&calls, 1)
+				status := tc.statuses[n-1]
+				if status != 200 {
+					w.Header().Set("Retry-After", "0")
+					w.WriteHeader(status)
+					return
+				}
+				_, _ = w.Write([]byte(pineWrap(`{"id":1}`)))
+			}))
+			defer srv.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, err := newTestClient(srv, tc.retries).Get(ctx, "v7", "application", 1, Query{})
+			if (err != nil) != tc.wantErr {
+				t.Errorf("err = %v", err)
+			}
+			if got := atomic.LoadInt32(&calls); got != tc.wantCalls {
+				t.Errorf("calls = %d, want %d", got, tc.wantCalls)
+			}
+		})
+	}
 }
 
-func TestNon2xxReturnsAPIError(t *testing.T) {
+func TestListPages(t *testing.T) {
+	var calls int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = w.Write([]byte("access denied"))
+		atomic.AddInt32(&calls, 1)
+		q := r.URL.RawQuery
+		if !strings.Contains(q, "$orderby=id%20asc") || !strings.Contains(q, fmt.Sprintf("$top=%d", DEFAULT_PAGE_SIZE)) {
+			t.Errorf("query = %s", q)
+		}
+		var rows []string
+		switch {
+		case strings.Contains(q, "$skip=0"):
+			for i := 0; i < DEFAULT_PAGE_SIZE; i++ {
+				rows = append(rows, fmt.Sprintf(`{"id":%d}`, i+1))
+			}
+		case strings.Contains(q, fmt.Sprintf("$skip=%d", DEFAULT_PAGE_SIZE)):
+			rows = []string{`{"id":9001}`, `{"id":9002}`}
+		default:
+			t.Errorf("unexpected query %s", q)
+		}
+		_, _ = w.Write([]byte(pineWrap(rows...)))
 	}))
 	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetApplication(context.Background(), 1)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("expected *APIError, got %T", err)
-	}
-	if apiErr.StatusCode != 403 {
-		t.Errorf("StatusCode = %d", apiErr.StatusCode)
-	}
-	if apiErr.Body != "access denied" {
-		t.Errorf("Body = %q", apiErr.Body)
-	}
-}
-
-func TestGetApplication_Success(t *testing.T) {
-	app := Application{
-		ID: 42, AppName: "my-app", Slug: "org/my-app", IsPublic: false,
-		DeviceType: []DeviceTypeRef{{Slug: "raspberrypi4-64"}},
-	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %s", r.Method)
-		}
-		if !strings.HasSuffix(r.URL.Path, "/v6/application(42)") {
-			t.Errorf("path = %s", r.URL.Path)
-		}
-		if !strings.Contains(r.URL.RawQuery, "expand") {
-			t.Errorf("expected $expand in query, got %s", r.URL.RawQuery)
-		}
-		_, _ = w.Write(pineWrap(app))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplication(context.Background(), 42)
+	rows, err := newTestClient(srv, 0).List(context.Background(), "v7", "application", Query{Select: []string{"id"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.ID != 42 || got.AppName != "my-app" {
-		t.Errorf("unexpected app: %+v", got)
-	}
-	if got.DeviceTypeSlug() != "raspberrypi4-64" {
-		t.Errorf("DeviceTypeSlug() = %q", got.DeviceTypeSlug())
+	if len(rows) != DEFAULT_PAGE_SIZE+2 || atomic.LoadInt32(&calls) != 2 {
+		t.Errorf("rows = %d, calls = %d", len(rows), calls)
 	}
 }
 
-func TestGetApplication_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Pine.js returns 200 with empty d array for missing IDs
-		_, _ = w.Write(pineWrap[Application]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetApplication(context.Background(), 999)
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found error, got %v", err)
-	}
-}
-
-func TestGetApplicationByName_Success(t *testing.T) {
-	app := Application{ID: 10, AppName: "test-app"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, "filter") {
-			t.Errorf("expected OData filter in query, got %s", r.URL.RawQuery)
-		}
-		_, _ = w.Write(pineWrap(app))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationByName(context.Background(), "test-app")
-	if err != nil {
+func TestValueDecoding(t *testing.T) {
+	var row Row
+	dec := json.NewDecoder(strings.NewReader(`{"a":{"__id":12345678901},"b":null,"c":[],"d":"98765432109","e":[{"id":3}]}`))
+	dec.UseNumber()
+	if err := dec.Decode(&row); err != nil {
 		t.Fatal(err)
 	}
-	if got.AppName != "test-app" {
-		t.Errorf("AppName = %q", got.AppName)
+	if id, ok, err := RefID(row["a"]); !ok || err != nil || id != 12345678901 {
+		t.Errorf("a = %d %v %v", id, ok, err)
+	}
+	if _, ok, err := RefID(row["b"]); ok || err != nil {
+		t.Errorf("null reference should be absent")
+	}
+	if _, ok, err := RefID(row["c"]); ok || err != nil {
+		t.Errorf("empty expansion should be absent")
+	}
+	if n, ok, err := ToInt64(row["d"]); !ok || err != nil || n != 98765432109 {
+		t.Errorf("big integer string = %d %v %v", n, ok, err)
+	}
+	if id, ok, _ := RefID(row["e"]); !ok || id != 3 {
+		t.Errorf("expanded reference = %d", id)
+	}
+	if _, _, err := RefID("nope"); err == nil {
+		t.Errorf("expected an error for a malformed reference")
 	}
 }
 
-func TestGetApplicationByName_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap[Application]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetApplicationByName(context.Background(), "no-such-app")
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found, got %v", err)
-	}
-}
-
-func TestGetApplicationByName_EscapesOData(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.RawQuery
-		// The name O'Reilly should be escaped as O''Reilly in the filter
-		if !strings.Contains(query, "O%27%27Reilly") {
-			t.Errorf("expected escaped OData in query, got %s", query)
-		}
-		_, _ = w.Write(pineWrap(Application{ID: 1, AppName: "O'Reilly"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationByName(context.Background(), "O'Reilly")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 1 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestCreateApplication_Basic(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/v6/device_type") {
-			_, _ = w.Write(pineWrap(DeviceType{ID: 676, Slug: "raspberrypi4-64", Name: "Raspberry Pi 4"}))
-			return
-		}
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/v6/application") {
-			_, _ = w.Write(pineWrap(Application{ID: 100, AppName: "new-app"}))
-			return
-		}
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["app_name"] != "new-app" {
-			t.Errorf("app_name = %v", payload["app_name"])
-		}
-		if payload["is_for__device_type"] != float64(676) {
-			t.Errorf("is_for__device_type = %v, want 676", payload["is_for__device_type"])
-		}
-		if _, ok := payload["is_public"]; ok {
-			t.Error("is_public should be omitted when nil")
-		}
-		_, _ = w.Write(mustJSON(t, applicationCreateResponse{ID: 100}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateApplication(context.Background(), "new-app", "raspberrypi4-64", 1, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 100 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestCreateApplication_WithIsPublic(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/v6/device_type") {
-			_, _ = w.Write(pineWrap(DeviceType{ID: 676, Slug: "raspberrypi4-64", Name: "Raspberry Pi 4"}))
-			return
-		}
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/v6/application") {
-			_, _ = w.Write(pineWrap(Application{ID: 101, AppName: "pub-app", IsPublic: true}))
-			return
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		isPublic, ok := payload["is_public"]
-		if !ok {
-			t.Fatal("is_public should be present")
-		}
-		if isPublic != true {
-			t.Errorf("is_public = %v", isPublic)
-		}
-		_, _ = w.Write(mustJSON(t, applicationCreateResponse{ID: 101}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	isPublic := true
-	got, err := c.CreateApplication(context.Background(), "pub-app", "raspberrypi4-64", 1, &isPublic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.IsPublic {
-		t.Error("expected IsPublic to be true")
-	}
-}
-
-func TestDeleteApplication_Success(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			t.Errorf("method = %s", r.Method)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if err := c.DeleteApplication(context.Background(), 42); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestDeleteApplication_404Tolerance(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("not found"))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	err := c.DeleteApplication(context.Background(), 999)
-	if err == nil {
-		t.Fatal("expected error for 404")
-	}
-	if !IsNotFound(err) {
-		t.Errorf("expected IsNotFound=true, got %v", err)
-	}
-}
-
-func TestGetApplicationEnvVar_Success(t *testing.T) {
-	envVar := ApplicationEnvVar{ID: 5, App: ODataRef{ID: 1}, Name: "DB_HOST", Value: "localhost"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(envVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationEnvVar(context.Background(), 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "DB_HOST" || got.Value != "localhost" {
-		t.Errorf("unexpected env var: %+v", got)
-	}
-}
-
-func TestCreateApplicationEnvVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["name"] != "MY_VAR" {
-			t.Errorf("name = %v", payload["name"])
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationEnvVar{ID: 20, Name: "MY_VAR", Value: "val"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateApplicationEnvVar(context.Background(), 1, "MY_VAR", "val")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 20 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestUpdateApplicationEnvVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s", r.Method)
-		}
-		if !strings.HasSuffix(r.URL.Path, "(10)") {
-			t.Errorf("path = %s", r.URL.Path)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["value"] != "new-val" {
-			t.Errorf("value = %v", payload["value"])
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if err := c.UpdateApplicationEnvVar(context.Background(), 10, "new-val"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestGetApplicationConfigVar_Success(t *testing.T) {
-	cfgVar := ApplicationConfigVar{ID: 7, App: ODataRef{ID: 1}, Name: "RESIN_SUPERVISOR_DELTA", Value: "1"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(cfgVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationConfigVar(context.Background(), 7)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "RESIN_SUPERVISOR_DELTA" {
-		t.Errorf("Name = %q", got.Name)
-	}
-}
-
-func TestCreateApplicationConfigVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationConfigVar{ID: 30, Name: "CFG_KEY", Value: "cfgval"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateApplicationConfigVar(context.Background(), 1, "CFG_KEY", "cfgval")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 30 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetDeviceEnvVar_Success(t *testing.T) {
-	envVar := DeviceEnvVar{ID: 8, Device: ODataRef{ID: 55}, Name: "DEVICE_VAR", Value: "dv"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(envVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceEnvVar(context.Background(), 8)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "DEVICE_VAR" {
-		t.Errorf("Name = %q", got.Name)
-	}
-}
-
-func TestCreateDeviceEnvVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["device"] != float64(55) {
-			t.Errorf("device = %v", payload["device"])
-		}
-		_, _ = w.Write(mustJSON(t, DeviceEnvVar{ID: 40, Name: "DEV_VAR", Value: "v1"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateDeviceEnvVar(context.Background(), 55, "DEV_VAR", "v1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 40 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetSSHKey_Success(t *testing.T) {
-	key := SSHKey{ID: 3, Title: "my-key", PublicKey: "ssh-ed25519 AAAA..."}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, "/v6/user__has__public_key(3)") {
-			t.Errorf("path = %s", r.URL.Path)
-		}
-		_, _ = w.Write(pineWrap(key))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetSSHKey(context.Background(), 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Title != "my-key" {
-		t.Errorf("Title = %q", got.Title)
-	}
-}
-
-func TestCreateSSHKey(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["title"] != "deploy-key" {
-			t.Errorf("title = %v", payload["title"])
-		}
-		_, _ = w.Write(mustJSON(t, SSHKey{ID: 50, Title: "deploy-key", PublicKey: "ssh-rsa AAAA..."}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateSSHKey(context.Background(), "deploy-key", "ssh-rsa AAAA...")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 50 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetApplicationTag_Success(t *testing.T) {
-	tag := ApplicationTag{ID: 11, App: ODataRef{ID: 1}, TagKey: "env", Value: "prod"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(tag))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationTag(context.Background(), 11)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.TagKey != "env" || got.Value != "prod" {
-		t.Errorf("unexpected tag: %+v", got)
-	}
-}
-
-func TestCreateApplicationTag(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["tag_key"] != "region" {
-			t.Errorf("tag_key = %v", payload["tag_key"])
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationTag{ID: 60, TagKey: "region", Value: "us-east"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateApplicationTag(context.Background(), 1, "region", "us-east")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 60 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetDeviceTag_Success(t *testing.T) {
-	tag := DeviceTag{ID: 15, Device: ODataRef{ID: 99}, TagKey: "location", Value: "rack-3"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(tag))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceTag(context.Background(), 15)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.TagKey != "location" {
-		t.Errorf("TagKey = %q", got.TagKey)
-	}
-}
-
-func TestCreateDeviceTag(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["device"] != float64(99) {
-			t.Errorf("device = %v", payload["device"])
-		}
-		_, _ = w.Write(mustJSON(t, DeviceTag{ID: 70, TagKey: "floor", Value: "2"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateDeviceTag(context.Background(), 99, "floor", "2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 70 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetServiceEnvVar_Success(t *testing.T) {
-	envVar := ServiceEnvVar{ID: 80, Service: ODataRef{ID: 10}, Name: "SVC_VAR", Value: "sval"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(envVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetServiceEnvVar(context.Background(), 80)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "SVC_VAR" || got.Value != "sval" {
-		t.Errorf("unexpected env var: %+v", got)
-	}
-}
-
-func TestCreateServiceEnvVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["service"] != float64(10) {
-			t.Errorf("service = %v", payload["service"])
-		}
-		if payload["name"] != "SVC_VAR" {
-			t.Errorf("name = %v", payload["name"])
-		}
-		_, _ = w.Write(mustJSON(t, ServiceEnvVar{ID: 81, Name: "SVC_VAR", Value: "v1"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateServiceEnvVar(context.Background(), 10, "SVC_VAR", "v1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 81 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetDeviceConfigVar_Success(t *testing.T) {
-	cfgVar := DeviceConfigVar{ID: 90, Device: ODataRef{ID: 55}, Name: "RESIN_HOST_CONFIG_gpu_mem", Value: "128"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(cfgVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceConfigVar(context.Background(), 90)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "RESIN_HOST_CONFIG_gpu_mem" {
-		t.Errorf("Name = %q", got.Name)
-	}
-}
-
-func TestCreateDeviceConfigVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["device"] != float64(55) {
-			t.Errorf("device = %v", payload["device"])
-		}
-		_, _ = w.Write(mustJSON(t, DeviceConfigVar{ID: 91, Name: "CFG_KEY", Value: "cfgval"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateDeviceConfigVar(context.Background(), 55, "CFG_KEY", "cfgval")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 91 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetReleaseTag_Success(t *testing.T) {
-	tag := ReleaseTag{ID: 100, Release: ODataRef{ID: 42}, TagKey: "version", Value: "stable"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(tag))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetReleaseTag(context.Background(), 100)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.TagKey != "version" || got.Value != "stable" {
-		t.Errorf("unexpected tag: %+v", got)
-	}
-}
-
-func TestCreateReleaseTag(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["release"] != float64(42) {
-			t.Errorf("release = %v", payload["release"])
-		}
-		if payload["tag_key"] != "channel" {
-			t.Errorf("tag_key = %v", payload["tag_key"])
-		}
-		_, _ = w.Write(mustJSON(t, ReleaseTag{ID: 101, TagKey: "channel", Value: "beta"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateReleaseTag(context.Background(), 42, "channel", "beta")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 101 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetImageEnvVar_Success(t *testing.T) {
-	envVar := ImageEnvVar{ID: 110, ReleaseImage: ODataRef{ID: 77}, Name: "IMG_VAR", Value: "ival"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(envVar))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetImageEnvVar(context.Background(), 110)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "IMG_VAR" || got.Value != "ival" {
-		t.Errorf("unexpected env var: %+v", got)
-	}
-}
-
-func TestCreateImageEnvVar(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["release_image"] != float64(77) {
-			t.Errorf("release_image = %v", payload["release_image"])
-		}
-		_, _ = w.Write(mustJSON(t, ImageEnvVar{ID: 111, Name: "IMG_VAR", Value: "v2"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateImageEnvVar(context.Background(), 77, "IMG_VAR", "v2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 111 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetImageProfile_Success(t *testing.T) {
-	profile := ImageProfile{ID: 130, ReleaseImage: ODataRef{ID: 77}, ProfileName: "gpu"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(profile))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetImageProfile(context.Background(), 130)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ProfileName != "gpu" || got.ReleaseImage.ID != 77 {
-		t.Errorf("unexpected image profile: %+v", got)
-	}
-}
-
-func TestCreateImageProfile(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["release_image"] != float64(77) {
-			t.Errorf("release_image = %v", payload["release_image"])
-		}
-		if payload["profile_name"] != "gpu" {
-			t.Errorf("profile_name = %v", payload["profile_name"])
-		}
-		_, _ = w.Write(mustJSON(t, ImageProfile{ID: 131, ProfileName: "gpu"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateImageProfile(context.Background(), 77, "gpu")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 131 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetApplicationProfile_Success(t *testing.T) {
-	profile := ApplicationProfile{ID: 140, App: ODataRef{ID: 1}, ProfileName: "gpu", HostApp: ODataRef{ID: 2}}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(profile))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationProfile(context.Background(), 140)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ProfileName != "gpu" || got.App.ID != 1 || got.HostApp.ID != 2 {
-		t.Errorf("unexpected application profile: %+v", got)
-	}
-}
-
-func TestCreateApplicationProfile(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["application"] != float64(1) {
-			t.Errorf("application = %v", payload["application"])
-		}
-		if payload["activates__profile_name"] != "gpu" {
-			t.Errorf("activates__profile_name = %v", payload["activates__profile_name"])
-		}
-		if payload["on__application"] != float64(2) {
-			t.Errorf("on__application = %v", payload["on__application"])
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationProfile{ID: 141, ProfileName: "gpu"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateApplicationProfile(context.Background(), 1, "gpu", 2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 141 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetApplicationProfileCatalog_Success(t *testing.T) {
-	description := "GPU acceleration"
-	entry := ApplicationProfileCatalog{ID: 160, App: ODataRef{ID: 1}, ProfileName: "gpu", Description: &description}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(entry))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetApplicationProfileCatalog(context.Background(), 160)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ProfileName != "gpu" || got.App.ID != 1 || got.Description == nil || *got.Description != description {
-		t.Errorf("unexpected application profile catalog: %+v", got)
-	}
-}
-
-func TestCreateApplicationProfileCatalog(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["application"] != float64(1) {
-			t.Errorf("application = %v", payload["application"])
-		}
-		if payload["catalogs__profile_name"] != "gpu" {
-			t.Errorf("catalogs__profile_name = %v", payload["catalogs__profile_name"])
-		}
-		if payload["description"] != "GPU acceleration" {
-			t.Errorf("description = %v", payload["description"])
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationProfileCatalog{ID: 161, ProfileName: "gpu"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	description := "GPU acceleration"
-	got, err := c.CreateApplicationProfileCatalog(context.Background(), 1, "gpu", &description)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 161 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestCreateApplicationProfileCatalog_OmitsNilDescription(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if _, ok := payload["description"]; ok {
-			t.Errorf("description should be omitted, got %v", payload["description"])
-		}
-		_, _ = w.Write(mustJSON(t, ApplicationProfileCatalog{ID: 162, ProfileName: "gpu"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if _, err := c.CreateApplicationProfileCatalog(context.Background(), 1, "gpu", nil); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUpdateApplicationProfileCatalog(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["description"] != "updated" {
-			t.Errorf("description = %v", payload["description"])
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	description := "updated"
-	if err := c.UpdateApplicationProfileCatalog(context.Background(), 161, &description); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestGetDeviceProfileOverride_Success(t *testing.T) {
-	override := DeviceProfileOverride{ID: 150, Device: ODataRef{ID: 3}, ProfileName: "gpu", HostApp: ODataRef{ID: 2}, IsActive: true}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(override))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceProfileOverride(context.Background(), 150)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ProfileName != "gpu" || got.Device.ID != 3 || got.HostApp.ID != 2 || !got.IsActive {
-		t.Errorf("unexpected device profile override: %+v", got)
-	}
-}
-
-func TestCreateDeviceProfileOverride(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["device"] != float64(3) {
-			t.Errorf("device = %v", payload["device"])
-		}
-		if payload["overrides__profile_name"] != "gpu" {
-			t.Errorf("overrides__profile_name = %v", payload["overrides__profile_name"])
-		}
-		if payload["on__application"] != float64(2) {
-			t.Errorf("on__application = %v", payload["on__application"])
-		}
-		if payload["is_active"] != true {
-			t.Errorf("is_active = %v", payload["is_active"])
-		}
-		_, _ = w.Write(mustJSON(t, DeviceProfileOverride{ID: 151, ProfileName: "gpu"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	isActive := true
-	got, err := c.CreateDeviceProfileOverride(context.Background(), 3, "gpu", 2, &isActive)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 151 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestUpdateDeviceProfileOverride(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["is_active"] != false {
-			t.Errorf("is_active = %v", payload["is_active"])
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if err := c.UpdateDeviceProfileOverride(context.Background(), 151, false); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestGetServiceLabel_Success(t *testing.T) {
-	label := ServiceLabel{ID: 120, Service: ODataRef{ID: 10}, LabelName: "io.balena.features.dbus", Value: "1"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(label))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetServiceLabel(context.Background(), 120)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.LabelName != "io.balena.features.dbus" || got.Value != "1" {
-		t.Errorf("unexpected label: %+v", got)
-	}
-}
-
-func TestCreateServiceLabel(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
-		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["service"] != float64(10) {
-			t.Errorf("service = %v", payload["service"])
-		}
-		if payload["label_name"] != "io.balena.features.supervisor-api" {
-			t.Errorf("label_name = %v", payload["label_name"])
-		}
-		_, _ = w.Write(mustJSON(t, ServiceLabel{ID: 121, LabelName: "io.balena.features.supervisor-api", Value: "1"}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.CreateServiceLabel(context.Background(), 10, "io.balena.features.supervisor-api", "1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 121 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-// Service (data source)
-
-func TestGetServiceByName_Success(t *testing.T) {
-	svc := Service{ID: 200, App: ODataRef{ID: 42}, ServiceName: "main"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, "filter") {
-			t.Errorf("expected OData filter in query, got %s", r.URL.RawQuery)
-		}
-		_, _ = w.Write(pineWrap(svc))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetServiceByName(context.Background(), 42, "main")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 200 || got.ServiceName != "main" {
-		t.Errorf("unexpected service: %+v", got)
-	}
-}
-
-func TestGetServiceByName_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap[Service]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetServiceByName(context.Background(), 42, "no-such-svc")
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found, got %v", err)
-	}
-}
-
-// Release (data source)
-
-func TestGetRelease_Success(t *testing.T) {
-	rel := Release{ID: 300, App: ODataRef{ID: 42}, Commit: "abc123", Status: "success"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(rel))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetRelease(context.Background(), 300)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Commit != "abc123" || got.Status != "success" {
-		t.Errorf("unexpected release: %+v", got)
-	}
-}
-
-func TestGetReleaseByCommit_Success(t *testing.T) {
-	rel := Release{ID: 301, App: ODataRef{ID: 42}, Commit: "def456", Status: "success"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, "filter") {
-			t.Errorf("expected OData filter in query, got %s", r.URL.RawQuery)
-		}
-		_, _ = w.Write(pineWrap(rel))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetReleaseByCommit(context.Background(), 42, "def456")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 301 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetReleaseByCommit_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap[Release]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetReleaseByCommit(context.Background(), 42, "nope")
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found, got %v", err)
-	}
-}
-
-func TestGetSuccessfulReleaseByCommit_FiltersOnStatus(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		want := "belongs_to__application eq 42 and commit eq 'def456' and status eq 'success'"
-		if got := r.URL.Query().Get("$filter"); got != want {
-			t.Errorf("$filter = %q, want %q", got, want)
-		}
-		_, _ = w.Write(pineWrap(Release{ID: 301}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if _, err := c.GetSuccessfulReleaseByCommit(context.Background(), 42, "def456"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// Organization (data source)
-
-func TestGetOrganization_Success(t *testing.T) {
-	org := Organization{ID: 400, Name: "My Org", Handle: "my-org"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(org))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetOrganization(context.Background(), 400)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Name != "My Org" || got.Handle != "my-org" {
-		t.Errorf("unexpected org: %+v", got)
-	}
-}
-
-func TestGetOrganizationByHandle_Success(t *testing.T) {
-	org := Organization{ID: 401, Name: "Another Org", Handle: "another-org"}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, "filter") {
-			t.Errorf("expected OData filter in query, got %s", r.URL.RawQuery)
-		}
-		_, _ = w.Write(pineWrap(org))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetOrganizationByHandle(context.Background(), "another-org")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 401 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetOrganizationByHandle_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap[Organization]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetOrganizationByHandle(context.Background(), "no-such-org")
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found, got %v", err)
-	}
-}
-
-func TestGetDeviceByUUID_ReadsPinnedAndHostOSReleases(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, DEVICE_EXPAND) {
-			t.Errorf("expected %s in query, got %s", DEVICE_EXPAND, r.URL.RawQuery)
-		}
-		_, _ = w.Write([]byte(`{"d":[{"id":7,"uuid":"abc","device_name":"pinned",` +
-			`"should_be_running__release":[{"commit":"f2a97d43"}],` +
-			`"should_be_operated_by__release":[{"raw_version":"6.0.10+rev1"}]}]}`))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceByUUID(context.Background(), "abc")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if commit := got.PinnedReleaseCommit(); commit == nil || *commit != "f2a97d43" {
-		t.Errorf("PinnedReleaseCommit() = %v", commit)
-	}
-	if version := got.HostOSVersion(); version == nil || *version != "6.0.10+rev1" {
-		t.Errorf("HostOSVersion() = %v", version)
-	}
-}
-
-func TestGetDeviceByUUID_TrackingDeviceHasNoPinnedRelease(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"d":[{"id":7,"uuid":"abc","should_be_running__release":[],"should_be_operated_by__release":[]}]}`))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetDeviceByUUID(context.Background(), "abc")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if commit := got.PinnedReleaseCommit(); commit != nil {
-		t.Errorf("PinnedReleaseCommit() = %q, want nil", *commit)
-	}
-	if version := got.HostOSVersion(); version != nil {
-		t.Errorf("HostOSVersion() = %q, want nil", *version)
-	}
-}
-
-func TestUpdateDevice_SendsNullToUnpin(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s", r.Method)
-		}
-		if r.URL.Path != "/v6/device(7)" {
-			t.Errorf("path = %s", r.URL.Path)
-		}
-		body, _ := io.ReadAll(r.Body)
-		if string(body) != `{"should_be_running__release":null}` {
-			t.Errorf("body = %s", body)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	if err := c.UpdateDevice(context.Background(), 7, map[string]interface{}{"should_be_running__release": nil}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestGetHostOSRelease_KeepsNavigationUnencoded(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		want := "$filter=raw_version%20eq%20%276.0.10%2Brev1%27%20and%20status%20eq%20%27success%27%20and%20" +
-			"belongs_to__application/any(a:a/is_host%20eq%20true%20and%20a/is_for__device_type/any(dt:dt/slug%20eq%20%27raspberrypi5%27))"
-		if !strings.HasPrefix(r.URL.RawQuery, want) {
-			t.Errorf("query = %s, want prefix %s", r.URL.RawQuery, want)
-		}
-		_, _ = w.Write(pineWrap(Release{ID: 4371882}))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	got, err := c.GetHostOSRelease(context.Background(), "raspberrypi5", "6.0.10+rev1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != 4371882 {
-		t.Errorf("ID = %d", got.ID)
-	}
-}
-
-func TestGetHostOSRelease_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap[Release]())
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv)
-	_, err := c.GetHostOSRelease(context.Background(), "raspberrypi5", "1.0.0")
-	if !IsNotFound(err) {
-		t.Errorf("expected not-found, got %v", err)
+func TestLiteral(t *testing.T) {
+	for in, want := range map[any]string{
+		"o'clock": "'o''clock'",
+		int64(5):  "5",
+		true:      "true",
+		nil:       "null",
+		1.5:       "1.5",
+	} {
+		if got := Literal(in); got != want {
+			t.Errorf("Literal(%v) = %s, want %s", in, got, want)
+		}
+	}
+	if got := EscapeFilter("a/b(c:d), e&f#g%h+i'j"); got != "a/b(c:d),%20e%26f%23g%25h%2Bi%27j" {
+		t.Errorf("EscapeFilter = %s", got)
 	}
 }

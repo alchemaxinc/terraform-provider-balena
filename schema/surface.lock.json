@@ -1,0 +1,1921 @@
+{
+  "format": 1,
+  "resources": {
+    "balena_application": {
+      "table": "application",
+      "root": "v7",
+      "attributes": {
+        "app_name": {
+          "field": "app_name",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:4..100"
+          ]
+        },
+        "application_type_id": {
+          "field": "application_type",
+          "type": "int64",
+          "mode": "optional_computed"
+        },
+        "class": {
+          "field": "is_of__class",
+          "type": "string",
+          "mode": "optional_computed",
+          "validators": [
+            "one_of:app,block,fleet"
+          ]
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_type": {
+          "field": "is_for__device_type",
+          "via": "slug",
+          "type": "string",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "is_accessible_by_support_until_date": {
+          "field": "is_accessible_by_support_until__date",
+          "type": "string",
+          "mode": "optional"
+        },
+        "is_archived": {
+          "field": "is_archived",
+          "type": "bool",
+          "mode": "optional_computed"
+        },
+        "is_discoverable": {
+          "field": "is_discoverable",
+          "type": "bool",
+          "mode": "computed"
+        },
+        "is_host": {
+          "field": "is_host",
+          "type": "bool",
+          "mode": "computed"
+        },
+        "is_public": {
+          "field": "is_public",
+          "type": "bool",
+          "mode": "optional_computed"
+        },
+        "organization_id": {
+          "field": "organization",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
+          "mode": "optional_computed"
+        },
+        "repository_url": {
+          "field": "is_stored_at__repository_url",
+          "type": "string",
+          "mode": "optional"
+        },
+        "should_track_latest_release": {
+          "field": "should_track_latest_release",
+          "type": "bool",
+          "mode": "optional_computed"
+        },
+        "slug": {
+          "field": "slug",
+          "type": "string",
+          "mode": "optional_computed",
+          "validators": [
+            "length:6..321"
+          ]
+        },
+        "uuid": {
+          "field": "uuid",
+          "type": "string",
+          "mode": "optional_computed",
+          "validators": [
+            "length:32..32"
+          ]
+        }
+      }
+    },
+    "balena_application_config_variable": {
+      "table": "application_config_variable",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^[\\d:]|[^A-Za-z0-9_:]`; must not be `BALENA`, `RESIN`, `USER`; must start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..492001"
+          ]
+        }
+      }
+    },
+    "balena_application_environment_variable": {
+      "table": "application_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^\\d|\\W`; must not be `BALENA`, `RESIN`, `USER`; must not start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "sensitive": true,
+          "validators": [
+            "length:0..106104"
+          ]
+        }
+      }
+    },
+    "balena_application_profile": {
+      "table": "application_profile",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "on_application_id": {
+          "field": "on__application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "profile_name": {
+          "field": "activates__profile_name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:2..100"
+          ]
+        }
+      }
+    },
+    "balena_application_tag": {
+      "table": "application_tag",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:1..100"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..1000"
+          ]
+        }
+      }
+    },
+    "balena_device": {
+      "table": "device",
+      "root": "v7",
+      "import_by": "uuid",
+      "hooks": [
+        "create=deviceAdopt",
+        "delete=deviceForget"
+      ],
+      "attributes": {
+        "device_name": {
+          "field": "device_name",
+          "type": "string",
+          "mode": "optional_computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "is_pinned_on_release": {
+          "field": "is_pinned_on__release",
+          "via": "commit",
+          "type": "string",
+          "mode": "optional"
+        },
+        "should_be_operated_by_release": {
+          "field": "should_be_operated_by__release",
+          "via": "raw_version",
+          "type": "string",
+          "mode": "optional_computed"
+        },
+        "uuid": {
+          "field": "uuid",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:0..62"
+          ]
+        }
+      }
+    },
+    "balena_device_config_variable": {
+      "table": "device_config_variable",
+      "root": "v7",
+      "attributes": {
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^[\\d:]|[^A-Za-z0-9_:]`; must not be `BALENA`, `RESIN`, `USER`; must start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..372340"
+          ]
+        }
+      }
+    },
+    "balena_device_environment_variable": {
+      "table": "device_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^\\d|\\W`; must not be `BALENA`, `RESIN`, `USER`; must not start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "sensitive": true,
+          "validators": [
+            "length:0..515798"
+          ]
+        }
+      }
+    },
+    "balena_device_profile_override": {
+      "table": "device_profile_override",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "application_id": {
+          "field": "on__application",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "is_active": {
+          "field": "is_active",
+          "type": "bool",
+          "mode": "optional_computed"
+        },
+        "profile_name": {
+          "field": "overrides__profile_name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:2..100"
+          ]
+        }
+      }
+    },
+    "balena_device_service_environment_variable": {
+      "table": "device_service_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^\\d|\\W`; must not be `BALENA`, `RESIN`, `USER`; must not start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "service_install_id": {
+          "field": "service_install",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "sensitive": true,
+          "validators": [
+            "length:0..285082"
+          ]
+        }
+      }
+    },
+    "balena_device_tag": {
+      "table": "device_tag",
+      "root": "v7",
+      "attributes": {
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:1..100"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..60158"
+          ]
+        }
+      }
+    },
+    "balena_image_environment_variable": {
+      "table": "image_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true
+        },
+        "release_image_id": {
+          "field": "release_image",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "sensitive": true,
+          "validators": [
+            "length:0..100000"
+          ]
+        }
+      }
+    },
+    "balena_image_profile": {
+      "table": "image_profile",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "profile_name": {
+          "field": "profile_name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:2..100"
+          ]
+        },
+        "release_image_id": {
+          "field": "release_image",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        }
+      }
+    },
+    "balena_organization": {
+      "table": "organization",
+      "root": "v7",
+      "hooks": [
+        "delete=organizationDeleteTolerates401"
+      ],
+      "attributes": {
+        "company_name": {
+          "field": "company_name",
+          "type": "string",
+          "mode": "optional"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "handle": {
+          "field": "handle",
+          "type": "string",
+          "mode": "optional_computed",
+          "validators": [
+            "length:1..220"
+          ]
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "industry": {
+          "field": "industry",
+          "type": "string",
+          "mode": "optional"
+        },
+        "is_enforcing_saml_login": {
+          "field": "is_enforcing_saml_login",
+          "type": "bool",
+          "mode": "optional_computed"
+        },
+        "is_frozen": {
+          "field": "is_frozen",
+          "type": "bool",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:1..220"
+          ]
+        },
+        "website": {
+          "field": "website",
+          "type": "string",
+          "mode": "optional"
+        }
+      }
+    },
+    "balena_release_tag": {
+      "table": "release_tag",
+      "root": "v7",
+      "attributes": {
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "release_id": {
+          "field": "release",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:1..164"
+          ]
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..1000"
+          ]
+        }
+      }
+    },
+    "balena_service_environment_variable": {
+      "table": "service_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "var_name:must not match `^\\d|\\W`; must not be `BALENA`, `RESIN`, `USER`; must not start with `BALENA_` or `RESIN_`"
+          ]
+        },
+        "service_id": {
+          "field": "service",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "sensitive": true,
+          "validators": [
+            "length:0..100000"
+          ]
+        }
+      }
+    },
+    "balena_service_label": {
+      "table": "service_label",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "label_name": {
+          "field": "label_name",
+          "type": "string",
+          "mode": "required",
+          "force_new": true
+        },
+        "service_id": {
+          "field": "service",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..300"
+          ]
+        }
+      }
+    },
+    "balena_user_public_key": {
+      "table": "user_public_key",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
+        },
+        "public_key": {
+          "field": "public_key",
+          "type": "string",
+          "mode": "required",
+          "force_new": true,
+          "validators": [
+            "length:0..2850"
+          ]
+        },
+        "title": {
+          "field": "title",
+          "type": "string",
+          "mode": "required",
+          "validators": [
+            "length:0..120"
+          ]
+        },
+        "user_id": {
+          "field": "user",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        }
+      }
+    }
+  },
+  "data_sources": {
+    "balena_application": {
+      "table": "application",
+      "root": "v7",
+      "attributes": {
+        "app_name": {
+          "field": "app_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "application_type_id": {
+          "field": "application_type",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "class": {
+          "field": "is_of__class",
+          "type": "string",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_type": {
+          "field": "is_for__device_type",
+          "via": "slug",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "is_accessible_by_support_until_date": {
+          "field": "is_accessible_by_support_until__date",
+          "type": "string",
+          "mode": "computed"
+        },
+        "is_archived": {
+          "field": "is_archived",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_discoverable": {
+          "field": "is_discoverable",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_host": {
+          "field": "is_host",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_public": {
+          "field": "is_public",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "organization_id": {
+          "field": "organization",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "repository_url": {
+          "field": "is_stored_at__repository_url",
+          "type": "string",
+          "mode": "filter"
+        },
+        "should_track_latest_release": {
+          "field": "should_track_latest_release",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "slug": {
+          "field": "slug",
+          "type": "string",
+          "mode": "filter"
+        },
+        "uuid": {
+          "field": "uuid",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_application_config_variable": {
+      "table": "application_config_variable",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_application_environment_variable": {
+      "table": "application_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter",
+          "sensitive": true
+        }
+      }
+    },
+    "balena_application_profile": {
+      "table": "application_profile",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "on_application_id": {
+          "field": "on__application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "profile_name": {
+          "field": "activates__profile_name",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_application_profile_catalog": {
+      "table": "application_profile_catalog",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "description": {
+          "field": "description",
+          "type": "string",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "profile_name": {
+          "field": "catalogs__profile_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "release_id": {
+          "field": "available_since__release",
+          "type": "int64",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_application_tag": {
+      "table": "application_tag",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_device": {
+      "table": "device",
+      "root": "v7",
+      "attributes": {
+        "api_heartbeat_state": {
+          "field": "api_heartbeat_state",
+          "type": "string",
+          "mode": "filter"
+        },
+        "application_id": {
+          "field": "belongs_to__application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "changed_api_heartbeat_state_on_date": {
+          "field": "changed_api_heartbeat_state_on__date",
+          "type": "string",
+          "mode": "computed"
+        },
+        "cpu_id": {
+          "field": "cpu_id",
+          "type": "string",
+          "mode": "filter"
+        },
+        "cpu_temp": {
+          "field": "cpu_temp",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "cpu_usage": {
+          "field": "cpu_usage",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "custom_latitude": {
+          "field": "custom_latitude",
+          "type": "string",
+          "mode": "filter"
+        },
+        "custom_longitude": {
+          "field": "custom_longitude",
+          "type": "string",
+          "mode": "filter"
+        },
+        "device_name": {
+          "field": "device_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "device_type": {
+          "field": "is_of__device_type",
+          "via": "slug",
+          "type": "string",
+          "mode": "computed"
+        },
+        "download_progress": {
+          "field": "download_progress",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "ip_address": {
+          "field": "ip_address",
+          "type": "string",
+          "mode": "filter"
+        },
+        "is_accessible_by_support_until_date": {
+          "field": "is_accessible_by_support_until__date",
+          "type": "string",
+          "mode": "computed"
+        },
+        "is_active": {
+          "field": "is_active",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_connected_to_vpn": {
+          "field": "is_connected_to_vpn",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_frozen": {
+          "field": "is_frozen",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_locked_until_date": {
+          "field": "is_locked_until__date",
+          "type": "string",
+          "mode": "computed"
+        },
+        "is_online": {
+          "field": "is_online",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_pinned_on_release": {
+          "field": "is_pinned_on__release",
+          "via": "commit",
+          "type": "string",
+          "mode": "computed"
+        },
+        "is_running_release_id": {
+          "field": "is_running__release",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "is_undervolted": {
+          "field": "is_undervolted",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_web_accessible": {
+          "field": "is_web_accessible",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "last_connectivity_event": {
+          "field": "last_connectivity_event",
+          "type": "string",
+          "mode": "computed"
+        },
+        "last_update_status_event": {
+          "field": "last_update_status_event",
+          "type": "string",
+          "mode": "computed"
+        },
+        "last_vpn_event": {
+          "field": "last_vpn_event",
+          "type": "string",
+          "mode": "computed"
+        },
+        "latitude": {
+          "field": "latitude",
+          "type": "string",
+          "mode": "filter"
+        },
+        "local_id": {
+          "field": "local_id",
+          "type": "string",
+          "mode": "filter"
+        },
+        "location": {
+          "field": "location",
+          "type": "string",
+          "mode": "filter"
+        },
+        "longitude": {
+          "field": "longitude",
+          "type": "string",
+          "mode": "filter"
+        },
+        "mac_address": {
+          "field": "mac_address",
+          "type": "string",
+          "mode": "filter"
+        },
+        "memory_total": {
+          "field": "memory_total",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "memory_usage": {
+          "field": "memory_usage",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "note": {
+          "field": "note",
+          "type": "string",
+          "mode": "filter"
+        },
+        "os_variant": {
+          "field": "os_variant",
+          "type": "string",
+          "mode": "filter"
+        },
+        "os_version": {
+          "field": "os_version",
+          "type": "string",
+          "mode": "filter"
+        },
+        "overall_progress": {
+          "field": "overall_progress",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "overall_status": {
+          "field": "overall_status",
+          "type": "string",
+          "mode": "filter"
+        },
+        "provisioning_progress": {
+          "field": "provisioning_progress",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "provisioning_state": {
+          "field": "provisioning_state",
+          "type": "string",
+          "mode": "filter"
+        },
+        "public_address": {
+          "field": "public_address",
+          "type": "string",
+          "mode": "filter"
+        },
+        "service_instance_id": {
+          "field": "is_managed_by__service_instance",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "should_be_managed_by_release_id": {
+          "field": "should_be_managed_by__release",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "should_be_operated_by_release": {
+          "field": "should_be_operated_by__release",
+          "via": "raw_version",
+          "type": "string",
+          "mode": "computed"
+        },
+        "should_be_running_release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "status": {
+          "field": "status",
+          "type": "string",
+          "mode": "filter"
+        },
+        "storage_block_device": {
+          "field": "storage_block_device",
+          "type": "string",
+          "mode": "filter"
+        },
+        "storage_total": {
+          "field": "storage_total",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "storage_usage": {
+          "field": "storage_usage",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "supervisor_version": {
+          "field": "supervisor_version",
+          "type": "string",
+          "mode": "filter"
+        },
+        "update_status": {
+          "field": "update_status",
+          "type": "string",
+          "mode": "filter"
+        },
+        "user_id": {
+          "field": "belongs_to__user",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "uuid": {
+          "field": "uuid",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_device_config_variable": {
+      "table": "device_config_variable",
+      "root": "v7",
+      "attributes": {
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_device_environment_variable": {
+      "table": "device_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter",
+          "sensitive": true
+        }
+      }
+    },
+    "balena_device_profile_override": {
+      "table": "device_profile_override",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "application_id": {
+          "field": "on__application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "is_active": {
+          "field": "is_active",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "profile_name": {
+          "field": "overrides__profile_name",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_device_service_environment_variable": {
+      "table": "device_service_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "service_install_id": {
+          "field": "service_install",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter",
+          "sensitive": true
+        }
+      }
+    },
+    "balena_device_tag": {
+      "table": "device_tag",
+      "root": "v7",
+      "attributes": {
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_image_environment_variable": {
+      "table": "image_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "release_image_id": {
+          "field": "release_image",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter",
+          "sensitive": true
+        }
+      }
+    },
+    "balena_image_profile": {
+      "table": "image_profile",
+      "root": "resin",
+      "preview": true,
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "profile_name": {
+          "field": "profile_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "release_image_id": {
+          "field": "release_image",
+          "type": "int64",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_organization": {
+      "table": "organization",
+      "root": "v7",
+      "attributes": {
+        "company_name": {
+          "field": "company_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "handle": {
+          "field": "handle",
+          "type": "string",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "industry": {
+          "field": "industry",
+          "type": "string",
+          "mode": "filter"
+        },
+        "is_enforcing_saml_login": {
+          "field": "is_enforcing_saml_login",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_frozen": {
+          "field": "is_frozen",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "website": {
+          "field": "website",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_release": {
+      "table": "release",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "belongs_to__application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "build_log": {
+          "field": "build_log",
+          "type": "string",
+          "mode": "filter"
+        },
+        "commit": {
+          "field": "commit",
+          "type": "string",
+          "mode": "filter"
+        },
+        "composition": {
+          "field": "composition",
+          "type": "string",
+          "mode": "computed"
+        },
+        "contract": {
+          "field": "contract",
+          "type": "string",
+          "mode": "computed"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "end_timestamp": {
+          "field": "end_timestamp",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "invalidation_reason": {
+          "field": "invalidation_reason",
+          "type": "string",
+          "mode": "filter"
+        },
+        "is_final": {
+          "field": "is_final",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_finalized_at_date": {
+          "field": "is_finalized_at__date",
+          "type": "string",
+          "mode": "computed"
+        },
+        "is_invalidated": {
+          "field": "is_invalidated",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "is_passing_tests": {
+          "field": "is_passing_tests",
+          "type": "bool",
+          "mode": "filter"
+        },
+        "known_issue_list": {
+          "field": "known_issue_list",
+          "type": "string",
+          "mode": "filter"
+        },
+        "note": {
+          "field": "note",
+          "type": "string",
+          "mode": "filter"
+        },
+        "phase": {
+          "field": "phase",
+          "type": "string",
+          "mode": "filter"
+        },
+        "raw_version": {
+          "field": "raw_version",
+          "type": "string",
+          "mode": "filter"
+        },
+        "release_version": {
+          "field": "release_version",
+          "type": "string",
+          "mode": "filter"
+        },
+        "revision": {
+          "field": "revision",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "semver": {
+          "field": "semver",
+          "type": "string",
+          "mode": "filter"
+        },
+        "semver_build": {
+          "field": "semver_build",
+          "type": "string",
+          "mode": "filter"
+        },
+        "semver_major": {
+          "field": "semver_major",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "semver_minor": {
+          "field": "semver_minor",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "semver_patch": {
+          "field": "semver_patch",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "semver_prerelease": {
+          "field": "semver_prerelease",
+          "type": "string",
+          "mode": "filter"
+        },
+        "source": {
+          "field": "source",
+          "type": "string",
+          "mode": "filter"
+        },
+        "start_timestamp": {
+          "field": "start_timestamp",
+          "type": "string",
+          "mode": "computed"
+        },
+        "status": {
+          "field": "status",
+          "type": "string",
+          "mode": "filter"
+        },
+        "update_timestamp": {
+          "field": "update_timestamp",
+          "type": "string",
+          "mode": "computed"
+        },
+        "user_id": {
+          "field": "is_created_by__user",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "variant": {
+          "field": "variant",
+          "type": "string",
+          "mode": "filter"
+        },
+        "version": {
+          "field": "version",
+          "type": "string",
+          "mode": "computed"
+        }
+      }
+    },
+    "balena_release_image": {
+      "table": "release_image",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "image_id": {
+          "field": "image",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "release_id": {
+          "field": "is_part_of__release",
+          "type": "int64",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_release_tag": {
+      "table": "release_tag",
+      "root": "v7",
+      "attributes": {
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "release_id": {
+          "field": "release",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "tag_key": {
+          "field": "tag_key",
+          "type": "string",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_service": {
+      "table": "service",
+      "root": "v7",
+      "attributes": {
+        "application_id": {
+          "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "service_name": {
+          "field": "service_name",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_service_environment_variable": {
+      "table": "service_environment_variable",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "name": {
+          "field": "name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "service_id": {
+          "field": "service",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter",
+          "sensitive": true
+        }
+      }
+    },
+    "balena_service_install": {
+      "table": "service_install",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "device_id": {
+          "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "service_id": {
+          "field": "installs__service",
+          "type": "int64",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_service_label": {
+      "table": "service_label",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "label_name": {
+          "field": "label_name",
+          "type": "string",
+          "mode": "filter"
+        },
+        "service_id": {
+          "field": "service",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "value": {
+          "field": "value",
+          "type": "string",
+          "mode": "filter"
+        }
+      }
+    },
+    "balena_user_public_key": {
+      "table": "user_public_key",
+      "root": "v7",
+      "attributes": {
+        "created_at": {
+          "field": "created_at",
+          "type": "string",
+          "mode": "computed"
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "public_key": {
+          "field": "public_key",
+          "type": "string",
+          "mode": "filter"
+        },
+        "title": {
+          "field": "title",
+          "type": "string",
+          "mode": "filter"
+        },
+        "user_id": {
+          "field": "user",
+          "type": "int64",
+          "mode": "filter"
+        }
+      }
+    }
+  }
+}

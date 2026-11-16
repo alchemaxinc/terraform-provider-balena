@@ -3,22 +3,18 @@
 page_title: "balena_organization Data Source - balena"
 subcategory: ""
 description: |-
-  Look up a Balena organization by ID or handle.
+  Reads the one organization (the organization resource of the /v7 API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 ---
 
 # balena_organization (Data Source)
 
-Look up a Balena organization by ID or handle.
+Reads the one organization (the `organization` resource of the `/v7` API) that matches every configured attribute. At least one attribute must be set, and exactly one row must match.
 
 ## Example Usage
 
 ```terraform
-data "balena_organization" "my_org" {
-  handle = "my-org-handle"
-}
-
-output "organization_id" {
-  value = data.balena_organization.my_org.id
+data "balena_organization" "example" {
+  handle = "example-handle"
 }
 ```
 
@@ -28,9 +24,15 @@ output "organization_id" {
 
 ### Optional
 
-- `handle` (String) Handle of the organization. Provide either handle or id.
-- `id` (Number) Numeric identifier of the organization. Provide either id or handle.
+- `company_name` (String) API field `company_name` (text). Selects the row when configured.
+- `handle` (String) API field `handle` (short text). Between 1 and 220 characters. The API sets a value when none is configured. Unique. Selects the row when configured.
+- `id` (Number) Numeric ID of the organization. Selects the row when configured.
+- `industry` (String) API field `industry` (short text). Selects the row when configured.
+- `is_enforcing_saml_login` (Boolean) API field `is_enforcing_saml_login` (boolean). The API sets a value when none is configured. Selects the row when configured.
+- `is_frozen` (Boolean) API field `is_frozen` (boolean). Selects the row when configured.
+- `name` (String) API field `name` (short text). Between 1 and 220 characters. Selects the row when configured.
+- `website` (String) API field `website` (text). Selects the row when configured.
 
 ### Read-Only
 
-- `name` (String) Name of the organization.
+- `created_at` (String) API field `created_at` (date time).

@@ -1,5 +1,5 @@
-resource "balena_device_tag" "role" {
+resource "balena_device_tag" "example" {
   device_id = 123456
-  tag_key   = "role"
-  value     = "gateway"
+  tag_key   = "example-tag-key"
+  value     = "example-value"
 }

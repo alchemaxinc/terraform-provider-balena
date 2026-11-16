@@ -1,6 +1,5 @@
-resource "balena_device_profile_override" "gpu" {
-  device_id           = 987654
-  profile_name        = "gpu"
-  host_application_id = 654321
-  is_active           = true
+resource "balena_device_profile_override" "example" {
+  application_id = 123456
+  device_id      = 123456
+  profile_name   = "example-profile-name"
 }

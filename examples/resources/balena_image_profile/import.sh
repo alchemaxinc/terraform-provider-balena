@@ -1,0 +1,1 @@
+terraform import balena_image_profile.example 123456

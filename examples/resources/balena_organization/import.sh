@@ -1,0 +1,1 @@
+terraform import balena_organization.example 123456

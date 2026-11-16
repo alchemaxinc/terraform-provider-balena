@@ -1,4 +1,3 @@
-resource "balena_organization" "my_org" {
-  name   = "My Organization"
-  handle = "my_organization"
+resource "balena_organization" "example" {
+  name = "example-name"
 }

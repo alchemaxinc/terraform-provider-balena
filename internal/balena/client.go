@@ -1,4 +1,14 @@
-// Package balena provides a Go client for the Balena Cloud REST API.
+// Package balena is a thin, generic client for the Pine.js OData API of balena: rows are map[string]any, every table
+// and API root is a parameter, and the Pine.js quirks live here once.
+//
+// Quirks handled:
+//   - collections come wrapped in {"d": [...]}; a GET by id of a missing row answers 200 with an empty "d";
+//   - references read as {"__id": N} (or as an expanded array) and are written as a bare integer;
+//   - POST answers the created row without expanding navigation properties;
+//   - 409, 429 and 5xx are retried with exponential backoff, honouring Retry-After;
+//   - collections page with $top/$skip;
+//   - 401 means forbidden or unknown (table or $select field) alike, so it is never read as "gone";
+//   - a $filter that navigates relations must keep `/`, `(`, `)` and `:` unencoded.
 package balena
 
 import (
@@ -9,37 +19,30 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// DEFAULT_BASE_URL is the default Balena Cloud API endpoint.
+// DEFAULT_BASE_URL is the default balena API endpoint (balena-cloud).
 const DEFAULT_BASE_URL = "https://api.balena-cloud.com"
 
-// DEFAULT_HTTP_TIMEOUT is the default per-request HTTP timeout for the Balena client.
+// DEFAULT_HTTP_TIMEOUT is the default per-request HTTP timeout.
 const DEFAULT_HTTP_TIMEOUT = 60 * time.Second
 
 // DEFAULT_MAX_RETRIES is the default number of retries for transient failures (409/429/5xx).
 const DEFAULT_MAX_RETRIES = 5
 
-// DEFAULT_PAGE_SIZE is the Pine.js OData page size used when listing collections.
+// DEFAULT_PAGE_SIZE is the Pine.js page size used when listing collections.
 const DEFAULT_PAGE_SIZE = 1000
 
-// APP_DEVICE_TYPE_EXPAND is the OData $expand clause to resolve the device type slug on applications.
-const APP_DEVICE_TYPE_EXPAND = "$expand=is_for__device_type($select=slug)"
+// MAX_BACKOFF caps the exponential backoff between retries.
+const MAX_BACKOFF = 30 * time.Second
 
-// DEVICE_EXPAND is the OData $expand clause to resolve, on devices, the device type slug, the commit of the pinned
-// release and the version of the host OS release. In /v6, should_be_running__release is the pin: /v7 names it
-// is_pinned_on__release.
-const DEVICE_EXPAND = "$expand=is_of__device_type($select=slug),should_be_running__release($select=commit),should_be_operated_by__release($select=raw_version)"
+// Row is one row of a Pine.js resource.
+type Row = map[string]any
 
-// LAMBDA_FILTER_ESCAPER percent-encodes an OData $filter that navigates relations. The API rejects a filter whose
-// `/`, `(`, `)` or `:` are percent-encoded, as url.QueryEscape does.
-var LAMBDA_FILTER_ESCAPER = strings.NewReplacer("%", "%25", " ", "%20", "+", "%2B", "&", "%26", "#", "%23", "'", "%27")
-
-// APIError represents an error response from the Balena API.
+// APIError is a non-2xx response, or a synthesised 404 for an empty result.
 type APIError struct {
 	StatusCode int
 	Body       string
@@ -50,25 +53,25 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("API returned status %d: %s", e.StatusCode, e.Body)
 }
 
-// IsNotFound reports whether the error is a 404 Not Found response.
-func IsNotFound(err error) bool {
+func statusOf(err error) int {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
-		return apiErr.StatusCode == http.StatusNotFound
+		return apiErr.StatusCode
 	}
-	return false
+	return 0
 }
+
+// IsNotFound reports whether the error is a 404 Not Found response.
+func IsNotFound(err error) bool { return statusOf(err) == http.StatusNotFound }
 
 // IsConflict reports whether the error is a 409 Conflict response.
-func IsConflict(err error) bool {
-	var apiErr *APIError
-	if errors.As(err, &apiErr) {
-		return apiErr.StatusCode == http.StatusConflict
-	}
-	return false
-}
+func IsConflict(err error) bool { return statusOf(err) == http.StatusConflict }
 
-// Client is the Balena Cloud REST API client.
+// IsUnauthorized reports whether the error is a 401 response. Pine.js answers 401 both for a forbidden request and for
+// an unknown table or field, so callers must not treat it as "not found".
+func IsUnauthorized(err error) bool { return statusOf(err) == http.StatusUnauthorized }
+
+// Client is the balena API client.
 type Client struct {
 	baseURL    string
 	apiToken   string
@@ -80,8 +83,7 @@ type Client struct {
 // ClientOption configures a Client.
 type ClientOption func(*Client)
 
-// WithHTTPClient sets a custom HTTP client for the Balena client. When provided,
-// the caller is responsible for setting any desired timeout on the HTTP client.
+// WithHTTPClient sets a custom HTTP client. The caller is responsible for its timeout.
 func WithHTTPClient(hc *http.Client) ClientOption {
 	return func(c *Client) {
 		c.httpClient = hc
@@ -97,8 +99,7 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
-// WithMaxRetries overrides the number of retries for transient failures (409/429/5xx).
-// A value of zero disables retries.
+// WithMaxRetries overrides the number of retries for transient failures (409/429/5xx). Zero disables retries.
 func WithMaxRetries(n int) ClientOption {
 	return func(c *Client) {
 		if n >= 0 {
@@ -107,13 +108,13 @@ func WithMaxRetries(n int) ClientOption {
 	}
 }
 
-// NewClient creates a new Balena API client.
+// NewClient creates a client.
 func NewClient(baseURL, apiToken, version string, opts ...ClientOption) *Client {
 	if baseURL == "" {
 		baseURL = DEFAULT_BASE_URL
 	}
 	c := &Client{
-		baseURL:    baseURL,
+		baseURL:    strings.TrimRight(baseURL, "/"),
 		apiToken:   apiToken,
 		userAgent:  "terraform-provider-balena/" + version,
 		httpClient: &http.Client{Timeout: DEFAULT_HTTP_TIMEOUT},
@@ -125,922 +126,275 @@ func NewClient(baseURL, apiToken, version string, opts ...ClientOption) *Client 
 	return c
 }
 
-// pineResponse is the generic Pine.js OData response wrapper.
-type pineResponse[T any] struct {
-	D []T `json:"d"`
+// Expand is one $expand clause: a navigation field and the columns to read from the referenced row.
+type Expand struct {
+	Field  string
+	Select []string
 }
 
-// ODataRef represents a Pine.js linked object with __id.
-type ODataRef struct {
-	ID int64 `json:"__id"`
+// Query describes a read.
+type Query struct {
+	Select []string
+	Expand []Expand
+	// Filter is an OData $filter expression; build it with Eq, And and Literal.
+	Filter string
+	// Top limits the result to one page of that size; zero pages through the whole collection.
+	Top int
 }
 
-// DeviceTypeRef represents an expanded device type navigation property.
-type DeviceTypeRef struct {
-	Slug string `json:"slug"`
-}
-
-// Application represents a Balena application resource.
-type Application struct {
-	ID         int64           `json:"id"`
-	AppName    string          `json:"app_name"`
-	Slug       string          `json:"slug"`
-	DeviceType []DeviceTypeRef `json:"is_for__device_type"`
-	Org        ODataRef        `json:"organization"`
-	IsPublic   bool            `json:"is_public"`
-	IsArchived bool            `json:"is_archived"`
-}
-
-// DeviceTypeSlug returns the resolved device type slug from the expanded navigation property.
-func (a *Application) DeviceTypeSlug() string {
-	if len(a.DeviceType) > 0 {
-		return a.DeviceType[0].Slug
+func (q Query) params() []string {
+	var p []string
+	if len(q.Select) > 0 {
+		p = append(p, "$select="+strings.Join(q.Select, ","))
 	}
-	return ""
+	if len(q.Expand) > 0 {
+		var parts []string
+		for _, e := range q.Expand {
+			part := e.Field
+			if len(e.Select) > 0 {
+				part += "($select=" + strings.Join(e.Select, ",") + ")"
+			}
+			parts = append(parts, part)
+		}
+		p = append(p, "$expand="+strings.Join(parts, ","))
+	}
+	if q.Filter != "" {
+		p = append(p, "$filter="+EscapeFilter(q.Filter))
+	}
+	return p
 }
 
-type applicationCreatePayload struct {
-	AppName    string `json:"app_name"`
-	DeviceType int64  `json:"is_for__device_type"`
-	Org        int64  `json:"organization"`
-	IsPublic   *bool  `json:"is_public,omitempty"`
+// EscapeFilter percent-encodes a $filter expression for a query string. It encodes everything except unreserved
+// characters and `/`, `(`, `)`, `:` and `,`, which the API rejects when encoded in navigation (lambda) filters.
+func EscapeFilter(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		switch {
+		case ch >= 'a' && ch <= 'z', ch >= 'A' && ch <= 'Z', ch >= '0' && ch <= '9',
+			ch == '-', ch == '.', ch == '_', ch == '~', ch == '/', ch == '(', ch == ')', ch == ':', ch == ',':
+			b.WriteByte(ch)
+		default:
+			_, _ = fmt.Fprintf(&b, "%%%02X", ch)
+		}
+	}
+	return b.String()
 }
 
-// ListApplications returns all applications visible to the authenticated user.
-func (c *Client) ListApplications(ctx context.Context) ([]Application, error) {
-	return doListFiltered[Application](ctx, c, "/v6/application", APP_DEVICE_TYPE_EXPAND)
+// Literal renders an OData literal: strings are quoted with embedded quotes doubled.
+func Literal(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return "null"
+	case string:
+		return "'" + strings.ReplaceAll(x, "'", "''") + "'"
+	case bool:
+		return strconv.FormatBool(x)
+	case int:
+		return strconv.Itoa(x)
+	case int64:
+		return strconv.FormatInt(x, 10)
+	case float64:
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	case json.Number:
+		return x.String()
+	default:
+		return "'" + strings.ReplaceAll(fmt.Sprint(x), "'", "''") + "'"
+	}
 }
 
-// GetApplication retrieves a single application by numeric ID.
-func (c *Client) GetApplication(ctx context.Context, id int64) (*Application, error) {
-	return doGetByID[Application](ctx, c, "/v6/application", id, APP_DEVICE_TYPE_EXPAND)
+// Eq renders `field eq value`.
+func Eq(field string, value any) string {
+	return field + " eq " + Literal(value)
 }
 
-// GetApplicationByName retrieves a single application by its app_name.
-func (c *Client) GetApplicationByName(ctx context.Context, name string) (*Application, error) {
-	filter := "$filter=" + url.QueryEscape("app_name eq '"+escapeOData(name)+"'") + "&" + APP_DEVICE_TYPE_EXPAND
-	items, err := doListFiltered[Application](ctx, c, "/v6/application", filter)
+// And joins expressions with `and`, skipping empty ones.
+func And(exprs ...string) string {
+	var parts []string
+	for _, e := range exprs {
+		if e != "" {
+			parts = append(parts, e)
+		}
+	}
+	return strings.Join(parts, " and ")
+}
+
+// RefID reads a reference value: {"__id": N}, an expanded [{"id": N}], or a bare number. ok is false for null or an
+// empty expansion.
+func RefID(v any) (int64, bool, error) {
+	switch x := v.(type) {
+	case nil:
+		return 0, false, nil
+	case map[string]any:
+		return numberToInt64(x["__id"])
+	case []any:
+		if len(x) == 0 {
+			return 0, false, nil
+		}
+		if row, ok := x[0].(map[string]any); ok {
+			return numberToInt64(row["id"])
+		}
+	default:
+		return numberToInt64(x)
+	}
+	return 0, false, fmt.Errorf("unexpected reference value %v", v)
+}
+
+// Expanded reads an expanded navigation value ([{...}] or []). ok is false for null or an empty expansion.
+func Expanded(v any) (Row, bool, error) {
+	switch x := v.(type) {
+	case nil:
+		return nil, false, nil
+	case []any:
+		if len(x) == 0 {
+			return nil, false, nil
+		}
+		if row, ok := x[0].(map[string]any); ok {
+			return row, true, nil
+		}
+	}
+	return nil, false, fmt.Errorf("unexpected expansion %v", v)
+}
+
+func numberToInt64(v any) (int64, bool, error) {
+	switch x := v.(type) {
+	case nil:
+		return 0, false, nil
+	case json.Number:
+		n, err := x.Int64()
+		return n, err == nil, err
+	case float64:
+		return int64(x), true, nil
+	case int64:
+		return x, true, nil
+	case int:
+		return int64(x), true, nil
+	case string:
+		// Big Integer columns come back as strings.
+		n, err := strconv.ParseInt(x, 10, 64)
+		return n, err == nil, err
+	}
+	return 0, false, fmt.Errorf("unexpected number %v", v)
+}
+
+// ToInt64 converts a numeric row value.
+func ToInt64(v any) (int64, bool, error) { return numberToInt64(v) }
+
+func collectionPath(root, table string) string {
+	return "/" + root + "/" + table
+}
+
+func rowPath(root, table string, id int64) string {
+	return collectionPath(root, table) + "(" + strconv.FormatInt(id, 10) + ")"
+}
+
+func withParams(path string, params []string) string {
+	if len(params) == 0 {
+		return path
+	}
+	return path + "?" + strings.Join(params, "&")
+}
+
+func decodeCollection(data []byte) ([]Row, error) {
+	var resp struct {
+		D []Row `json:"d"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&resp); err != nil {
+		return nil, fmt.Errorf("decoding response: %w", err)
+	}
+	return resp.D, nil
+}
+
+// List reads the rows of a table that match the query, paging with $top/$skip unless q.Top is set.
+func (c *Client) List(ctx context.Context, root, table string, q Query) ([]Row, error) {
+	base := q.params()
+	if q.Top > 0 {
+		data, err := c.Do(ctx, http.MethodGet, withParams(collectionPath(root, table), append(base, "$top="+strconv.Itoa(q.Top))), nil)
+		if err != nil {
+			return nil, err
+		}
+		return decodeCollection(data)
+	}
+	var out []Row
+	for skip := 0; ; skip += DEFAULT_PAGE_SIZE {
+		params := append(append([]string{}, base...), "$orderby=id%20asc", fmt.Sprintf("$top=%d", DEFAULT_PAGE_SIZE), fmt.Sprintf("$skip=%d", skip))
+		data, err := c.Do(ctx, http.MethodGet, withParams(collectionPath(root, table), params), nil)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := decodeCollection(data)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rows...)
+		if len(rows) < DEFAULT_PAGE_SIZE {
+			return out, nil
+		}
+	}
+}
+
+// Get reads one row by id. Pine.js answers a missing id with an empty collection, which becomes a 404 APIError.
+func (c *Client) Get(ctx context.Context, root, table string, id int64, q Query) (Row, error) {
+	data, err := c.Do(ctx, http.MethodGet, withParams(rowPath(root, table, id), q.params()), nil)
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("application %q not found", name)}
-	}
-	return &items[0], nil
-}
-
-// applicationCreateResponse is the minimal shape returned by POST /v6/application
-// (without $expand, nav properties come back as {"__id": N}).
-type applicationCreateResponse struct {
-	ID int64 `json:"id"`
-}
-
-// CreateApplication creates a new application in the given organization.
-// The deviceType parameter is a slug (e.g. "raspberrypi5") which is resolved to a numeric ID.
-func (c *Client) CreateApplication(ctx context.Context, appName, deviceType string, orgID int64, isPublic *bool) (*Application, error) {
-	dt, err := c.GetDeviceTypeBySlug(ctx, deviceType)
-	if err != nil {
-		return nil, fmt.Errorf("resolving device type %q: %w", deviceType, err)
-	}
-	payload := applicationCreatePayload{
-		AppName:    appName,
-		DeviceType: dt.ID,
-		Org:        orgID,
-		IsPublic:   isPublic,
-	}
-	created, err := doCreate[applicationCreateResponse](ctx, c, "/v6/application", payload)
+	rows, err := decodeCollection(data)
 	if err != nil {
 		return nil, err
 	}
-	return c.GetApplication(ctx, created.ID)
+	if len(rows) == 0 {
+		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("%s with id %d not found", table, id)}
+	}
+	return rows[0], nil
 }
 
-// UpdateApplication patches an existing application with the given fields.
-func (c *Client) UpdateApplication(ctx context.Context, id int64, body map[string]interface{}) error {
-	return doPatch(ctx, c, "/v6/application", id, body)
-}
-
-// DeleteApplication removes an application by ID.
-func (c *Client) DeleteApplication(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application", id)
-}
-
-// DeviceType represents a Balena device type (e.g. raspberrypi5).
-type DeviceType struct {
-	ID   int64  `json:"id"`
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-}
-
-// GetDeviceTypeBySlug retrieves a device type by its slug.
-func (c *Client) GetDeviceTypeBySlug(ctx context.Context, slug string) (*DeviceType, error) {
-	filter := "$filter=" + url.QueryEscape("slug eq '"+escapeOData(slug)+"'")
-	items, err := doListFiltered[DeviceType](ctx, c, "/v6/device_type", filter)
+// Create posts a row and returns the created row as the API answers it (navigation properties unexpanded).
+func (c *Client) Create(ctx context.Context, root, table string, body Row) (Row, error) {
+	data, err := c.Do(ctx, http.MethodPost, collectionPath(root, table), body)
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("device type %q not found", slug)}
+	var row Row
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&row); err != nil {
+		return nil, fmt.Errorf("decoding create response: %w", err)
 	}
-	return &items[0], nil
-}
-
-// Device represents a Balena device resource.
-type Device struct {
-	ID                int64           `json:"id"`
-	UUID              string          `json:"uuid"`
-	DeviceName        string          `json:"device_name"`
-	BelongsToApp      ODataRef        `json:"belongs_to__application"`
-	DeviceType        []DeviceTypeRef `json:"is_of__device_type"`
-	Status            string          `json:"status"`
-	IsOnline          bool            `json:"is_online"`
-	IPAddress         string          `json:"ip_address"`
-	OSVersion         string          `json:"os_version"`
-	SupervisorVersion string          `json:"supervisor_version"`
-	PinnedRelease     []ReleaseRef    `json:"should_be_running__release"`
-	HostOSRelease     []ReleaseRef    `json:"should_be_operated_by__release"`
-}
-
-// ReleaseRef represents an expanded release navigation property.
-type ReleaseRef struct {
-	Commit     string `json:"commit"`
-	RawVersion string `json:"raw_version"`
-}
-
-// DeviceTypeSlug returns the resolved device type slug from the expanded navigation property.
-func (d *Device) DeviceTypeSlug() string {
-	if len(d.DeviceType) > 0 {
-		return d.DeviceType[0].Slug
+	if d, ok := row["d"].([]any); ok && len(d) == 1 {
+		if inner, ok := d[0].(map[string]any); ok {
+			row = inner
+		}
 	}
-	return ""
+	return row, nil
 }
 
-// PinnedReleaseCommit returns the commit of the release that the device is pinned to, or nil when the device tracks
-// the release of its fleet.
-func (d *Device) PinnedReleaseCommit() *string {
-	if len(d.PinnedRelease) > 0 {
-		return &d.PinnedRelease[0].Commit
+// CreatedID reads the id of a row returned by Create.
+func CreatedID(row Row) (int64, error) {
+	id, ok, err := numberToInt64(row["id"])
+	if err != nil || !ok {
+		return 0, fmt.Errorf("create response has no id: %v", row)
 	}
-	return nil
+	return id, nil
 }
 
-// HostOSVersion returns the version of the host OS release that should operate the device, or nil when none is set.
-func (d *Device) HostOSVersion() *string {
-	if len(d.HostOSRelease) > 0 {
-		return &d.HostOSRelease[0].RawVersion
-	}
-	return nil
+// Patch updates the given columns of a row.
+func (c *Client) Patch(ctx context.Context, root, table string, id int64, body Row) error {
+	_, err := c.Do(ctx, http.MethodPatch, rowPath(root, table, id), body)
+	return err
 }
 
-// GetDeviceByUUID retrieves a single device by its UUID.
-func (c *Client) GetDeviceByUUID(ctx context.Context, uuid string) (*Device, error) {
-	filter := "$filter=" + url.QueryEscape("uuid eq '"+escapeOData(uuid)+"'") + "&" + DEVICE_EXPAND
-	items, err := doListFiltered[Device](ctx, c, "/v6/device", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("device with uuid %q not found", uuid)}
-	}
-	return &items[0], nil
+// Delete removes a row.
+func (c *Client) Delete(ctx context.Context, root, table string, id int64) error {
+	_, err := c.Do(ctx, http.MethodDelete, rowPath(root, table, id), nil)
+	return err
 }
 
-// UpdateDevice patches an existing device with the given fields.
-func (c *Client) UpdateDevice(ctx context.Context, id int64, body map[string]interface{}) error {
-	return doPatch(ctx, c, "/v6/device", id, body)
-}
-
-// GetHostOSRelease retrieves the successful release of the given version, among the host OS applications for the
-// given device type.
-func (c *Client) GetHostOSRelease(ctx context.Context, deviceTypeSlug, rawVersion string) (*Release, error) {
-	filter := "$filter=" + LAMBDA_FILTER_ESCAPER.Replace(fmt.Sprintf(
-		"raw_version eq '%s' and status eq 'success' and belongs_to__application/any(a:a/is_host eq true and a/is_for__device_type/any(dt:dt/slug eq '%s'))",
-		escapeOData(rawVersion), escapeOData(deviceTypeSlug),
-	))
-	items, err := doListFiltered[Release](ctx, c, "/v6/release", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("host OS release %q not found for device type %q", rawVersion, deviceTypeSlug)}
-	}
-	return &items[0], nil
-}
-
-// ApplicationEnvVar represents an application-level environment variable.
-type ApplicationEnvVar struct {
-	ID    int64    `json:"id"`
-	App   ODataRef `json:"application"`
-	Name  string   `json:"name"`
-	Value string   `json:"value"`
-}
-
-type appEnvVarCreatePayload struct {
-	App   int64  `json:"application"`
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// ListApplicationEnvVars returns all environment variables for an application.
-func (c *Client) ListApplicationEnvVars(ctx context.Context, appID int64) ([]ApplicationEnvVar, error) {
-	filter := fmt.Sprintf("$filter=application eq %d", appID)
-	return doListFiltered[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", filter)
-}
-
-// GetApplicationEnvVar retrieves a single application environment variable by ID.
-func (c *Client) GetApplicationEnvVar(ctx context.Context, id int64) (*ApplicationEnvVar, error) {
-	return doGetByID[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", id)
-}
-
-// CreateApplicationEnvVar creates a new environment variable on an application.
-func (c *Client) CreateApplicationEnvVar(ctx context.Context, appID int64, name, value string) (*ApplicationEnvVar, error) {
-	payload := appEnvVarCreatePayload{App: appID, Name: name, Value: value}
-	return doCreate[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", payload)
-}
-
-// UpdateApplicationEnvVar updates the value of an application environment variable.
-func (c *Client) UpdateApplicationEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/application_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteApplicationEnvVar removes an application environment variable by ID.
-func (c *Client) DeleteApplicationEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_environment_variable", id)
-}
-
-// ApplicationConfigVar represents an application-level configuration variable.
-type ApplicationConfigVar struct {
-	ID    int64    `json:"id"`
-	App   ODataRef `json:"application"`
-	Name  string   `json:"name"`
-	Value string   `json:"value"`
-}
-
-type appConfigVarCreatePayload struct {
-	App   int64  `json:"application"`
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// GetApplicationConfigVar retrieves a single application config variable by ID.
-func (c *Client) GetApplicationConfigVar(ctx context.Context, id int64) (*ApplicationConfigVar, error) {
-	return doGetByID[ApplicationConfigVar](ctx, c, "/v6/application_config_variable", id)
-}
-
-// CreateApplicationConfigVar creates a new config variable on an application.
-func (c *Client) CreateApplicationConfigVar(ctx context.Context, appID int64, name, value string) (*ApplicationConfigVar, error) {
-	payload := appConfigVarCreatePayload{App: appID, Name: name, Value: value}
-	return doCreate[ApplicationConfigVar](ctx, c, "/v6/application_config_variable", payload)
-}
-
-// UpdateApplicationConfigVar updates the value of an application config variable.
-func (c *Client) UpdateApplicationConfigVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/application_config_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteApplicationConfigVar removes an application config variable by ID.
-func (c *Client) DeleteApplicationConfigVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_config_variable", id)
-}
-
-// DeviceEnvVar represents a device-level environment variable.
-type DeviceEnvVar struct {
-	ID     int64    `json:"id"`
-	Device ODataRef `json:"device"`
-	Name   string   `json:"name"`
-	Value  string   `json:"value"`
-}
-
-type deviceEnvVarCreatePayload struct {
-	Device int64  `json:"device"`
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-}
-
-// GetDeviceEnvVar retrieves a single device environment variable by ID.
-func (c *Client) GetDeviceEnvVar(ctx context.Context, id int64) (*DeviceEnvVar, error) {
-	return doGetByID[DeviceEnvVar](ctx, c, "/v6/device_environment_variable", id)
-}
-
-// CreateDeviceEnvVar creates a new environment variable on a device.
-func (c *Client) CreateDeviceEnvVar(ctx context.Context, deviceID int64, name, value string) (*DeviceEnvVar, error) {
-	payload := deviceEnvVarCreatePayload{Device: deviceID, Name: name, Value: value}
-	return doCreate[DeviceEnvVar](ctx, c, "/v6/device_environment_variable", payload)
-}
-
-// UpdateDeviceEnvVar updates the value of a device environment variable.
-func (c *Client) UpdateDeviceEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/device_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteDeviceEnvVar removes a device environment variable by ID.
-func (c *Client) DeleteDeviceEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/device_environment_variable", id)
-}
-
-// DeviceServiceEnvVar represents a per-service device environment variable.
-type DeviceServiceEnvVar struct {
-	ID             int64    `json:"id"`
-	ServiceInstall ODataRef `json:"service_install"`
-	Name           string   `json:"name"`
-	Value          string   `json:"value"`
-}
-
-type deviceServiceEnvVarCreatePayload struct {
-	ServiceInstall int64  `json:"service_install"`
-	Name           string `json:"name"`
-	Value          string `json:"value"`
-}
-
-// GetDeviceServiceEnvVar retrieves a single per-service device env var by ID.
-func (c *Client) GetDeviceServiceEnvVar(ctx context.Context, id int64) (*DeviceServiceEnvVar, error) {
-	return doGetByID[DeviceServiceEnvVar](ctx, c, "/v6/device_service_environment_variable", id)
-}
-
-// CreateDeviceServiceEnvVar creates a per-service env var on a device service install.
-func (c *Client) CreateDeviceServiceEnvVar(ctx context.Context, serviceInstallID int64, name, value string) (*DeviceServiceEnvVar, error) {
-	payload := deviceServiceEnvVarCreatePayload{ServiceInstall: serviceInstallID, Name: name, Value: value}
-	return doCreate[DeviceServiceEnvVar](ctx, c, "/v6/device_service_environment_variable", payload)
-}
-
-// UpdateDeviceServiceEnvVar updates the value of a per-service device env var.
-func (c *Client) UpdateDeviceServiceEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/device_service_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteDeviceServiceEnvVar removes a per-service device env var by ID.
-func (c *Client) DeleteDeviceServiceEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/device_service_environment_variable", id)
-}
-
-// SSHKey represents a user SSH key.
-type SSHKey struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	PublicKey string `json:"public_key"`
-	CreatedAt string `json:"created_at"`
-}
-
-type sshKeyCreatePayload struct {
-	Title     string `json:"title"`
-	PublicKey string `json:"public_key"`
-}
-
-// GetSSHKey retrieves a single SSH key by ID.
-func (c *Client) GetSSHKey(ctx context.Context, id int64) (*SSHKey, error) {
-	return doGetByID[SSHKey](ctx, c, "/v6/user__has__public_key", id)
-}
-
-// CreateSSHKey registers a new SSH public key for the authenticated user.
-func (c *Client) CreateSSHKey(ctx context.Context, title, publicKey string) (*SSHKey, error) {
-	payload := sshKeyCreatePayload{Title: title, PublicKey: publicKey}
-	return doCreate[SSHKey](ctx, c, "/v6/user__has__public_key", payload)
-}
-
-// DeleteSSHKey removes an SSH key by ID.
-func (c *Client) DeleteSSHKey(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/user__has__public_key", id)
-}
-
-// ApplicationTag represents a tag on an application.
-type ApplicationTag struct {
-	ID     int64    `json:"id"`
-	App    ODataRef `json:"application"`
-	TagKey string   `json:"tag_key"`
-	Value  string   `json:"value"`
-}
-
-type appTagCreatePayload struct {
-	App    int64  `json:"application"`
-	TagKey string `json:"tag_key"`
-	Value  string `json:"value"`
-}
-
-// GetApplicationTag retrieves a single application tag by ID.
-func (c *Client) GetApplicationTag(ctx context.Context, id int64) (*ApplicationTag, error) {
-	return doGetByID[ApplicationTag](ctx, c, "/v6/application_tag", id)
-}
-
-// CreateApplicationTag creates a new tag on an application.
-func (c *Client) CreateApplicationTag(ctx context.Context, appID int64, tagKey, value string) (*ApplicationTag, error) {
-	payload := appTagCreatePayload{App: appID, TagKey: tagKey, Value: value}
-	return doCreate[ApplicationTag](ctx, c, "/v6/application_tag", payload)
-}
-
-// UpdateApplicationTag updates the value of an application tag.
-func (c *Client) UpdateApplicationTag(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/application_tag", id, map[string]interface{}{"value": value})
-}
-
-// DeleteApplicationTag removes an application tag by ID.
-func (c *Client) DeleteApplicationTag(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_tag", id)
-}
-
-// ApplicationProfile represents a profile name activated by a fleet on a host
-// application (the `application profile` term form).
-type ApplicationProfile struct {
-	ID          int64    `json:"id"`
-	App         ODataRef `json:"application"`
-	ProfileName string   `json:"activates__profile_name"`
-	HostApp     ODataRef `json:"on__application"`
-}
-
-type appProfileCreatePayload struct {
-	App         int64  `json:"application"`
-	ProfileName string `json:"activates__profile_name"`
-	HostApp     int64  `json:"on__application"`
-}
-
-// GetApplicationProfile retrieves a single application profile by ID.
-func (c *Client) GetApplicationProfile(ctx context.Context, id int64) (*ApplicationProfile, error) {
-	return doGetByID[ApplicationProfile](ctx, c, "/v6/application_profile", id)
-}
-
-// CreateApplicationProfile activates a profile name of a host application on an application.
-func (c *Client) CreateApplicationProfile(ctx context.Context, appID int64, profileName string, hostAppID int64) (*ApplicationProfile, error) {
-	payload := appProfileCreatePayload{App: appID, ProfileName: profileName, HostApp: hostAppID}
-	return doCreate[ApplicationProfile](ctx, c, "/v6/application_profile", payload)
-}
-
-// DeleteApplicationProfile removes an application profile by ID.
-func (c *Client) DeleteApplicationProfile(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_profile", id)
-}
-
-// ApplicationProfileCatalog represents a profile name catalogued by an
-// application (the `application profile catalog` term form).
-type ApplicationProfileCatalog struct {
-	ID          int64    `json:"id"`
-	App         ODataRef `json:"application"`
-	ProfileName string   `json:"catalogs__profile_name"`
-	Description *string  `json:"description"`
-}
-
-type appProfileCatalogCreatePayload struct {
-	App         int64   `json:"application"`
-	ProfileName string  `json:"catalogs__profile_name"`
-	Description *string `json:"description,omitempty"`
-}
-
-// GetApplicationProfileCatalog retrieves a single application profile catalog entry by ID.
-func (c *Client) GetApplicationProfileCatalog(ctx context.Context, id int64) (*ApplicationProfileCatalog, error) {
-	return doGetByID[ApplicationProfileCatalog](ctx, c, "/v6/application_profile_catalog", id)
-}
-
-// CreateApplicationProfileCatalog catalogs a profile name on an application.
-func (c *Client) CreateApplicationProfileCatalog(ctx context.Context, appID int64, profileName string, description *string) (*ApplicationProfileCatalog, error) {
-	payload := appProfileCatalogCreatePayload{App: appID, ProfileName: profileName, Description: description}
-	return doCreate[ApplicationProfileCatalog](ctx, c, "/v6/application_profile_catalog", payload)
-}
-
-// UpdateApplicationProfileCatalog updates the description of an application
-// profile catalog entry. A nil description clears it.
-func (c *Client) UpdateApplicationProfileCatalog(ctx context.Context, id int64, description *string) error {
-	return doPatch(ctx, c, "/v6/application_profile_catalog", id, map[string]interface{}{"description": description})
-}
-
-// DeleteApplicationProfileCatalog removes an application profile catalog entry by ID.
-func (c *Client) DeleteApplicationProfileCatalog(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_profile_catalog", id)
-}
-
-// DeviceProfileOverride represents a profile name a device overrides on a host
-// application (the `device profile override` term form).
-type DeviceProfileOverride struct {
-	ID          int64    `json:"id"`
-	Device      ODataRef `json:"device"`
-	ProfileName string   `json:"overrides__profile_name"`
-	HostApp     ODataRef `json:"on__application"`
-	IsActive    bool     `json:"is_active"`
-}
-
-type deviceProfileOverrideCreatePayload struct {
-	Device      int64  `json:"device"`
-	ProfileName string `json:"overrides__profile_name"`
-	HostApp     int64  `json:"on__application"`
-	IsActive    *bool  `json:"is_active,omitempty"`
-}
-
-// GetDeviceProfileOverride retrieves a single device profile override by ID.
-func (c *Client) GetDeviceProfileOverride(ctx context.Context, id int64) (*DeviceProfileOverride, error) {
-	return doGetByID[DeviceProfileOverride](ctx, c, "/v6/device_profile_override", id)
-}
-
-// CreateDeviceProfileOverride overrides a profile name of a host application on a device.
-func (c *Client) CreateDeviceProfileOverride(ctx context.Context, deviceID int64, profileName string, hostAppID int64, isActive *bool) (*DeviceProfileOverride, error) {
-	payload := deviceProfileOverrideCreatePayload{Device: deviceID, ProfileName: profileName, HostApp: hostAppID, IsActive: isActive}
-	return doCreate[DeviceProfileOverride](ctx, c, "/v6/device_profile_override", payload)
-}
-
-// UpdateDeviceProfileOverride updates the active flag of a device profile override.
-func (c *Client) UpdateDeviceProfileOverride(ctx context.Context, id int64, isActive bool) error {
-	return doPatch(ctx, c, "/v6/device_profile_override", id, map[string]interface{}{"is_active": isActive})
-}
-
-// DeleteDeviceProfileOverride removes a device profile override by ID.
-func (c *Client) DeleteDeviceProfileOverride(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/device_profile_override", id)
-}
-
-// DeviceTag represents a tag on a device.
-type DeviceTag struct {
-	ID     int64    `json:"id"`
-	Device ODataRef `json:"device"`
-	TagKey string   `json:"tag_key"`
-	Value  string   `json:"value"`
-}
-
-type deviceTagCreatePayload struct {
-	Device int64  `json:"device"`
-	TagKey string `json:"tag_key"`
-	Value  string `json:"value"`
-}
-
-// GetDeviceTag retrieves a single device tag by ID.
-func (c *Client) GetDeviceTag(ctx context.Context, id int64) (*DeviceTag, error) {
-	return doGetByID[DeviceTag](ctx, c, "/v6/device_tag", id)
-}
-
-// CreateDeviceTag creates a new tag on a device.
-func (c *Client) CreateDeviceTag(ctx context.Context, deviceID int64, tagKey, value string) (*DeviceTag, error) {
-	payload := deviceTagCreatePayload{Device: deviceID, TagKey: tagKey, Value: value}
-	return doCreate[DeviceTag](ctx, c, "/v6/device_tag", payload)
-}
-
-// UpdateDeviceTag updates the value of a device tag.
-func (c *Client) UpdateDeviceTag(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/device_tag", id, map[string]interface{}{"value": value})
-}
-
-// DeleteDeviceTag removes a device tag by ID.
-func (c *Client) DeleteDeviceTag(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/device_tag", id)
-}
-
-// ServiceEnvVar represents a service-level environment variable.
-type ServiceEnvVar struct {
-	ID      int64    `json:"id"`
-	Service ODataRef `json:"service"`
-	Name    string   `json:"name"`
-	Value   string   `json:"value"`
-}
-
-type serviceEnvVarCreatePayload struct {
-	Service int64  `json:"service"`
-	Name    string `json:"name"`
-	Value   string `json:"value"`
-}
-
-// GetServiceEnvVar retrieves a single service environment variable by ID.
-func (c *Client) GetServiceEnvVar(ctx context.Context, id int64) (*ServiceEnvVar, error) {
-	return doGetByID[ServiceEnvVar](ctx, c, "/v6/service_environment_variable", id)
-}
-
-// CreateServiceEnvVar creates a new environment variable on a service.
-func (c *Client) CreateServiceEnvVar(ctx context.Context, serviceID int64, name, value string) (*ServiceEnvVar, error) {
-	payload := serviceEnvVarCreatePayload{Service: serviceID, Name: name, Value: value}
-	return doCreate[ServiceEnvVar](ctx, c, "/v6/service_environment_variable", payload)
-}
-
-// UpdateServiceEnvVar updates the value of a service environment variable.
-func (c *Client) UpdateServiceEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/service_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteServiceEnvVar removes a service environment variable by ID.
-func (c *Client) DeleteServiceEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/service_environment_variable", id)
-}
-
-// DeviceConfigVar represents a device-level configuration variable.
-type DeviceConfigVar struct {
-	ID     int64    `json:"id"`
-	Device ODataRef `json:"device"`
-	Name   string   `json:"name"`
-	Value  string   `json:"value"`
-}
-
-type deviceConfigVarCreatePayload struct {
-	Device int64  `json:"device"`
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-}
-
-// GetDeviceConfigVar retrieves a single device config variable by ID.
-func (c *Client) GetDeviceConfigVar(ctx context.Context, id int64) (*DeviceConfigVar, error) {
-	return doGetByID[DeviceConfigVar](ctx, c, "/v6/device_config_variable", id)
-}
-
-// CreateDeviceConfigVar creates a new config variable on a device.
-func (c *Client) CreateDeviceConfigVar(ctx context.Context, deviceID int64, name, value string) (*DeviceConfigVar, error) {
-	payload := deviceConfigVarCreatePayload{Device: deviceID, Name: name, Value: value}
-	return doCreate[DeviceConfigVar](ctx, c, "/v6/device_config_variable", payload)
-}
-
-// UpdateDeviceConfigVar updates the value of a device config variable.
-func (c *Client) UpdateDeviceConfigVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/device_config_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteDeviceConfigVar removes a device config variable by ID.
-func (c *Client) DeleteDeviceConfigVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/device_config_variable", id)
-}
-
-// ReleaseTag represents a tag on a release.
-type ReleaseTag struct {
-	ID      int64    `json:"id"`
-	Release ODataRef `json:"release"`
-	TagKey  string   `json:"tag_key"`
-	Value   string   `json:"value"`
-}
-
-type releaseTagCreatePayload struct {
-	Release int64  `json:"release"`
-	TagKey  string `json:"tag_key"`
-	Value   string `json:"value"`
-}
-
-// GetReleaseTag retrieves a single release tag by ID.
-func (c *Client) GetReleaseTag(ctx context.Context, id int64) (*ReleaseTag, error) {
-	return doGetByID[ReleaseTag](ctx, c, "/v6/release_tag", id)
-}
-
-// CreateReleaseTag creates a new tag on a release.
-func (c *Client) CreateReleaseTag(ctx context.Context, releaseID int64, tagKey, value string) (*ReleaseTag, error) {
-	payload := releaseTagCreatePayload{Release: releaseID, TagKey: tagKey, Value: value}
-	return doCreate[ReleaseTag](ctx, c, "/v6/release_tag", payload)
-}
-
-// UpdateReleaseTag updates the value of a release tag.
-func (c *Client) UpdateReleaseTag(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/release_tag", id, map[string]interface{}{"value": value})
-}
-
-// DeleteReleaseTag removes a release tag by ID.
-func (c *Client) DeleteReleaseTag(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/release_tag", id)
-}
-
-// ImageEnvVar represents an image-level environment variable.
-type ImageEnvVar struct {
-	ID           int64    `json:"id"`
-	ReleaseImage ODataRef `json:"release_image"`
-	Name         string   `json:"name"`
-	Value        string   `json:"value"`
-}
-
-type imageEnvVarCreatePayload struct {
-	ReleaseImage int64  `json:"release_image"`
-	Name         string `json:"name"`
-	Value        string `json:"value"`
-}
-
-// GetImageEnvVar retrieves a single image environment variable by ID.
-func (c *Client) GetImageEnvVar(ctx context.Context, id int64) (*ImageEnvVar, error) {
-	return doGetByID[ImageEnvVar](ctx, c, "/v6/image_environment_variable", id)
-}
-
-// CreateImageEnvVar creates a new environment variable on a release image.
-func (c *Client) CreateImageEnvVar(ctx context.Context, releaseImageID int64, name, value string) (*ImageEnvVar, error) {
-	payload := imageEnvVarCreatePayload{ReleaseImage: releaseImageID, Name: name, Value: value}
-	return doCreate[ImageEnvVar](ctx, c, "/v6/image_environment_variable", payload)
-}
-
-// UpdateImageEnvVar updates the value of an image environment variable.
-func (c *Client) UpdateImageEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/image_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteImageEnvVar removes an image environment variable by ID.
-func (c *Client) DeleteImageEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/image_environment_variable", id)
-}
-
-// ImageProfile represents a profile name on a release image.
-type ImageProfile struct {
-	ID           int64    `json:"id"`
-	ReleaseImage ODataRef `json:"release_image"`
-	ProfileName  string   `json:"profile_name"`
-}
-
-type imageProfileCreatePayload struct {
-	ReleaseImage int64  `json:"release_image"`
-	ProfileName  string `json:"profile_name"`
-}
-
-// GetImageProfile retrieves a single image profile by ID.
-func (c *Client) GetImageProfile(ctx context.Context, id int64) (*ImageProfile, error) {
-	return doGetByID[ImageProfile](ctx, c, "/v6/image_profile", id)
-}
-
-// CreateImageProfile creates a new profile on a release image.
-func (c *Client) CreateImageProfile(ctx context.Context, releaseImageID int64, profileName string) (*ImageProfile, error) {
-	payload := imageProfileCreatePayload{ReleaseImage: releaseImageID, ProfileName: profileName}
-	return doCreate[ImageProfile](ctx, c, "/v6/image_profile", payload)
-}
-
-// DeleteImageProfile removes an image profile by ID.
-func (c *Client) DeleteImageProfile(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/image_profile", id)
-}
-
-// ServiceLabel represents a label on a service.
-type ServiceLabel struct {
-	ID        int64    `json:"id"`
-	Service   ODataRef `json:"service"`
-	LabelName string   `json:"label_name"`
-	Value     string   `json:"value"`
-}
-
-type serviceLabelCreatePayload struct {
-	Service   int64  `json:"service"`
-	LabelName string `json:"label_name"`
-	Value     string `json:"value"`
-}
-
-// GetServiceLabel retrieves a single service label by ID.
-func (c *Client) GetServiceLabel(ctx context.Context, id int64) (*ServiceLabel, error) {
-	return doGetByID[ServiceLabel](ctx, c, "/v6/service_label", id)
-}
-
-// CreateServiceLabel creates a new label on a service.
-func (c *Client) CreateServiceLabel(ctx context.Context, serviceID int64, labelName, value string) (*ServiceLabel, error) {
-	payload := serviceLabelCreatePayload{Service: serviceID, LabelName: labelName, Value: value}
-	return doCreate[ServiceLabel](ctx, c, "/v6/service_label", payload)
-}
-
-// UpdateServiceLabel updates the value of a service label.
-func (c *Client) UpdateServiceLabel(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/service_label", id, map[string]interface{}{"value": value})
-}
-
-// DeleteServiceLabel removes a service label by ID.
-func (c *Client) DeleteServiceLabel(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/service_label", id)
-}
-
-// Service (read-only, for data source)
-
-// Service represents a Balena service resource.
-type Service struct {
-	ID          int64    `json:"id"`
-	App         ODataRef `json:"application"`
-	ServiceName string   `json:"service_name"`
-}
-
-// GetServiceByName retrieves a service by application ID and service name.
-func (c *Client) GetServiceByName(ctx context.Context, appID int64, serviceName string) (*Service, error) {
-	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("application eq %d and service_name eq '%s'", appID, escapeOData(serviceName)))
-	items, err := doListFiltered[Service](ctx, c, "/v6/service", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("service %q not found in application %d", serviceName, appID)}
-	}
-	return &items[0], nil
-}
-
-// Release (read-only, for data source)
-
-// Release represents a Balena release resource.
-type Release struct {
-	ID             int64    `json:"id"`
-	App            ODataRef `json:"belongs_to__application"`
-	Commit         string   `json:"commit"`
-	Status         string   `json:"status"`
-	ReleaseVersion string   `json:"release_version"`
-	Semver         string   `json:"semver"`
-	CreatedAt      string   `json:"created_at"`
-}
-
-// GetRelease retrieves a single release by ID.
-func (c *Client) GetRelease(ctx context.Context, id int64) (*Release, error) {
-	return doGetByID[Release](ctx, c, "/v6/release", id)
-}
-
-// GetReleaseByCommit retrieves a release by application ID and commit hash.
-func (c *Client) GetReleaseByCommit(ctx context.Context, appID int64, commit string) (*Release, error) {
-	return c.getReleaseByCommit(ctx, appID, commit, "")
-}
-
-// GetSuccessfulReleaseByCommit retrieves the successful release with the given commit in the given application. A
-// failed release can share its commit with a successful one, and only a successful release can be pinned.
-func (c *Client) GetSuccessfulReleaseByCommit(ctx context.Context, appID int64, commit string) (*Release, error) {
-	return c.getReleaseByCommit(ctx, appID, commit, " and status eq 'success'")
-}
-
-func (c *Client) getReleaseByCommit(ctx context.Context, appID int64, commit, extraFilter string) (*Release, error) {
-	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("belongs_to__application eq %d and commit eq '%s'", appID, escapeOData(commit))+extraFilter)
-	items, err := doListFiltered[Release](ctx, c, "/v6/release", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("release with commit %q not found in application %d", commit, appID)}
-	}
-	return &items[0], nil
-}
-
-// ServiceInstall represents a service_install pivot (device + service pair).
-type ServiceInstall struct {
-	ID              int64    `json:"id"`
-	Device          ODataRef `json:"device"`
-	InstallsService ODataRef `json:"installs__service"`
-}
-
-// GetServiceInstall retrieves the service_install linking a device to a service.
-func (c *Client) GetServiceInstall(ctx context.Context, deviceID, serviceID int64) (*ServiceInstall, error) {
-	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("device eq %d and installs__service eq %d", deviceID, serviceID))
-	items, err := doListFiltered[ServiceInstall](ctx, c, "/v6/service_install", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("service_install not found for device %d and service %d", deviceID, serviceID)}
-	}
-	return &items[0], nil
-}
-
-// ReleaseImage represents a release_image pivot (release + image pair).
-type ReleaseImage struct {
-	ID              int64    `json:"id"`
-	IsPartOfRelease ODataRef `json:"is_part_of__release"`
-	Image           ODataRef `json:"image"`
-}
-
-// GetReleaseImage retrieves the release_image linking a release to an image.
-func (c *Client) GetReleaseImage(ctx context.Context, releaseID, imageID int64) (*ReleaseImage, error) {
-	filter := "$filter=" + url.QueryEscape(fmt.Sprintf("is_part_of__release eq %d and image eq %d", releaseID, imageID))
-	items, err := doListFiltered[ReleaseImage](ctx, c, "/v6/release_image", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("release_image not found for release %d and image %d", releaseID, imageID)}
-	}
-	return &items[0], nil
-}
-
-// Organization (read-only, for data source)
-
-// Organization represents a Balena organization resource.
-type Organization struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	Handle string `json:"handle"`
-}
-
-type organizationCreatePayload struct {
-	Name   string `json:"name"`
-	Handle string `json:"handle,omitempty"`
-}
-
-// GetOrganization retrieves a single organization by ID.
-func (c *Client) GetOrganization(ctx context.Context, id int64) (*Organization, error) {
-	return doGetByID[Organization](ctx, c, "/v6/organization", id)
-}
-
-// GetOrganizationByHandle retrieves a single organization by its handle.
-func (c *Client) GetOrganizationByHandle(ctx context.Context, handle string) (*Organization, error) {
-	filter := "$filter=" + url.QueryEscape("handle eq '"+escapeOData(handle)+"'")
-	items, err := doListFiltered[Organization](ctx, c, "/v6/organization", filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, &APIError{StatusCode: http.StatusNotFound, Body: fmt.Sprintf("organization with handle %q not found", handle)}
-	}
-	return &items[0], nil
-}
-
-// CreateOrganization creates a new organization.
-func (c *Client) CreateOrganization(ctx context.Context, name, handle string) (*Organization, error) {
-	payload := organizationCreatePayload{Name: name, Handle: handle}
-	return doCreate[Organization](ctx, c, "/v6/organization", payload)
-}
-
-// UpdateOrganization patches an existing organization.
-func (c *Client) UpdateOrganization(ctx context.Context, id int64, body map[string]interface{}) error {
-	return doPatch(ctx, c, "/v6/organization", id, body)
-}
-
-// DeleteOrganization removes an organization by ID.
-func (c *Client) DeleteOrganization(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/organization", id)
-}
-
-// escapeOData escapes single quotes in OData string literals.
-func escapeOData(s string) string {
-	return strings.ReplaceAll(s, "'", "''")
-}
-
-// do builds, sends, and retries a single HTTP operation. Returns the response
-// body on 2xx and an *APIError otherwise. 409/429/5xx responses are retried
-// with exponential backoff honoring any Retry-After header, up to Client.maxRetries.
-func (c *Client) do(ctx context.Context, method, rawPath string, body interface{}) ([]byte, error) {
+// Do sends one request to a path (with its query string), retrying 409/429/5xx with exponential backoff that honours
+// Retry-After. It returns the body of a 2xx response and an *APIError otherwise.
+func (c *Client) Do(ctx context.Context, method, rawPath string, body any) ([]byte, error) {
 	var bodyBytes []byte
 	if body != nil {
 		var err error
@@ -1049,9 +403,7 @@ func (c *Client) do(ctx context.Context, method, rawPath string, body interface{
 			return nil, fmt.Errorf("marshalling request body: %w", err)
 		}
 	}
-
 	u := c.baseURL + rawPath
-
 	var lastErr error
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		var reqBody io.Reader
@@ -1077,17 +429,14 @@ func (c *Client) do(ctx context.Context, method, rawPath string, body interface{
 			}
 			continue
 		}
-
 		data, readErr := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		if readErr != nil {
 			return nil, fmt.Errorf("reading response body: %w", readErr)
 		}
-
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return data, nil
 		}
-
 		apiErr := &APIError{StatusCode: resp.StatusCode, Body: string(data)}
 		if !isRetryableStatus(resp.StatusCode) || attempt == c.maxRetries {
 			return nil, apiErr
@@ -1114,13 +463,12 @@ func isRetryableStatus(code int) bool {
 	return false
 }
 
-// waitBeforeRetry sleeps before the next retry, honoring a Retry-After header
-// (either integer seconds or HTTP-date) and falling back to exponential backoff
-// capped at 30 seconds.
+// waitBeforeRetry sleeps before the next retry, honouring a Retry-After header (integer seconds or HTTP-date) and
+// falling back to exponential backoff capped at MAX_BACKOFF.
 func waitBeforeRetry(ctx context.Context, retryAfter string, attempt int) error {
 	delay := time.Duration(1<<attempt) * time.Second
-	if delay > 30*time.Second {
-		delay = 30 * time.Second
+	if delay > MAX_BACKOFF {
+		delay = MAX_BACKOFF
 	}
 	if retryAfter = strings.TrimSpace(retryAfter); retryAfter != "" {
 		if secs, err := strconv.Atoi(retryAfter); err == nil && secs >= 0 {
@@ -1139,97 +487,4 @@ func waitBeforeRetry(ctx context.Context, retryAfter string, attempt int) error 
 	case <-timer.C:
 		return nil
 	}
-}
-
-// appendQuery appends an extra query fragment (without leading `?` or `&`) to a path.
-func appendQuery(path, extra string) string {
-	if extra == "" {
-		return path
-	}
-	sep := "?"
-	if strings.Contains(path, "?") {
-		sep = "&"
-	}
-	return path + sep + extra
-}
-
-// doListAll pages through a Pine.js collection using $top/$skip until a short page is returned.
-func doListAll[T any](ctx context.Context, c *Client, path, extraQuery string) ([]T, error) {
-	var out []T
-	for skip := 0; ; skip += DEFAULT_PAGE_SIZE {
-		pageQuery := fmt.Sprintf("$top=%d&$skip=%d", DEFAULT_PAGE_SIZE, skip)
-		combined := extraQuery
-		if combined == "" {
-			combined = pageQuery
-		} else {
-			combined = combined + "&" + pageQuery
-		}
-		data, err := c.do(ctx, http.MethodGet, appendQuery(path, combined), nil)
-		if err != nil {
-			return nil, err
-		}
-		var resp pineResponse[T]
-		if err := json.Unmarshal(data, &resp); err != nil {
-			return nil, fmt.Errorf("decoding response: %w", err)
-		}
-		out = append(out, resp.D...)
-		if len(resp.D) < DEFAULT_PAGE_SIZE {
-			break
-		}
-	}
-	return out, nil
-}
-
-// doListFiltered lists all items matching the given OData filter/expand fragment.
-// extraQuery must be a pre-joined query fragment (no leading `?` or `&`).
-func doListFiltered[T any](ctx context.Context, c *Client, path, extraQuery string) ([]T, error) {
-	return doListAll[T](ctx, c, path, extraQuery)
-}
-
-// doGetByID retrieves a single item by numeric ID, optionally with extra query fragments.
-func doGetByID[T any](ctx context.Context, c *Client, path string, id int64, query ...string) (*T, error) {
-	u := path + "(" + strconv.FormatInt(id, 10) + ")"
-	if len(query) > 0 {
-		u += "?" + strings.Join(query, "&")
-	}
-	data, err := c.do(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	var resp pineResponse[T]
-	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
-	}
-	if len(resp.D) == 0 {
-		return nil, &APIError{
-			StatusCode: http.StatusNotFound,
-			Body:       fmt.Sprintf("resource with id %d not found", id),
-		}
-	}
-	return &resp.D[0], nil
-}
-
-// doCreate POSTs the body to path and decodes the response into T.
-func doCreate[T any](ctx context.Context, c *Client, path string, body interface{}) (*T, error) {
-	data, err := c.do(ctx, http.MethodPost, path, body)
-	if err != nil {
-		return nil, err
-	}
-	var result T
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("decoding create response: %w", err)
-	}
-	return &result, nil
-}
-
-// doPatch issues a PATCH against the keyed resource.
-func doPatch(ctx context.Context, c *Client, path string, id int64, body interface{}) error {
-	_, err := c.do(ctx, http.MethodPatch, path+"("+strconv.FormatInt(id, 10)+")", body)
-	return err
-}
-
-// doDelete issues a DELETE against the keyed resource.
-func doDelete(ctx context.Context, c *Client, path string, id int64) error {
-	_, err := c.do(ctx, http.MethodDelete, path+"("+strconv.FormatInt(id, 10)+")", nil)
-	return err
 }

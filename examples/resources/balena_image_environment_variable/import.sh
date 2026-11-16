@@ -1,0 +1,1 @@
+terraform import balena_image_environment_variable.example 123456
