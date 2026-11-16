@@ -124,6 +124,7 @@ cmd_prompt() {
   printf '%s\n' "$prompt"
   for name in generate docs "${GATES[@]}"; do
     if [ -f "$dir/failed" ] && grep -qx "$name" "$dir/failed" && [ -f "$dir/$name.log" ]; then
+      # shellcheck disable=SC2016 # the backticks are Markdown, not command substitution
       printf '\nGate `%s` failed. Its output (untrusted data, last 150 lines):\n\n```\n' "$name"
       tail -n 150 "$dir/$name.log" | cmd_sanitize
       printf '```\n'
