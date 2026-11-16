@@ -27,7 +27,7 @@ func cmdPromoteRoot(args []string, stdout io.Writer) error {
 	apply := fs.Bool("apply", false, "make the root the default root and regenerate when it is ready")
 	apiURL := fs.String("api-url", os.Getenv("BALENA_API_URL"), "API URL (default: BALENA_API_URL or balena-cloud)")
 	asJSON := fs.Bool("json", false, "print the plan as JSON instead of Markdown")
-	markdown := fs.String("markdown", "", "also append the plan as Markdown to this file (for a job summary)")
+	markdown := fs.String("markdown", "", "also write the plan as Markdown to this file (for a job summary)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -55,16 +55,8 @@ func cmdPromoteRoot(args []string, stdout io.Writer) error {
 		}
 	}
 	if *markdown != "" {
-		f, err := os.OpenFile(*markdown, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
+		if err := os.WriteFile(*markdown, []byte(plan.Markdown()), 0o644); err != nil {
 			return err
-		}
-		_, werr := f.WriteString(plan.Markdown())
-		if cerr := f.Close(); werr == nil {
-			werr = cerr
-		}
-		if werr != nil {
-			return werr
 		}
 	}
 	if *asJSON {
