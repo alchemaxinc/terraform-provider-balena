@@ -419,7 +419,11 @@ func BuildIR(in *Inputs, preference []string) (*IR, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		problems = append(problems, p...)
+		// Only the roots the IR draws tables from must cross-check: a newer, not yet promoted root that disagrees
+		// with its SBVR blocks its own promotion, not the current generation.
+		if contains(preference, r.Name) {
+			problems = append(problems, p...)
+		}
 		byRoot[r.Name] = tables
 		ir.Roots = append(ir.Roots, RootInfo{
 			Name:           r.Name,

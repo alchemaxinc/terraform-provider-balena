@@ -9,6 +9,7 @@
 //	ir            print the IR for any locked API root (offline)
 //	surface-diff  compare the Terraform surface of two surface locks or two API roots (offline)
 //	contract      check every spec's table and $select-able fields against the live API (read-only, network)
+//	promote-root  make a newer locked API root the default root when it builds and passes its contract (network)
 package main
 
 import (
@@ -25,7 +26,7 @@ func main() {
 }
 
 func usage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: balena-schema <fetch|generate|check|ir|surface-diff|contract> [flags]")
+	_, _ = fmt.Fprintln(w, "usage: balena-schema <fetch|generate|check|ir|surface-diff|contract|promote-root> [flags]")
 }
 
 func run(args []string, stdout, stderr io.Writer) int {

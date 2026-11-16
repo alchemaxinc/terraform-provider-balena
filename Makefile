@@ -68,6 +68,10 @@ check-generate: ## Verify the lock, cross-check sources, gap-check tables and fa
 surface-diff: ## Compare the Terraform surface with BASE (a surface lock file); TITLE checks the commit type
 	go run ./cmd/balena-schema surface-diff -old $(BASE) $(if $(TITLE),-title "$(TITLE)")
 
+.PHONY: promote-root
+promote-root: ## Plan the promotion of a newer API root (needs BALENA_API_TOKEN); ARGS="-apply" promotes it
+	go run ./cmd/balena-schema promote-root $(ARGS)
+
 .PHONY: contract
 contract: ## Check every spec against the live API with GETs only (needs BALENA_API_TOKEN); ROOT picks the API root
 	go run ./cmd/balena-schema contract $(if $(ROOT),-root $(ROOT))
