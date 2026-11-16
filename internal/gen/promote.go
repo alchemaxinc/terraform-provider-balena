@@ -35,7 +35,8 @@ type PromotionPlan struct {
 	// Level is the conventional commit type the surface change needs.
 	Level   string   `json:"level,omitempty"`
 	Changes []Change `json:"changes,omitempty"`
-	// Fallbacks lists in-scope tables the candidate root lacks, with the root that serves them instead.
+	// Fallbacks lists in-scope tables the current root serves but the candidate lacks, with the root that serves them
+	// instead.
 	Fallbacks        []string `json:"fallbacks,omitempty"`
 	ContractFailures []string `json:"contract_failures,omitempty"`
 	// CurrentError is set when the current default root no longer generates.
@@ -110,8 +111,15 @@ func PlanPromotion(repoDir, candidate string, contract ContractRunner) (*Promoti
 		plan.Reason = "the generator cannot build /" + candidate + ": " + err.Error()
 		return plan, nil
 	}
+	// Tables the current root serves that the candidate lacks fall back to another root.
+	currentRoot := map[string]string{}
+	for _, types := range []map[string]*SurfaceType{currentSurface.Resources, currentSurface.DataSources} {
+		for _, st := range types {
+			currentRoot[st.Table] = st.Root
+		}
+	}
 	for _, s := range next.Specs {
-		if s.Root != candidate {
+		if s.Root != candidate && currentRoot[s.Table] == plan.Current {
 			plan.Fallbacks = append(plan.Fallbacks, s.Table+" (served from /"+s.Root+")")
 		}
 	}
