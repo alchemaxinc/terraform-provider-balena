@@ -1,0 +1,136 @@
+# The only hand-edited input of the generator (go run ./cmd/balena-schema generate). Everything else is derived from
+# the pinned upstream models. Every entry needs a reason. Unknown tables or columns, overrides that change nothing,
+# rules that match nothing and hooks without a Go implementation fail generation. See schema/README.md.
+
+# Tables the provider manages. Every other table is listed in schema/coverage.md with the classification the rules
+# would give it; widening the provider means adding names here.
+scope:
+  - application
+  - application_config_variable
+  - application_environment_variable
+  - application_profile
+  - application_profile_catalog
+  - application_tag
+  - device
+  - device_config_variable
+  - device_environment_variable
+  - device_profile_override
+  - device_service_environment_variable
+  - device_tag
+  - image_environment_variable
+  - image_profile
+  - organization
+  - release
+  - release_image
+  - release_tag
+  - service
+  - service_environment_variable
+  - service_install
+  - service_label
+  - user_public_key
+
+rules:
+  sensitive:
+    - table_suffix: _environment_variable
+      field: value
+      reason: environment variables commonly carry credentials; the models have no secret marker besides Hashed
+  var_names:
+    - tables:
+        - application_environment_variable
+        - device_environment_variable
+        - service_environment_variable
+        - device_service_environment_variable
+      field: name
+      rule: env_var
+      reason: open-balena-api checks environment variable names of these tables in a hook (checkEnvVarNameValidity, src/features/vars-schema/hooks/env-var-validation.ts) with the rules /config/vars publishes; image environment variables come from the build and are not checked
+    - tables:
+        - application_config_variable
+        - device_config_variable
+      field: name
+      rule: config_var
+      reason: open-balena-api checks configuration variable names of these tables in a hook (checkConfigVarNameValidity, src/features/vars-schema/hooks/config-var-validation.ts) with the rules /config/vars publishes
+
+hooks:
+  organizationDeleteTolerates401:
+    uses: [organization.id]
+    reason: the API refuses to delete an organization with an API token and answers 401
+  deviceAdopt:
+    uses: [device.id, device.uuid]
+    reason: an API token cannot create a device; a device joins balena when it is provisioned
+  deviceForget:
+    uses: [device.id]
+    reason: destroying the resource must not delete the device
+  devicePinnedRelease:
+    uses: [device.belongs_to__application, release.id, release.commit, release.status, release.belongs_to__application]
+    reason: a commit names one successful release only within the fleet of the device
+  deviceHostOSRelease:
+    uses:
+      [
+        device.is_of__device_type,
+        device_type.slug,
+        release.id,
+        release.raw_version,
+        release.status,
+        release.belongs_to__application,
+        application.is_host,
+        application.is_for__device_type,
+      ]
+    reason: a host OS version names one release only among the host applications of the device's type
+
+tables:
+  application:
+    fields:
+      is_for__device_type:
+        reference_by: slug
+        reason: device types are known by slug; their ids differ between balena environments
+      is_of__class:
+        mode: optional_computed
+        reason: a hook defaults the class to fleet
+      application_type:
+        mode: optional_computed
+        reason: a hook picks the application type
+  device:
+    reason: >-
+      A device joins balena when it is provisioned, so creating this resource takes over the existing device with the
+      given uuid, and destroying it leaves the device untouched.
+    resource_fields: [uuid, device_name, is_pinned_on__release, should_be_operated_by__release]
+    import_by: uuid
+    hooks:
+      create: deviceAdopt
+      delete: deviceForget
+    fields:
+      uuid:
+        mode: required
+        force_new: true
+        reason: the uuid selects the device to adopt
+      device_name:
+        mode: optional_computed
+        reason: an adopted device keeps its name unless one is configured
+      is_pinned_on__release:
+        mode: optional
+        reference_by: commit
+        resolver: devicePinnedRelease
+        reason: a pin is set by release commit; null unpins the device so it tracks its fleet
+      should_be_operated_by__release:
+        reference_by: raw_version
+        resolver: deviceHostOSRelease
+        reason: the host OS is set by version, for example 6.0.10+rev1
+      is_of__device_type:
+        reference_by: slug
+        reason: device types are known by slug; their ids differ between balena environments
+  organization:
+    reason: the API refuses to delete an organization with an API token, so destroying it only removes it from the state.
+    hooks:
+      delete: organizationDeleteTolerates401
+  release:
+    resource: false
+    reason: releases are written by the builder and the CLI, not managed declaratively
+  release_image:
+    resource: false
+    reason: the builder links images to releases
+  service:
+    resource: false
+    reason: the builder creates services from a release's composition
+  service_install:
+    resource: false
+    reason: the supervisor on the device creates service installs

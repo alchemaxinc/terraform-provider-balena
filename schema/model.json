@@ -1,0 +1,7090 @@
+{
+  "format": 1,
+  "default_root": "v7",
+  "roots": [
+    {
+      "name": "resin",
+      "preview": true,
+      "shape": "open-balena-api:src/balena-model.ts",
+      "constraints": [
+        "open-balena-api:src/balena.sbvr"
+      ],
+      "model_generator": "v6.1.29",
+      "tables": 48
+    },
+    {
+      "name": "v7",
+      "preview": false,
+      "shape": "balena-sdk:src/types/v7.ts",
+      "constraints": [
+        "open-balena-api:src/balena.sbvr",
+        "open-balena-api:src/translations/v7/v7.sbvr"
+      ],
+      "model_generator": "v5.1.2",
+      "tables": 74
+    }
+  ],
+  "sources": [
+    {
+      "name": "balena-cloud",
+      "url": "https://api.balena-cloud.com/config/vars"
+    },
+    {
+      "name": "balena-sdk",
+      "tag": "v23.2.24",
+      "commit": "ebd1a0780f28a3a5f0ae904c2a96f3d91ab12be8"
+    },
+    {
+      "name": "open-balena-api",
+      "tag": "v52.2.35",
+      "commit": "41efdad03c50ba5ae0aa5fa571f0e418753c591f"
+    }
+  ],
+  "tables": [
+    {
+      "name": "actor",
+      "canonical": "actor",
+      "interface": "Actor",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "open_balena_permissions": [
+        "delete"
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_actor",
+        "reason": "no columns besides its id"
+      }
+    },
+    {
+      "name": "api_key",
+      "canonical": "api_key",
+      "interface": "ApiKey",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1244,
+          "provenance": "open"
+        },
+        {
+          "name": "expiry_date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_of__actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1564,
+          "provenance": "open"
+        }
+      ],
+      "open_balena_permissions": [
+        "delete",
+        "read",
+        "update"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_api_key",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "api_key__has__permission",
+      "canonical": "api_key__has__permission",
+      "interface": "ApiKeyHasPermission",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "api_key",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "api_key",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "permission",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "permission",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "api_key",
+          "permission"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_api_key_has_permission",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "api_key__has__role",
+      "canonical": "api_key__has__role",
+      "interface": "ApiKeyHasRole",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "api_key",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "api_key",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "api_key",
+          "role"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_api_key_has_role",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "application",
+      "canonical": "application",
+      "interface": "Application",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "app_name",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 4,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "application_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application_type",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_accessible_by_support_until__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_archived",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_discoverable",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_host",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_of__class",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "enum": [
+            "fleet",
+            "block",
+            "app"
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "is_public",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_stored_at__repository_url",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "should_be_running__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "should_track_latest_release",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 6,
+          "max_length": 321,
+          "unique": true,
+          "provenance": "open"
+        },
+        {
+          "name": "uuid",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 32,
+          "max_length": 32,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ],
+        [
+          "uuid"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all",
+        "supervisor-proxy-write"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "application__can_use__application_as_host",
+      "canonical": "application__can_use__application_as_host",
+      "interface": "ApplicationCanUseApplicationAsHost",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "can_use__application_as_host",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_application_can_use_application_as_host",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "application_config_variable",
+      "canonical": "application__has__config_var_name",
+      "interface": "ApplicationConfigVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 492001,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_config_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "application_domain_mapping",
+      "canonical": "application__has__domain",
+      "interface": "ApplicationDomainMapping",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "domain",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_domain_mapping",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "application_environment_variable",
+      "canonical": "application__has__env_var_name",
+      "interface": "ApplicationEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 106104,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_environment_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "application_invite",
+      "canonical": "invitee__is_invited_to__application",
+      "interface": "InviteeIsInvitedToApplication",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "application_membership_role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application_membership_role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "invitee",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "invitee",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_created_by__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_invited_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "message",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_invite",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "application_membership_role",
+      "canonical": "application_membership_role",
+      "interface": "ApplicationMembershipRole",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_application_membership_role",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "application_profile",
+      "canonical": "application__activates__profile_name__on__application",
+      "interface": "ApplicationProfile",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "activates__profile_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 2,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "on__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "activates__profile_name",
+          "on__application"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "unenforced": [
+        "each application profile has an application2 that is host and is of a class that is not equal to \"block\"."
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_profile",
+        "preview": true,
+        "reason": "writable columns: resource and data source; preview: served from the unversioned /resin root"
+      }
+    },
+    {
+      "name": "application_profile_catalog",
+      "canonical": "application__catalogs__profile_name",
+      "interface": "ApplicationProfileCatalog",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "available_since__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "catalogs__profile_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 2,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 4000,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "catalogs__profile_name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read",
+        "update"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_application_profile_catalog",
+        "preview": true,
+        "reason": "data source only: open-balena-api grants users read,update but not create; preview: served from the unversioned /resin root"
+      }
+    },
+    {
+      "name": "application_tag",
+      "canonical": "application__has__tag_key",
+      "interface": "ApplicationTag",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "tag_key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 1000,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "tag_key"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_application_tag",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "application_type",
+      "canonical": "application_type",
+      "interface": "ApplicationType",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "max_length": 200,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_legacy",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "maximum_device_count",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 20,
+          "provenance": "open"
+        },
+        {
+          "name": "needs__os_version_range",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "requires_payment",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 30,
+          "unique": true,
+          "provenance": "open"
+        },
+        {
+          "name": "supports_gateway_mode",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "supports_multicontainer",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "supports_web_url",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_application_type",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "build_environment_variable",
+      "canonical": "application__has__build_var_name",
+      "interface": "BuildEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_build_environment_variable",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "config",
+      "canonical": "config",
+      "interface": "Config",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "scope",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_config",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "cpu_architecture",
+      "canonical": "cpu_architecture",
+      "interface": "CpuArchitecture",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_cpu_architecture",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "credit_bundle",
+      "canonical": "credit_bundle",
+      "interface": "CreditBundle",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "available_balance",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "belongs_to__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "error_message",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "expires_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_associated_with__invoice_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_created_by__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "original_quantity",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "payment_status",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "enum": [
+            "processing",
+            "paid",
+            "failed",
+            "complimentary",
+            "cancelled",
+            "refunded",
+            "manually invoiced"
+          ],
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "total_balance",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "total_cost",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "unit_cost",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_credit_bundle",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "delta",
+      "canonical": "delta",
+      "interface": "Delta",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "end_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "error_message",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_stored_at__location",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "originates_from__image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "image",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "produces__image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "size",
+          "kind": "scalar",
+          "type": "Big Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "update_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "version",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_delta",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "device",
+      "canonical": "device",
+      "interface": "Device",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "api_heartbeat_state",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "enum": [
+            "online",
+            "offline",
+            "timeout",
+            "unknown"
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "belongs_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "belongs_to__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "changed_api_heartbeat_state_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "cpu_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "cpu_temp",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "cpu_usage",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "custom_latitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "custom_longitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "device_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "download_progress",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "ip_address",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 2000,
+          "provenance": "open"
+        },
+        {
+          "name": "is_accessible_by_support_until__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_active",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_connected_to_vpn",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_frozen",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_locked_until__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_managed_by__service_instance",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service_instance",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_of__device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_online",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_pinned_on__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_running__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_undervolted",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_web_accessible",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "last_connectivity_event",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "last_update_status_event",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "last_vpn_event",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "latitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "local_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "location",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "longitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "mac_address",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 900,
+          "provenance": "open"
+        },
+        {
+          "name": "memory_total",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "memory_usage",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "note",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "os_variant",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "os_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 70,
+          "provenance": "open"
+        },
+        {
+          "name": "overall_progress",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "overall_status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "provisioning_progress",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "provisioning_state",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "public_address",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "should_be_managed_by__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "should_be_operated_by__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "should_be_running__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": false,
+          "computed": true,
+          "notes": [
+            "Computed as device is pinned on release ?? application should be running release."
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "storage_block_device",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "storage_total",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "storage_usage",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "supervisor_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 20,
+          "provenance": "open"
+        },
+        {
+          "name": "update_status",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "enum": [
+            "rejected",
+            "downloading",
+            "downloaded",
+            "applying changes",
+            "aborted",
+            "done"
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "uuid",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 62,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "uuid"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all",
+        "supervisor-proxy-write",
+        "tunnel-22222"
+      ],
+      "class": {
+        "status": "handwritten",
+        "resource": true,
+        "data_source": true,
+        "hooks": [
+          "create=deviceAdopt",
+          "delete=deviceForget"
+        ],
+        "type_name": "balena_device",
+        "reason": "writable columns: resource and data source; hand-written hooks: A device joins balena when it is provisioned, so creating this resource takes over the existing device with the given uuid, and destroying it leaves the device untouched."
+      }
+    },
+    {
+      "name": "device_config_variable",
+      "canonical": "device__has__config_var_name",
+      "interface": "DeviceConfigVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 372340,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_config_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "device_domain_mapping",
+      "canonical": "device__has__fqdn",
+      "interface": "DeviceDomainMapping",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "fqdn",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_domain_mapping",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "device_environment_variable",
+      "canonical": "device__has__env_var_name",
+      "interface": "DeviceEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 515798,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_environment_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "device_family",
+      "canonical": "device_family",
+      "interface": "DeviceFamily",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_manufactured_by__device_manufacturer",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_manufacturer",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 50,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ]
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_device_family",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "device_history",
+      "canonical": "device_history",
+      "interface": "DeviceHistory",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "cpu_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "end_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_active",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_created_by__actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_ended_by__actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_managed_by__service_instance",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service_instance",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_of__device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_pinned_on__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_running__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "os_variant",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "os_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "should_be_managed_by__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "supervisor_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "tracks__actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "tracks__device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "uuid",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_device_history",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "device_manufacturer",
+      "canonical": "device_manufacturer",
+      "interface": "DeviceManufacturer",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 50,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ]
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_device_manufacturer",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "device_profile_override",
+      "canonical": "device__overrides__profile_name__on__application",
+      "interface": "DeviceProfileOverride",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_active",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "on__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "overrides__profile_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 2,
+          "max_length": 100,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "overrides__profile_name",
+          "on__application"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "unenforced": [
+        "each device profile override has an application that is host and is of a class that is not equal to \"block\"."
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_profile_override",
+        "preview": true,
+        "reason": "writable columns: resource and data source; preview: served from the unversioned /resin root"
+      }
+    },
+    {
+      "name": "device_service_environment_variable",
+      "canonical": "device__installs__application__has__service_name__has__name",
+      "interface": "DeviceServiceEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "service_install",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service_install",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 285082,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "service_install",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_service_environment_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "device_tag",
+      "canonical": "device__has__tag_key",
+      "interface": "DeviceTag",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "tag_key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 60158,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "tag_key"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_device_tag",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "device_type",
+      "canonical": "device_type",
+      "interface": "DeviceType",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__device_family",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_family",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "contract",
+          "kind": "scalar",
+          "type": "JSON",
+          "nullable": true,
+          "writable": false,
+          "max_length": 5000000,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_of__cpu_architecture",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "cpu_architecture",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_private",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "logo",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "max_length": 400000,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "slug"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_device_type",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "device_type_alias",
+      "canonical": "device_type__is_referenced_by__alias",
+      "interface": "DeviceTypeAlias",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": false,
+      "fields": [
+        {
+          "name": "device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_referenced_by__alias",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "is_referenced_by__alias"
+        ],
+        [
+          "device_type",
+          "is_referenced_by__alias"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_device_type_alias",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "feature",
+      "canonical": "feature",
+      "interface": "Feature",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "billing_code",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "title",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_feature",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "identity_provider",
+      "canonical": "identity_provider",
+      "interface": "IdentityProvider",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "certificate",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "entry_point",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "issuer",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "requires_signed_authn_response",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "sso_identifier",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_identity_provider",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "identity_provider_membership",
+      "canonical": "organization__is_authorized_by__identity_provider",
+      "interface": "IdentityProviderMembership",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "grants_access_to__team",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "team",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_authorized_by__identity_provider",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "identity_provider",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_identity_provider_membership",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "image",
+      "canonical": "image",
+      "interface": "Image",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "build_log",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1500000,
+          "provenance": "open"
+        },
+        {
+          "name": "content_hash",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 71,
+          "provenance": "open"
+        },
+        {
+          "name": "contract",
+          "kind": "scalar",
+          "type": "JSON",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "dockerfile",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "end_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "error_message",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 300000,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "image_size",
+          "kind": "scalar",
+          "type": "Big Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_a_build_of__service",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_stored_at__image_location",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "unique": true,
+          "provenance": "open"
+        },
+        {
+          "name": "project_type",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "push_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "start_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "is_stored_at__image_location"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_image",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "image_environment_variable",
+      "canonical": "image__is_part_of__release__has__name",
+      "interface": "ImageEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "release_image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release_image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 100000,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "release_image",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_image_environment_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "image_install",
+      "canonical": "device__installs__image",
+      "interface": "ImageInstall",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "download_progress",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "install_date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "installs__image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_provided_by__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "installs__image"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_image_install",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "image_label",
+      "canonical": "image__is_part_of__release__has__label_name",
+      "interface": "ImageLabel",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "label_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "release_image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release_image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 300,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "release_image",
+          "label_name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_image_label",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "image_profile",
+      "canonical": "image__is_part_of__release__has__profile_name",
+      "interface": "ImageProfile",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "profile_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 2,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "release_image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release_image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "release_image",
+          "profile_name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_image_profile",
+        "preview": true,
+        "reason": "writable columns: resource and data source; preview: served from the unversioned /resin root"
+      }
+    },
+    {
+      "name": "invitee",
+      "canonical": "invitee",
+      "interface": "Invitee",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "email",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_invitee",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "oauth_application",
+      "canonical": "oauth_application",
+      "interface": "OauthApplication",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "client_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "redirect_uri",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_oauth_application",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "oauth_application_authorization",
+      "canonical": "oauth_application_authorization",
+      "interface": "OauthApplicationAuthorization",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "belongs_to__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_for__oauth_application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "oauth_application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_oauth_application_authorization",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "organization",
+      "canonical": "organization",
+      "interface": "Organization",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "billing_account_code",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "company_name",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "handle",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 220,
+          "unique": true,
+          "provenance": "open"
+        },
+        {
+          "name": "has_past_due_invoice_since__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "industry",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_enforcing_saml_login",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_frozen",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_using__billing_version",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "logo_image",
+          "kind": "scalar",
+          "type": "WebResource",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 220,
+          "provenance": "open"
+        },
+        {
+          "name": "website",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "natural_keys": [
+        [
+          "handle"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "handwritten",
+        "resource": true,
+        "data_source": true,
+        "hooks": [
+          "delete=organizationDeleteTolerates401"
+        ],
+        "type_name": "balena_organization",
+        "reason": "writable columns: resource and data source; hand-written hooks: the API refuses to delete an organization with an API token, so destroying it only removes it from the state."
+      }
+    },
+    {
+      "name": "organization__has_private_access_to__device_type",
+      "canonical": "organization__has_private_access_to__device_type",
+      "interface": "OrganizationHasPrivateAccessToDeviceType",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "has_private_access_to__device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_accessible_privately_by__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_organization_has_private_access_to_device_type",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "organization_credit_notification",
+      "canonical": "organization__owns_credit_notification_for__feature",
+      "interface": "OrganizationCreditNotification",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_sent_when_below__threshold",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "owns_credit_notification_for__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_organization_credit_notification",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "organization_invite",
+      "canonical": "invitee__is_invited_to__organization",
+      "interface": "InviteeIsInvitedToOrganization",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "invitee",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "invitee",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_created_by__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_invited_to__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "message",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "organization_membership_role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization_membership_role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_organization_invite",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "organization_membership",
+      "canonical": "user__is_member_of__organization",
+      "interface": "OrganizationMembership",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "effective_seat_role",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_member_of__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "organization_membership_role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization_membership_role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "user",
+          "is_member_of__organization"
+        ]
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_organization_membership",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "organization_membership_role",
+      "canonical": "organization_membership_role",
+      "interface": "OrganizationMembershipRole",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_organization_membership_role",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "organization_membership_tag",
+      "canonical": "user__is_member_of__organization__has__tag_key",
+      "interface": "OrganizationMembershipTag",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "organization_membership",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization_membership",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "tag_key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_organization_membership_tag",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "permission",
+      "canonical": "permission",
+      "interface": "Permission",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "name"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_permission",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "plan",
+      "canonical": "plan",
+      "interface": "Plan",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "annual_price",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "billing_code",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "can_self_serve",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_legacy",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_valid_from__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_valid_until__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "monthly_price",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "title",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_plan",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "plan__has__discount_code",
+      "canonical": "plan__has__discount_code",
+      "interface": "PlanHasDiscountCode",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "discount_code",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "plan",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_plan_has_discount_code",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "plan_addon",
+      "canonical": "plan__offers__feature",
+      "interface": "PlanAddon",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "base_price",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "bills_dynamically",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "can_self_serve",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_offered_by__plan",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "offers__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "plan",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_plan_addon",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "plan_feature",
+      "canonical": "plan__provides__feature",
+      "interface": "PlanFeature",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "plan",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "provides__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "quantity",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_plan_feature",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "public_device",
+      "canonical": "public_device",
+      "interface": "PublicDevice",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_of__device_type",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device_type",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "latitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "longitude",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "was_recently_online",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_public_device",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "public_organization",
+      "canonical": "public_organization",
+      "interface": "PublicOrganization",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "handle",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_public_organization",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "recovery_two_factor",
+      "canonical": "recovery_two_factor",
+      "interface": "RecoveryTwoFactor",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "used_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_recovery_two_factor",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "release",
+      "canonical": "release",
+      "interface": "Release",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "belongs_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "build_log",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "commit",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 40,
+          "provenance": "open"
+        },
+        {
+          "name": "composition",
+          "kind": "scalar",
+          "type": "JSON",
+          "nullable": false,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "contract",
+          "kind": "scalar",
+          "type": "JSON",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "end_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "invalidation_reason",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 255,
+          "provenance": "open"
+        },
+        {
+          "name": "is_created_by__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_final",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_finalized_at__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_invalidated",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_passing_tests",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "known_issue_list",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000,
+          "provenance": "open"
+        },
+        {
+          "name": "note",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 1000000,
+          "provenance": "open"
+        },
+        {
+          "name": "phase",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "enum": [
+            "next",
+            "current",
+            "sunset",
+            "end-of-life"
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "raw_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "release_version",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": true,
+          "max_length": 81,
+          "notes": [
+            "Deprecated."
+          ],
+          "provenance": "open"
+        },
+        {
+          "name": "revision",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": true,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "semver",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "provenance": "open"
+        },
+        {
+          "name": "semver_build",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "semver_major",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "semver_minor",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "semver_patch",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "semver_prerelease",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 100,
+          "provenance": "open"
+        },
+        {
+          "name": "source",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "start_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "status",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "update_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "variant",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 50,
+          "provenance": "open"
+        },
+        {
+          "name": "version",
+          "kind": "scalar",
+          "type": "JSON",
+          "nullable": false,
+          "writable": false,
+          "computed": true,
+          "notes": [
+            "The release.version's field type is overriden to JSON by changing the generated abstract sql."
+          ],
+          "provenance": "open"
+        }
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "unenforced": [
+        "each release that has a revision, has a revision that is greater than or equal to 0.",
+        "each release that has an invalidation reason, is invalidated."
+      ],
+      "class": {
+        "status": "generated",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_release",
+        "reason": "data source only (override: releases are written by the builder and the CLI, not managed declaratively)"
+      }
+    },
+    {
+      "name": "release_asset",
+      "canonical": "release__has__asset_key",
+      "interface": "ReleaseAsset",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "asset",
+          "kind": "scalar",
+          "type": "WebResource",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "asset_key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "release",
+          "asset_key"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "unenforced": [
+        "each release asset that has an asset, has an asset that has a Filename (Type) that has a Length (Type) that is less than or equal to 255 and has a Content Type (Type) that has a Length (Type) that is less than or equal to 129."
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_release_asset",
+        "reason": "proposed: writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "release_image",
+      "canonical": "image__is_part_of__release",
+      "interface": "ImageIsPartOfRelease",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "image",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "image",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "is_part_of__release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "image",
+          "is_part_of__release"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_release_image",
+        "reason": "data source only (override: the builder links images to releases)"
+      }
+    },
+    {
+      "name": "release_tag",
+      "canonical": "release__has__tag_key",
+      "interface": "ReleaseTag",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "release",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "release",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "tag_key",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 164,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 1000,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "release",
+          "tag_key"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_release_tag",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "role",
+      "canonical": "role",
+      "interface": "Role",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "name"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_role",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "role__has__permission",
+      "canonical": "role__has__permission",
+      "interface": "RoleHasPermission",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "permission",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "permission",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "role",
+          "permission"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_role_has_permission",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "saml_account",
+      "canonical": "saml_account",
+      "interface": "SamlAccount",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "display_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "remote_id",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "was_generated_by__identity_provider",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "identity_provider",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_saml_account",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "scheduled_job_run",
+      "canonical": "scheduled_job_run",
+      "interface": "ScheduledJobRun",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "end_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "start_timestamp",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "status",
+          "kind": "enum",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "enum": [
+            "running",
+            "success",
+            "error"
+          ],
+          "provenance": "open"
+        }
+      ],
+      "unenforced": [
+        "each scheduled job run that has a status that is equal to \"success\", has an end timestamp."
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_scheduled_job_run",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "service",
+      "canonical": "application__has__service_name",
+      "interface": "Service",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "service_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "min_length": 1,
+          "max_length": 63,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "application",
+          "service_name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_service",
+        "reason": "data source only (override: the builder creates services from a release's composition)"
+      }
+    },
+    {
+      "name": "service_environment_variable",
+      "canonical": "application__has__service_name__has__name",
+      "interface": "ServiceEnvironmentVariable",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "service",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 100000,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "service",
+          "name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_service_environment_variable",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "service_install",
+      "canonical": "device__installs__application__has__service_name",
+      "interface": "ServiceInstall",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "device",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "device",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "installs__service",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "device",
+          "installs__service"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_service_install",
+        "reason": "data source only (override: the supervisor on the device creates service installs)"
+      }
+    },
+    {
+      "name": "service_instance",
+      "canonical": "service_instance",
+      "interface": "ServiceInstance",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "ip_address",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 39,
+          "provenance": "open"
+        }
+      ],
+      "open_balena_permissions": [
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_service_instance",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "service_label",
+      "canonical": "application__has__service_name__has__label_name",
+      "interface": "ServiceLabel",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "label_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "service",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "service",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "value",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 300,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "service",
+          "label_name"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_service_label",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "social_service_account",
+      "canonical": "social_service_account",
+      "interface": "SocialServiceAccount",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "belongs_to__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "display_name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "provider",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_social_service_account",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "subscription",
+      "canonical": "subscription",
+      "interface": "Subscription",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "billing_cycle",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "discount_percentage",
+          "kind": "scalar",
+          "type": "Real",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "ends_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_active",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__plan",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "origin",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "starts_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_subscription",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "subscription_addon_discount",
+      "canonical": "subscription__discounts__plan__offers__feature",
+      "interface": "SubscriptionDiscountsPlanAddon",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "discount_percentage",
+          "kind": "scalar",
+          "type": "Real",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "discounts__plan__offers__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "discounts__plan_addon",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "plan__offers__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "plan_addon",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "subscription",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "subscription",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_subscription_addon_discount",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "subscription_prepaid_addon",
+      "canonical": "subscription_prepaid_addon",
+      "interface": "SubscriptionPrepaidAddon",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "discount_percentage",
+          "kind": "scalar",
+          "type": "Real",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "expires_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_for__plan__offers__feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__plan_addon",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "plan_addon",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_for__subscription",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "subscription",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "quantity",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "starts_on__date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_subscription_prepaid_addon",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "support_feature",
+      "canonical": "support_feature",
+      "interface": "SupportFeature",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "feature",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "feature",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "support_tier",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "support_tier",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_support_feature",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "support_tier",
+      "canonical": "support_tier",
+      "interface": "SupportTier",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "includes__SLA",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "includes_private_support",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "slug",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "title",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_support_tier",
+        "reason": "payment or billing table"
+      }
+    },
+    {
+      "name": "team",
+      "canonical": "team",
+      "interface": "Team",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "belongs_to__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "description",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "name",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_team",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "team_application_access",
+      "canonical": "team__grants_access_to__application",
+      "interface": "TeamApplicationAccess",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "application_membership_role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application_membership_role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "grants_access_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "team",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "team",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_team_application_access",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "team_membership",
+      "canonical": "user__is_member_of__team",
+      "interface": "TeamMembership",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_member_of__team",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "team",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_team_membership",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "user",
+      "canonical": "user",
+      "interface": "User",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "actor",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "actor",
+          "nullable": false,
+          "writable": false,
+          "unique": true,
+          "provenance": "open"
+        },
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "has_legacy_link_to__organization",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "organization",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "username",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": false,
+          "max_length": 73,
+          "unique": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "actor"
+        ],
+        [
+          "username"
+        ]
+      ],
+      "open_balena_permissions": [
+        "create-named-user-api-key",
+        "create-user-api-key",
+        "read"
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_user",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "user__has_direct_access_to__application",
+      "canonical": "user__has_direct_access_to__application",
+      "interface": "UserHasDirectAccessToApplication",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "writable": false,
+      "fields": [
+        {
+          "name": "application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "has_direct_access_to__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_directly_accessible_by__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_user_has_direct_access_to_application",
+        "reason": "proposed: no user-writable columns: data source only"
+      }
+    },
+    {
+      "name": "user_application_membership",
+      "canonical": "user__is_member_of__application",
+      "interface": "UserIsMemberOfApplication",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": true,
+      "fields": [
+        {
+          "name": "application_membership_role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application_membership_role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_member_of__application",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "application",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_user_application_membership",
+        "reason": "proposed: writable columns: resource and data source; cloud-only"
+      }
+    },
+    {
+      "name": "user_permission",
+      "canonical": "user__has__permission",
+      "interface": "UserHasPermission",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "expiry_date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "permission",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "permission",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "user",
+          "permission"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_user_permission",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    },
+    {
+      "name": "user_profile",
+      "canonical": "user_profile",
+      "interface": "UserProfile",
+      "root": "v7",
+      "roots": [
+        "v7"
+      ],
+      "provenance": "cloud-only",
+      "writable": false,
+      "fields": [
+        {
+          "name": "account_type",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "company",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "email",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "first_name",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "has_disabled_newsletter",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "has_password_set",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "has_responded_to_profile",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "is_of__user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "is_verified",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "last_name",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": true,
+          "writable": false,
+          "provenance": "cloud-only"
+        },
+        {
+          "name": "must_be_verified",
+          "kind": "scalar",
+          "type": "Boolean",
+          "nullable": false,
+          "writable": false,
+          "provenance": "cloud-only"
+        }
+      ],
+      "class": {
+        "status": "unscoped",
+        "resource": false,
+        "data_source": true,
+        "type_name": "balena_user_profile",
+        "reason": "proposed: no user-writable columns: data source only; cloud-only"
+      }
+    },
+    {
+      "name": "user_public_key",
+      "canonical": "user__has__public_key",
+      "interface": "UserHasPublicKey",
+      "root": "v7",
+      "roots": [
+        "resin",
+        "v7"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Integer",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "public_key",
+          "kind": "scalar",
+          "type": "Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 2850,
+          "provenance": "open"
+        },
+        {
+          "name": "title",
+          "kind": "scalar",
+          "type": "Short Text",
+          "nullable": false,
+          "writable": true,
+          "max_length": 120,
+          "provenance": "open"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "user",
+          "public_key"
+        ]
+      ],
+      "open_balena_permissions": [
+        "all"
+      ],
+      "class": {
+        "status": "generated",
+        "resource": true,
+        "data_source": true,
+        "type_name": "balena_user_public_key",
+        "reason": "writable columns: resource and data source"
+      }
+    },
+    {
+      "name": "user_role",
+      "canonical": "user__has__role",
+      "interface": "UserHasRole",
+      "root": "resin",
+      "roots": [
+        "resin"
+      ],
+      "provenance": "open",
+      "link": true,
+      "writable": true,
+      "fields": [
+        {
+          "name": "created_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "expiry_date",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": true,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "id",
+          "kind": "scalar",
+          "type": "Serial",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "modified_at",
+          "kind": "scalar",
+          "type": "Date Time",
+          "nullable": false,
+          "writable": false,
+          "provenance": "open"
+        },
+        {
+          "name": "role",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "role",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        },
+        {
+          "name": "user",
+          "kind": "fk",
+          "type": "Integer",
+          "target": "user",
+          "nullable": false,
+          "writable": true,
+          "provenance": "open"
+        }
+      ],
+      "natural_keys": [
+        [
+          "user",
+          "role"
+        ]
+      ],
+      "class": {
+        "status": "excluded",
+        "resource": false,
+        "data_source": false,
+        "type_name": "balena_user_role",
+        "preview": true,
+        "reason": "internal: only the unversioned model has it and open-balena-api grants users no access"
+      }
+    }
+  ]
+}
