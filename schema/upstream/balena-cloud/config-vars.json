@@ -1,0 +1,150 @@
+{
+  "blackListedNames": [
+    "RESIN_RESTART",
+    "RESIN_DEVICE_RESTART",
+    "RESIN_SUPERVISOR_OVERRIDE_LOCK",
+    "RESIN_SUPERVISOR_NATIVE_LOGGER",
+    "RESIN_HOST_LOG_TO_DISPLAY",
+    "BALENA_RESTART",
+    "BALENA_DEVICE_RESTART",
+    "BALENA_SUPERVISOR_OVERRIDE_LOCK",
+    "BALENA_SUPERVISOR_NATIVE_LOGGER",
+    "BALENA_HOST_LOG_TO_DISPLAY",
+    "RESIN_SUPERVISOR_DELTA_VERSION",
+    "BALENA_SUPERVISOR_DELTA_VERSION"
+  ],
+  "configVarInvalidRegex": "/^[\\d:]|[^A-Za-z0-9_:]/",
+  "configVarSchema": {
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "properties": {
+      "BALENA_HOST_SPLASH_IMAGE": {
+        "description": "Define the PNG image to be used for the boot splash screen. Only supported by supervisor versions \u003e= v12.3.0.",
+        "format": "data-url",
+        "maxLength": 13400,
+        "pattern": "^data:image/png;(?:name=(.*);)?base64,(.*)$",
+        "type": "string",
+        "will_reboot": true
+      },
+      "BALENA_SUPERVISOR_HARDWARE_METRICS": {
+        "default": "true",
+        "description": "Enable / Disable reporting device metrics such as CPU usage for bandwidth conservation. Only supported by supervisor versions \u003e= v12.8.0.",
+        "enum": [
+          "false",
+          "true"
+        ]
+      },
+      "RESIN_OVERRIDE_LOCK": {
+        "default": 0,
+        "description": "Override existing update lock(s) if your app is stuck in an invalid state under an update lock",
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer"
+      },
+      "RESIN_SUPERVISOR_CONNECTIVITY_CHECK": {
+        "default": "true",
+        "description": "Enable / Disable Cloudlink connectivity check",
+        "enum": [
+          "false",
+          "true"
+        ]
+      },
+      "RESIN_SUPERVISOR_INSTANT_UPDATE_TRIGGER": {
+        "default": "true",
+        "description": "Enable / Disable triggering updates instantly on startup or after pushing a release. Only supported by supervisor versions \u003e= v9.13.0.",
+        "enum": [
+          "false",
+          "true"
+        ]
+      },
+      "RESIN_SUPERVISOR_LOG_CONTROL": {
+        "default": "true",
+        "description": "Enable / Disable logs from being sent to balena API",
+        "enum": [
+          "false",
+          "true"
+        ]
+      },
+      "RESIN_SUPERVISOR_PERSISTENT_LOGGING": {
+        "default": "false",
+        "description": "Enable persistent logging. Only supported by supervisor versions \u003e= v7.15.0.",
+        "enum": [
+          "false",
+          "true"
+        ],
+        "will_reboot": true
+      },
+      "RESIN_SUPERVISOR_POLL_INTERVAL": {
+        "default": 900000,
+        "description": "Define the balena API poll interval in milliseconds",
+        "maximum": 86400000,
+        "minimum": 900000,
+        "type": "integer"
+      },
+      "RESIN_SUPERVISOR_VPN_CONTROL": {
+        "default": "true",
+        "description": "Enable / Disable Cloudlink service on device",
+        "enum": [
+          "false",
+          "true"
+        ]
+      }
+    },
+    "type": "object"
+  },
+  "invalidRegex": "/^\\d|\\W/",
+  "reservedNames": [
+    "RESIN",
+    "BALENA",
+    "USER"
+  ],
+  "reservedNamespaces": [
+    "RESIN_",
+    "BALENA_"
+  ],
+  "whiteListedNames": [
+    "RESIN_APP_RESTART_POLICY",
+    "RESIN_APP_RESTART_RETRIES",
+    "RESIN_DEPENDENT_DEVICES_HOOK_ADDRESS",
+    "RESIN_OVERRIDE_LOCK",
+    "RESIN_SUPERVISOR_CONNECTIVITY_CHECK",
+    "RESIN_SUPERVISOR_HANDOVER_TIMEOUT",
+    "RESIN_SUPERVISOR_LOCAL_MODE",
+    "RESIN_SUPERVISOR_LOG_CONTROL",
+    "RESIN_SUPERVISOR_POLL_INTERVAL",
+    "RESIN_SUPERVISOR_UPDATE_STRATEGY",
+    "RESIN_SUPERVISOR_VPN_CONTROL",
+    "RESIN_SUPERVISOR_PERSISTENT_LOGGING",
+    "RESIN_SUPERVISOR_INSTANT_UPDATE_TRIGGER",
+    "RESIN_SUPERVISOR_HARDWARE_METRICS",
+    "BALENA_APP_RESTART_POLICY",
+    "BALENA_APP_RESTART_RETRIES",
+    "BALENA_DEPENDENT_DEVICES_HOOK_ADDRESS",
+    "BALENA_OVERRIDE_LOCK",
+    "BALENA_SUPERVISOR_CONNECTIVITY_CHECK",
+    "BALENA_SUPERVISOR_HANDOVER_TIMEOUT",
+    "BALENA_SUPERVISOR_LOCAL_MODE",
+    "BALENA_SUPERVISOR_LOG_CONTROL",
+    "BALENA_SUPERVISOR_POLL_INTERVAL",
+    "BALENA_SUPERVISOR_UPDATE_STRATEGY",
+    "BALENA_SUPERVISOR_VPN_CONTROL",
+    "BALENA_SUPERVISOR_PERSISTENT_LOGGING",
+    "BALENA_SUPERVISOR_INSTANT_UPDATE_TRIGGER",
+    "BALENA_SUPERVISOR_HARDWARE_METRICS",
+    "RESIN_SUPERVISOR_DELTA",
+    "RESIN_SUPERVISOR_DELTA_RETRY_COUNT",
+    "RESIN_SUPERVISOR_DELTA_RETRY_INTERVAL",
+    "RESIN_SUPERVISOR_DELTA_TOTAL_TIMEOUT",
+    "BALENA_SUPERVISOR_DELTA",
+    "BALENA_SUPERVISOR_DELTA_RETRY_COUNT",
+    "BALENA_SUPERVISOR_DELTA_RETRY_INTERVAL",
+    "BALENA_SUPERVISOR_DELTA_TOTAL_TIMEOUT"
+  ],
+  "whiteListedNamespaces": [
+    "RESIN_HOST_",
+    "RESIN_UI_",
+    "BALENA_HOST_",
+    "BALENA_UI_"
+  ]
+}

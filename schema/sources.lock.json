@@ -1,0 +1,86 @@
+{
+  "format": 1,
+  "default_root": "v7",
+  "roots": [
+    {
+      "name": "resin",
+      "shape": "open-balena-api:src/balena-model.ts",
+      "constraints": [
+        "open-balena-api:src/balena.sbvr"
+      ],
+      "preview": true
+    },
+    {
+      "name": "v7",
+      "shape": "balena-sdk:src/types/v7.ts",
+      "constraints": [
+        "open-balena-api:src/balena.sbvr",
+        "open-balena-api:src/translations/v7/v7.sbvr"
+      ],
+      "preview": false
+    }
+  ],
+  "sources": [
+    {
+      "name": "balena-cloud",
+      "url": "https://api.balena-cloud.com/config/vars",
+      "license": "public API response",
+      "files": [
+        {
+          "path": "config/vars",
+          "local": "schema/upstream/balena-cloud/config-vars.json",
+          "role": "config-vars",
+          "sha256": "98eb5ba3b6496c961653f5d8a8556a06b4f849be1c749104de69908b7c5b9890"
+        }
+      ]
+    },
+    {
+      "name": "balena-sdk",
+      "repo": "balena-io/balena-sdk",
+      "tag": "v23.2.24",
+      "commit": "ebd1a0780f28a3a5f0ae904c2a96f3d91ab12be8",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "src/types/v7.ts",
+          "local": "schema/upstream/balena-sdk/src/types/v7.ts",
+          "role": "shape",
+          "sha256": "8e64d0b12e35ab8076e9337da6e728c36002208dd6f3c62fd375bd82cccf9c0c"
+        }
+      ]
+    },
+    {
+      "name": "open-balena-api",
+      "repo": "balena-io/open-balena-api",
+      "tag": "v52.2.35",
+      "commit": "41efdad03c50ba5ae0aa5fa571f0e418753c591f",
+      "license": "AGPL-3.0",
+      "files": [
+        {
+          "path": "src/balena-model.ts",
+          "local": "schema/upstream/open-balena-api/src/balena-model.ts",
+          "role": "shape",
+          "sha256": "21cb773f4d5f5fb9799e2dcf343f8dfa4b99a5a3104d504f968ed1d51b02f9bd"
+        },
+        {
+          "path": "src/balena.sbvr",
+          "local": "schema/balena.sbvr",
+          "role": "constraints",
+          "sha256": "6041e5dd88b8308e1d1d3376880e5c984fa77ee66bb1dcccd5d6d18a4b08b1f8"
+        },
+        {
+          "path": "src/lib/auth.ts",
+          "local": "schema/upstream/open-balena-api/src/lib/auth.ts",
+          "role": "permissions",
+          "sha256": "6a503b2a810d9a1cbb2c928b34785d009f900903987b59c96deca61b2873a004"
+        },
+        {
+          "path": "src/translations/v7/v7.sbvr",
+          "local": "schema/upstream/open-balena-api/src/translations/v7/v7.sbvr",
+          "role": "constraints",
+          "sha256": "04f5fe4db0b8d7e233b4136c15d572354031d6d7ded97cf37b4b0bb8f8ab4c91"
+        }
+      ]
+    }
+  ]
+}
