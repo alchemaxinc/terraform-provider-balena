@@ -8,21 +8,32 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: check-schema
+  cancel-in-progress: false
+
+env:
+  PRETTIER_VERSION: "3.3.3"
+  TFPLUGINDOCS_VERSION: "0.24.0"
+
 jobs:
-  check-schema:
-    name: Check for schema updates
+  regenerate:
+    name: Regenerate from upstream
     runs-on: ubuntu-latest
 
+    # Holds BALENA_API_TOKEN for the read-only contract checks, as in test.yml. Every pull request's tests can already
+    # read that development token, so a branch rule would protect nothing here; the Copilot PAT, which must stay on
+    # `main`, lives in `copilot-agent` below.
+    environment: development
+
+    # Pushes and pull requests use the GitHub App token, so pull requests it opens run CI.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
 
     outputs:
-      branch: ${{ steps.push-branch.outputs.branch }}
-      commit_type: ${{ steps.commit-type.outputs.type }}
+      branch: ${{ steps.failure-branch.outputs.branch }}
       prompt: ${{ steps.prompt.outputs.text }}
-      current_tag: ${{ steps.current.outputs.tag }}
-      latest_tag: ${{ steps.latest.outputs.tag }}
+      title: ${{ steps.title.outputs.title }}
 
     steps:
       - name: Create temporary GitHub App Token
@@ -33,14 +44,16 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes branches, deletes swept branches, opens and auto-merges pull requests; nothing else.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout code
         uses: actions/checkout@v7
         with:
           token: ${{ steps.app.outputs.token }}
-          # A dispatch runs the workflow definition from the ref it was dispatched
-          # on, so the files it reads come from that same ref. Scheduled runs
-          # resolve to `main`.
+          # A dispatch runs the workflow definition from the ref it was dispatched on, so the files it reads come from
+          # that same ref. Scheduled runs resolve to `main`.
           ref: ${{ github.ref }}
 
       - name: Configure git identity
@@ -59,9 +72,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Copilot copies the schema commit onto a branch of its own, leaving the
-          # one pushed here behind once its task finishes. A running task reads
-          # that branch minutes after the push, so keep recent ones.
+          # Copilot copies the schema commit onto a branch of its own, leaving the one pushed here behind once its
+          # task finishes. A running task reads that branch minutes after the push, so keep recent ones.
           CUTOFF=$(date -u -d '6 hours ago' +%s)
 
           gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
@@ -87,222 +99,257 @@ jobs:
                 echo "::notice::Deleted orphaned branch ${BRANCH}"
               done
 
-      - name: Read current pinned version
-        id: current
-        run: |
-          CURRENT_TAG=$(tr -d '[:space:]' < schema/VERSION)
-          echo "tag=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
-          echo "Current pinned version: $CURRENT_TAG"
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: "go.mod"
+          cache: true
 
-      - name: Fetch latest open-balena-api tag
-        id: latest
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Install tfplugindocs
+        run: |
+          go install "github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v${TFPLUGINDOCS_VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve the latest upstream tags
+        id: tags
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          LATEST_TAG=$(gh api repos/balena-io/open-balena-api/tags --jq '.[0].name')
+          set -euo pipefail
+          # Each tag is checked against a strict pattern before it is used: it flows into branch names, commit
+          # messages and later shell steps.
+          OBA_TAG=$(bash .github/scripts/schema-update.sh resolve-tag balena-io/open-balena-api)
+          SDK_TAG=$(bash .github/scripts/schema-update.sh resolve-tag balena-io/balena-sdk)
+          {
+            echo "oba=$OBA_TAG"
+            echo "sdk=$SDK_TAG"
+            echo "oba_branch=$(bash .github/scripts/schema-update.sh branch-safe "$OBA_TAG")"
+            echo "sdk_branch=$(bash .github/scripts/schema-update.sh branch-safe "$SDK_TAG")"
+          } >> "$GITHUB_OUTPUT"
+          echo "Latest upstream tags: open-balena-api ${OBA_TAG}, balena-sdk ${SDK_TAG}"
 
-          # This value is controlled by an upstream repository and flows into
-          # branch names, commit messages and later shell steps, so reject
-          # anything that is not a plain version-like token before using it.
-          if [[ ! $LATEST_TAG =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$ ]]; then
-            echo "::error::Refusing to use upstream tag '$LATEST_TAG': expected only letters, digits, '.', '_', '+' or '-'."
-            exit 1
-          fi
-
-          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
-          echo "Latest upstream tag: $LATEST_TAG"
-
-      - name: Compare versions
-        id: compare
+      # Same as `make fetch ARGS=-latest`, with the tags resolved and validated above. A failure here is an
+      # infrastructure problem, not a schema change, and fails the run without starting the agent.
+      - name: Pin the upstream models
         env:
-          CURRENT: ${{ steps.current.outputs.tag }}
-          LATEST: ${{ steps.latest.outputs.tag }}
-        run: |
-          if [ "$CURRENT" = "$LATEST" ]; then
-            echo "Schema is up to date at $CURRENT"
-            echo "needs_update=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Schema update available: $CURRENT → $LATEST"
-            echo "needs_update=true" >> "$GITHUB_OUTPUT"
-          fi
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+          OBA_TAG: ${{ steps.tags.outputs.oba }}
+          SDK_TAG: ${{ steps.tags.outputs.sdk }}
+        run: go run ./cmd/balena-schema fetch -open-balena-api "$OBA_TAG" -balena-sdk "$SDK_TAG"
 
-      - name: Determine semantic commit type
-        if: steps.compare.outputs.needs_update == 'true'
-        id: commit-type
+      # A locked root newer than the default root becomes the default root when it builds and passes its live
+      # contract. Otherwise the current root stays and the run goes on; the summary and a warning say why.
+      - name: Promote a newer API root
+        id: promote
         env:
-          CURRENT_TAG: ${{ steps.current.outputs.tag }}
-          LATEST_TAG: ${{ steps.latest.outputs.tag }}
+          BALENA_API_TOKEN: ${{ secrets.BALENA_API_TOKEN }}
         run: |
           set -euo pipefail
+          SUMMARY="$RUNNER_TEMP/promotion.md"
+          go run ./cmd/balena-schema promote-root -apply -json -markdown "$SUMMARY" > "$RUNNER_TEMP/promotion.json"
+          cat "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
 
-          SEMVER='^v?([0-9]+)\.([0-9]+)\.([0-9]+)$'
+          STATUS=$(jq -r '.status' "$RUNNER_TEMP/promotion.json")
+          CANDIDATE=$(jq -r '.candidate // empty' "$RUNNER_TEMP/promotion.json")
+          case "$STATUS" in
+            none) ;;
+            promoted)
+              [[ $CANDIDATE =~ ^v[1-9][0-9]{0,2}$ ]] || { echo "::error::Unexpected root name."; exit 1; }
+              echo "root=$CANDIDATE" >> "$GITHUB_OUTPUT"
+              echo "::notice title=API root promoted::/${CANDIDATE} is the new default root."
+              ;;
+            blocked)
+              [[ $CANDIDATE =~ ^v[1-9][0-9]{0,2}$ ]] || { echo "::error::Unexpected root name."; exit 1; }
+              echo "::warning title=API root not promoted::/${CANDIDATE} is newer than the default root but was not promoted; see the job summary."
+              ;;
+            *)
+              echo "::error::Unexpected promotion status."
+              exit 1
+              ;;
+          esac
 
-          if [[ ! "$CURRENT_TAG" =~ $SEMVER ]]; then
-            echo "::error::Pinned version '${CURRENT_TAG}' is not a semantic version."
-            exit 1
-          fi
-          CURRENT=("${BASH_REMATCH[@]:1:3}")
-
-          if [[ ! "$LATEST_TAG" =~ $SEMVER ]]; then
-            echo "::error::Upstream version '${LATEST_TAG}' is not a semantic version."
-            exit 1
-          fi
-          LATEST=("${BASH_REMATCH[@]:1:3}")
-
-          if [[ "${CURRENT[0]}" != "${LATEST[0]}" ]]; then
-            TYPE="feat!"
-          elif [[ "${CURRENT[1]}" != "${LATEST[1]}" ]]; then
-            TYPE="feat"
-          elif [[ "${CURRENT[2]}" != "${LATEST[2]}" ]]; then
-            TYPE="fix"
+      - name: Regenerate
+        id: generate
+        run: |
+          set -euo pipefail
+          LOGS="$RUNNER_TEMP/gates"
+          mkdir -p "$LOGS"
+          if ! go run ./cmd/balena-schema generate > "$LOGS/generate.log" 2>&1; then
+            echo "generate" >> "$LOGS/failed"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=Generation failed::The generator rejected the new upstream models; see the agent prompt."
+          elif ! { make docs && npx --yes "prettier@${PRETTIER_VERSION}" --write docs/; } > "$LOGS/docs.log" 2>&1; then
+            echo "docs" >> "$LOGS/failed"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=Docs failed::The regenerated provider does not build its docs; see the agent prompt."
           else
-            TYPE="chore"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
-          # Branch names drop the breaking-change marker: Copilot strips the
-          # punctuation when deriving its own branch from ours.
-          echo "slug=${TYPE%!}" >> "$GITHUB_OUTPUT"
-
-      - name: Download new schema
-        if: steps.compare.outputs.needs_update == 'true'
+      - name: Run the gates
+        id: gates
+        if: steps.generate.outputs.ok == 'true'
         env:
-          LATEST: ${{ steps.latest.outputs.tag }}
+          BALENA_API_TOKEN: ${{ secrets.BALENA_API_TOKEN }}
         run: |
-          curl -fsSL "https://raw.githubusercontent.com/balena-io/open-balena-api/${LATEST}/src/balena.sbvr" \
-            -o /tmp/balena-new.sbvr
-          echo "Downloaded balena.sbvr from $LATEST"
-
-      - name: Diff schema
-        if: steps.compare.outputs.needs_update == 'true'
-        id: diff
-        run: |
-          if diff -q schema/balena.sbvr /tmp/balena-new.sbvr > /dev/null 2>&1; then
-            echo "No schema diff — only non-schema changes in the release"
-            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          # check-generate: lock hashes, source cross-check, gap check, overrides, and no stale generated file.
+          # build-and-unit-tests: the regenerated provider builds and its unit tests pass.
+          # contract: read-only GETs of every generated table and column on the live default root.
+          if bash .github/scripts/schema-update.sh gates "$RUNNER_TEMP/gates" >> "$GITHUB_STEP_SUMMARY"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Schema has changed"
-            echo "has_diff=true" >> "$GITHUB_OUTPUT"
-
-            DIFF_SUMMARY=$(bash schema/diff-sbvr.sh schema/balena.sbvr /tmp/balena-new.sbvr)
-
-            # The summary is derived from upstream schema text. A fixed delimiter
-            # would let that text close the heredoc early and append
-            # attacker-chosen step outputs, so use one it cannot predict.
-            DELIMITER="DIFF_EOF_$(openssl rand -hex 16)"
-            {
-              echo "summary<<${DELIMITER}"
-              echo "$DIFF_SUMMARY"
-              echo "${DELIMITER}"
-            } >> "$GITHUB_OUTPUT"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=Schema gates failed::At least one gate failed; nothing is merged."
           fi
 
-      - name: Update VERSION only (no schema diff)
-        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'false'
-        env:
-          LATEST: ${{ steps.latest.outputs.tag }}
+      - name: Detect changes
+        id: changes
         run: |
-          echo "$LATEST" > schema/VERSION
+          set -euo pipefail
+          read -r -a PATHS <<< "$(bash .github/scripts/schema-update.sh generated-paths)"
+          if [ -n "$(git status --porcelain -- "${PATHS[@]}")" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing changed upstream that affects the provider."
+          fi
 
-      - name: Look for an existing VERSION bump pull request
-        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'false'
-        id: existing-version-pr
+      - name: Determine the commit type and title
+        id: title
+        if: steps.changes.outputs.changed == 'true' || steps.gates.outputs.ok != 'true'
+        env:
+          OBA_TAG: ${{ steps.tags.outputs.oba }}
+          SDK_TAG: ${{ steps.tags.outputs.sdk }}
+          ROOT: ${{ steps.promote.outputs.root }}
+          GATES_OK: ${{ steps.gates.outputs.ok }}
+        run: |
+          set -euo pipefail
+          # The commit type comes from the Terraform surface diff against the committed surface lock, not from the
+          # upstream version. When the gates fail the diff may be unavailable; feat! never understates a change.
+          BASE="$RUNNER_TEMP/base-surface.lock.json"
+          git show HEAD:schema/surface.lock.json > "$BASE"
+          TYPE='feat!'
+          if [ "$GATES_OK" = "true" ]; then
+            TYPE=$(bash .github/scripts/schema-update.sh commit-type "$BASE" schema/surface.lock.json)
+          fi
+          TITLE=$(bash .github/scripts/schema-update.sh title "$TYPE" "$OBA_TAG" "$SDK_TAG" "$ROOT")
+          {
+            echo "type=$TYPE"
+            echo "slug=${TYPE%!}"
+            echo "title=$TITLE"
+          } >> "$GITHUB_OUTPUT"
+
+          go run ./cmd/balena-schema surface-diff -old "$BASE" -new schema/surface.lock.json > "$RUNNER_TEMP/surface-diff.txt" 2>&1 || true
+          echo "Commit type: ${TYPE}"
+
+      - name: Build the pull request body
+        id: body
+        if: steps.changes.outputs.changed == 'true' && steps.gates.outputs.ok == 'true'
+        env:
+          OBA_TAG: ${{ steps.tags.outputs.oba }}
+          SDK_TAG: ${{ steps.tags.outputs.sdk }}
+        run: |
+          set -euo pipefail
+          BODY=$(
+            echo "Regenerated from open-balena-api \`${OBA_TAG}\` and balena-sdk \`${SDK_TAG}\`. Every gate passed, so"
+            echo "this pull request merges itself once CI passes."
+            echo
+            cat "$RUNNER_TEMP/promotion.md"
+            echo
+            echo "Terraform surface change (the commit type comes from it):"
+            echo
+            echo '```'
+            head -n 200 "$RUNNER_TEMP/surface-diff.txt" | bash .github/scripts/schema-update.sh sanitize
+            echo '```'
+          )
+
+          # The body carries text derived from upstream models. A fixed delimiter would let that text close the
+          # heredoc early and append attacker-chosen step outputs, so use one it cannot predict.
+          DELIMITER="BODY_EOF_$(openssl rand -hex 16)"
+          {
+            echo "text<<${DELIMITER}"
+            echo "$BODY"
+            echo "${DELIMITER}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Look for an existing pull request
+        id: existing-pr
+        if: steps.body.outcome == 'success'
         uses: alchemaxinc/composite-toolbox/check-existing-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: main
-          pr-title: "chore: bump schema VERSION to ${{ steps.latest.outputs.tag }}"
+          pr-title: ${{ steps.title.outputs.title }}
 
-      - name: Create VERSION bump PR
-        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'false' && steps.existing-version-pr.outputs.exists == 'false'
-        id: create-version-pr
+      - name: Create the pull request
+        id: create-pr
+        if: steps.body.outcome == 'success' && steps.existing-pr.outputs.exists == 'false'
         uses: alchemaxinc/composite-toolbox/create-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: main
-          branch-prefix: chore/schema-version
-          branch-postfix: ${{ steps.latest.outputs.tag }}
-          files: "schema/VERSION"
-          commit-message: "chore: bump schema VERSION to ${{ steps.latest.outputs.tag }}"
-          pr-title: "chore: bump schema VERSION to ${{ steps.latest.outputs.tag }}"
-          pr-body: |
-            The upstream `open-balena-api` release `${{ steps.latest.outputs.tag }}` contains no
-            changes to `schema/balena.sbvr`, so only the pinned version is bumped
-            from `${{ steps.current.outputs.tag }}`.
+          branch-prefix: ${{ steps.title.outputs.slug }}/schema-update
+          branch-postfix: ${{ steps.tags.outputs.oba_branch }}-${{ steps.tags.outputs.sdk_branch }}
+          files: "schema docs examples internal/provider/zz_generated_specs.go"
+          commit-message: ${{ steps.title.outputs.title }}
+          pr-title: ${{ steps.title.outputs.title }}
+          pr-body: ${{ steps.body.outputs.text }}
 
-            No provider changes are needed, so this pull request auto-merges once
-            CI passes.
-
-      - name: Enable auto-merge on the VERSION bump PR
-        if: steps.create-version-pr.outputs.pr_number != ''
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pr_number != ''
         uses: alchemaxinc/composite-toolbox/merge-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
-          pull-request-number: ${{ steps.create-version-pr.outputs.pr_number }}
+          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
           merge-method: squash
 
-      - name: Update schema files
-        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
-        env:
-          LATEST: ${{ steps.latest.outputs.tag }}
-        run: |
-          cp /tmp/balena-new.sbvr schema/balena.sbvr
-          echo "$LATEST" > schema/VERSION
-
-      - name: Push schema update branch
-        if: steps.compare.outputs.needs_update == 'true' && steps.diff.outputs.has_diff == 'true'
-        id: push-branch
+      - name: Push the failing state for the agent
+        id: failure-branch
+        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          BRANCH: ${{ steps.commit-type.outputs.slug }}/schema-update-${{ steps.latest.outputs.tag }}
-          COMMIT_TYPE: ${{ steps.commit-type.outputs.type }}
-          LATEST: ${{ steps.latest.outputs.tag }}
+          SLUG: ${{ steps.title.outputs.slug }}
+          TITLE: ${{ steps.title.outputs.title }}
+          OBA_BRANCH: ${{ steps.tags.outputs.oba_branch }}
+          SDK_BRANCH: ${{ steps.tags.outputs.sdk_branch }}
         run: |
           set -euo pipefail
+          BRANCH="${SLUG}/schema-update-${OBA_BRANCH}-${SDK_BRANCH}"
 
-          # Copilot opens the pull request. A task started against a head_ref that
-          # already has an open pull request only answers review comments and drops
-          # the prompt, so refuse to start one that would silently do nothing.
+          # Copilot opens the pull request. A task started against a head_ref that already has an open pull request
+          # only answers review comments and drops the prompt, so refuse to start one that would silently do nothing.
           if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
             echo "::error::A pull request is already open for ${BRANCH}. Close it and delete the branch before re-running."
             exit 1
           fi
 
+          read -r -a PATHS <<< "$(bash .github/scripts/schema-update.sh generated-paths)"
           git checkout -b "$BRANCH"
-          git add schema/balena.sbvr schema/VERSION
-          git commit -m "${COMMIT_TYPE}: update balena schema to ${LATEST}"
+          git add -A -- "${PATHS[@]}"
+          # Commit even when nothing changed (the current root failing its contract), so the agent has a branch.
+          git commit --allow-empty -m "$TITLE"
           git push --force-with-lease origin "$BRANCH"
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Build the agent prompt
-        if: steps.push-branch.outputs.branch != ''
         id: prompt
+        if: steps.failure-branch.outputs.branch != ''
         env:
-          BRANCH: ${{ steps.push-branch.outputs.branch }}
-          CURRENT_TAG: ${{ steps.current.outputs.tag }}
-          LATEST_TAG: ${{ steps.latest.outputs.tag }}
-          COMMIT_TYPE: ${{ steps.commit-type.outputs.type }}
-          DIFF_SUMMARY: ${{ steps.diff.outputs.summary }}
+          BRANCH: ${{ steps.failure-branch.outputs.branch }}
+          TITLE: ${{ steps.title.outputs.title }}
         run: |
           set -euo pipefail
 
-          # The job that starts the task holds the PAT and has no checkout, so
-          # the prompt is assembled here and passed to it.
-          PROMPT=$(cat .github/prompts/schema-update.md)
-          PROMPT="${PROMPT//VERSION_PLACEHOLDER/$LATEST_TAG}"
-          PROMPT="${PROMPT//TYPE_PLACEHOLDER/$COMMIT_TYPE}"
-          PROMPT="${PROMPT//BRANCH_PLACEHOLDER/$BRANCH}"
-          PROMPT="${PROMPT}
-
-          Schema version ${CURRENT_TAG} -> ${LATEST_TAG}. Diff summary follows.
-
-          ${DIFF_SUMMARY}"
-
-          if printf '%s' "$PROMPT" | grep -q 'PLACEHOLDER'; then
-            echo "::error::Unsubstituted placeholder left in the agent prompt."
-            exit 1
-          fi
+          # The job that starts the task holds the PAT and has no checkout, so the prompt is assembled here and
+          # passed to it.
+          PROMPT=$(bash .github/scripts/schema-update.sh prompt .github/prompts/schema-update.md "$BRANCH" "$TITLE" "$RUNNER_TEMP/gates")
 
           DELIMITER="PROMPT_EOF_$(openssl rand -hex 16)"
           {
@@ -311,27 +358,31 @@ jobs:
             echo "${DELIMITER}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Fail the run when a gate failed
+        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        run: |
+          echo "::error::A schema gate failed. Nothing was merged; a Copilot task was started on the pushed branch."
+          exit 1
+
   start-copilot-task:
     name: Start Copilot task
-    needs: check-schema
-    if: needs.check-schema.outputs.branch != ''
+    needs: regenerate
+    # The regenerate job fails on purpose when a gate fails, after pushing the branch for the agent.
+    if: always() && needs.regenerate.outputs.branch != ''
     runs-on: ubuntu-latest
 
-    # Needs a deployment branch rule limited to `main`: workflow_dispatch runs the
-    # definition from the dispatched ref, so a plain repository secret would be
-    # readable by a modified copy of this workflow on any branch.
+    # Limited to `main` by a deployment branch rule: workflow_dispatch runs the workflow definition from the dispatched
+    # ref, so a plain repository secret would be readable by a modified copy of this workflow on any branch.
     environment: copilot-agent
 
-    # Holds a long-lived user PAT: the agent tasks API rejects GitHub App
-    # installation tokens, and an App-authored @copilot comment is ignored. No
-    # checkout and no third-party actions, so nothing here can be coerced into
+    # Holds a long-lived user PAT: the agent tasks API rejects GitHub App installation tokens, and an App-authored
+    # @copilot comment is ignored. No checkout and no third-party actions, so nothing here can be coerced into
     # reading it.
     permissions: {}
 
     env:
-      # Identifiers the API accepts are not all published, and change as models
-      # are released. An unknown or disabled one fails the request outright with
-      # "model not found or not enabled for user".
+      # Identifiers the API accepts are not all published, and change as models are released. An unknown or disabled
+      # one fails the request outright with "model not found or not enabled for user".
       COPILOT_MODEL: claude-opus-5
 
     steps:
@@ -340,8 +391,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
-          BRANCH: ${{ needs.check-schema.outputs.branch }}
-          PROMPT: ${{ needs.check-schema.outputs.prompt }}
+          BRANCH: ${{ needs.regenerate.outputs.branch }}
+          PROMPT: ${{ needs.regenerate.outputs.prompt }}
         run: |
           set -euo pipefail
 
@@ -350,8 +401,7 @@ jobs:
             exit 1
           fi
 
-          # jq keeps values out of shell and JSON syntax; stdin keeps the token off
-          # the command line.
+          # jq keeps values out of shell and JSON syntax; stdin keeps the token off the command line.
           RESPONSE=$(jq -n \
             --arg prompt "$PROMPT" \
             --arg head "refs/heads/$BRANCH" \
@@ -384,29 +434,26 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           TASK_ID: ${{ steps.task.outputs.task_id }}
-          TITLE: "${{ needs.check-schema.outputs.commit_type }}: update balena schema to ${{ needs.check-schema.outputs.latest_tag }}"
+          TITLE: ${{ needs.regenerate.outputs.title }}
         run: |
           set -euo pipefail
 
-          # The tasks API takes no title and the agent cannot set one itself, so
-          # it opens the pull request as "[WIP] ...". Actions runs on an agent's
-          # pull request stay blocked until a human presses "Approve and run
+          # The tasks API takes no title and the agent cannot set one itself, so it opens the pull request as
+          # "[WIP] ...". Actions runs on an agent's pull request stay blocked until a human presses "Approve and run
           # workflows", so this cannot be done from a pull_request job.
           OWNER="${REPOSITORY%%/*}"
 
           for _ in $(seq 1 30); do
-            # Artifacts are absent until the pull request exists, and a poll may
-            # fail transiently; both retry on the next tick.
+            # Artifacts are absent until the pull request exists, and a poll may fail transiently; both retry on the
+            # next tick.
             TASK=$(gh api "agents/repos/${REPOSITORY}/tasks/${TASK_ID}" || true)
 
-            # `data.id` is the pull request's database id, set as soon as the
-            # pull request exists.
+            # `data.id` is the pull request's database id, set as soon as the pull request exists.
             PR_ID=$(printf '%s' "$TASK" | jq -r '[.artifacts[]? | select(.type == "pull") | .data.id? | numbers] | last // empty')
             HEAD_REF=$(printf '%s' "$TASK" | jq -r '[.artifacts[]? | select(.type == "branch") | .data.head_ref? | strings] | last // empty')
 
             if [ -n "$PR_ID" ] && [ -n "$HEAD_REF" ]; then
-              # The agent reuses branch names across runs, so an earlier pull
-              # request can share this head.
+              # The agent reuses branch names across runs, so an earlier pull request can share this head.
               PR_NUMBER=$(gh api "repos/${REPOSITORY}/pulls?state=open&head=${OWNER}:${HEAD_REF}" \
                 --jq "[.[] | select(.id == ${PR_ID}) | .number] | first // empty" || true)
 

@@ -5,7 +5,7 @@ except named hooks for genuinely bespoke behaviour.
 
 ```
 schema/sources.lock.json   pinned tags, commit SHAs and sha256 of every upstream file   (make fetch, network)
-schema/upstream/**         the vendored upstream files (schema/balena.sbvr too)
+schema/upstream/**         the vendored upstream files: the only copy of every upstream input
 schema/overrides.yaml      the only hand-edited input
         |
         v  make generate   (go run ./cmd/balena-schema generate: pure Go, offline, deterministic)
@@ -86,11 +86,39 @@ All offline gates are deterministic and fail closed:
 Add table names to `scope`, run `make generate`, read the new rows of `schema/coverage.md`, add overrides only where
 the rules give something unacceptable, run `make contract`, then `make docs`. The surface diff is `feat`.
 
+## Weekly regeneration
+
+`.github/workflows/check-schema.yml` runs every Monday (and on dispatch from `main`):
+
+1. Resolve the newest open-balena-api and balena-sdk tags (strictly validated) and pin them with `fetch`.
+2. `promote-root -apply`: promote a newer API root when it is ready (below).
+3. `make generate`, `make docs`.
+4. Gates: `make check-generate`; `go build`, `go vet` and `make test-unit`; `make contract` against the live default
+   root.
+5. Nothing changed: the run ends quietly. Changed and every gate passed: a pull request through the GitHub App, set to
+   auto-merge once CI passes. Its type comes from the surface diff against the committed `surface.lock.json`: `feat!`,
+   `feat` or `fix` as classified, otherwise `fix` when generated provider files changed and `chore` when only `schema/`
+   did.
+6. A gate failed: nothing is merged, the run fails, the regenerated state is pushed to a branch, and a Copilot task is
+   started with the failing gates' output. The task may only change `schema/overrides.yaml` and the hooks in
+   `internal/provider/hooks.go` (`.github/prompts/schema-update.md`); its pull request is a draft for a human.
+
 ## A new API root (v8)
 
-1. `make fetch ARGS="-latest"` vendors `src/types/v8.ts` (and `v8.sbvr` when open-balena-api has it) and adds root
-   `v8` to the lock without changing `default_root`.
-2. `go run ./cmd/balena-schema ir -root v8` builds the IR for v8; `go run ./cmd/balena-schema surface-diff -old-root
-v7 -new-root v8` shows what promoting it would change (names stay sticky); `go run ./cmd/balena-schema contract
--root v8` checks it live.
-3. Promote with `go run ./cmd/balena-schema fetch -default-root v8` and `make generate`.
+`fetch` adds every root balena-sdk ships (`src/types/v<N>.ts`, plus `v<N>.sbvr` when open-balena-api has one) to the
+lock without changing `default_root`. Generation only cross-checks the roots it uses, so a new root never blocks it.
+
+`promote-root` (`make promote-root`, needs `BALENA_API_TOKEN`) takes the newest root newer than `default_root`:
+
+- It builds the IR for the new root, with every in-scope table the root lacks served by `/resin` (listed in the plan),
+  and runs the live contract against it. Both pass: the plan is ready, and `-apply` flips `default_root` and
+  regenerates; the surface diff gives the pull request type.
+- The new root does not cross-check, does not generate, or fails its contract: it is not promoted, the current root
+  stays, and the weekly run says so in its summary and a warning but carries on.
+
+When the current root breaks (upstream retires it or its contract fails), a newer root that passes is promoted. When
+`fetch` no longer finds the default root upstream, the newest root becomes the default and the contract gate decides.
+Otherwise the run fails closed: the contract or check gate fails, nothing merges, and the agent task reports it.
+
+By hand: `go run ./cmd/balena-schema ir -root v8`, `surface-diff -old-root v7 -new-root v8`, `contract -root v8`, and
+`promote-root -root v8 [-apply]`.
