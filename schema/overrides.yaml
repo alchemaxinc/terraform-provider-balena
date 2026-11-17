@@ -50,6 +50,46 @@ rules:
       rule: config_var
       reason: open-balena-api checks configuration variable names of these tables in a hook (checkConfigVarNameValidity, src/features/vars-schema/hooks/config-var-validation.ts) with the rules /config/vars publishes
 
+# Role names by API field, in every table that has the field (unscoped tables included), ahead of the surface lock.
+# References still get `_id` when they are exposed as an id.
+names:
+  should_be_running__release:
+    name: target_release
+    reason: balena calls it the target release of a device or fleet (docs, SDK getTargetReleaseHash, dashboard)
+  is_running__release:
+    name: running_release
+    reason: the release a device currently runs (docs); stripping the verb would leave an ambiguous release_id
+  is_pinned_on__release:
+    name: pinned_release
+    reason: the release a device is pinned to (CLI balena device pin, SDK device.pinToRelease)
+  should_be_managed_by__release:
+    name: supervisor_release
+    reason: the supervisor release a device should run (SDK device.pinToSupervisorRelease)
+  should_be_operated_by__release:
+    name: os_release
+    reason: the host OS release a device should run (SDK device.pinToOsRelease); os_version is the reported OS column
+  on__application:
+    name: host_application
+    reason: the host application that provides a profile (SBVR "has an application2 that is host")
+  can_use__application_as_host:
+    name: host_application
+    reason: the same host role as on__application
+  is_created_by__user:
+    name: created_by_user
+    reason: keeps the creator role; a bare user_id reads as the owner
+  available_since__release:
+    name: available_since_release
+    reason: keeps the role; a bare release_id reads as the release of the row
+  has_legacy_link_to__organization:
+    name: legacy_organization
+    reason: a bare organization_id reads as the user's organization
+
+# References exposed by a unique column of the referenced row instead of its id, in every table.
+references:
+  device_type:
+    by: slug
+    reason: device types are known by slug; their ids differ between balena environments
+
 hooks:
   organizationDeleteTolerates401:
     uses: [organization.id]
@@ -80,9 +120,6 @@ hooks:
 tables:
   application:
     fields:
-      is_for__device_type:
-        reference_by: slug
-        reason: device types are known by slug; their ids differ between balena environments
       is_of__class:
         mode: optional_computed
         reason: a hook defaults the class to fleet
@@ -115,9 +152,6 @@ tables:
         reference_by: raw_version
         resolver: deviceHostOSRelease
         reason: the host OS is set by version, for example 6.0.10+rev1
-      is_of__device_type:
-        reference_by: slug
-        reason: device types are known by slug; their ids differ between balena environments
   organization:
     reason: the API refuses to delete an organization with an API token, so destroying it only removes it from the state.
     hooks:

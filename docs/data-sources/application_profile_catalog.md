@@ -25,10 +25,10 @@ data "balena_application_profile_catalog" "example" {
 ### Optional
 
 - `application_id` (Number) ID of the referenced `application` (API field `application`). Selects the row when configured.
+- `available_since_release_id` (Number) ID of the referenced `release` (API field `available_since__release`). Selects the row when configured.
 - `description` (String) API field `description` (text). Selects the row when configured.
 - `id` (Number) Numeric ID of the application profile catalog. Selects the row when configured.
 - `profile_name` (String) API field `catalogs__profile_name` (short text). Selects the row when configured.
-- `release_id` (Number) ID of the referenced `release` (API field `available_since__release`). Selects the row when configured.
 
 ### Read-Only
 

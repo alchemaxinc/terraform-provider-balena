@@ -43,7 +43,7 @@
           "type": "int64",
           "mode": "computed"
         },
-        "is_accessible_by_support_until_date": {
+        "is_accessible_by_support_until": {
           "field": "is_accessible_by_support_until__date",
           "type": "string",
           "mode": "optional"
@@ -74,11 +74,6 @@
           "mode": "required",
           "force_new": true
         },
-        "release_id": {
-          "field": "should_be_running__release",
-          "type": "int64",
-          "mode": "optional_computed"
-        },
         "repository_url": {
           "field": "is_stored_at__repository_url",
           "type": "string",
@@ -96,6 +91,11 @@
           "validators": [
             "length:6..321"
           ]
+        },
+        "target_release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
+          "mode": "optional_computed"
         },
         "uuid": {
           "field": "uuid",
@@ -197,16 +197,16 @@
           "type": "string",
           "mode": "computed"
         },
-        "id": {
-          "field": "id",
-          "type": "int64",
-          "mode": "computed"
-        },
-        "on_application_id": {
+        "host_application_id": {
           "field": "on__application",
           "type": "int64",
           "mode": "required",
           "force_new": true
+        },
+        "id": {
+          "field": "id",
+          "type": "int64",
+          "mode": "computed"
         },
         "profile_name": {
           "field": "activates__profile_name",
@@ -272,17 +272,17 @@
           "type": "int64",
           "mode": "computed"
         },
-        "is_pinned_on_release": {
-          "field": "is_pinned_on__release",
-          "via": "commit",
-          "type": "string",
-          "mode": "optional"
-        },
-        "should_be_operated_by_release": {
+        "os_release": {
           "field": "should_be_operated_by__release",
           "via": "raw_version",
           "type": "string",
           "mode": "optional_computed"
+        },
+        "pinned_release": {
+          "field": "is_pinned_on__release",
+          "via": "commit",
+          "type": "string",
+          "mode": "optional"
         },
         "uuid": {
           "field": "uuid",
@@ -374,12 +374,6 @@
       "root": "resin",
       "preview": true,
       "attributes": {
-        "application_id": {
-          "field": "on__application",
-          "type": "int64",
-          "mode": "required",
-          "force_new": true
-        },
         "created_at": {
           "field": "created_at",
           "type": "string",
@@ -387,6 +381,12 @@
         },
         "device_id": {
           "field": "device",
+          "type": "int64",
+          "mode": "required",
+          "force_new": true
+        },
+        "host_application_id": {
+          "field": "on__application",
           "type": "int64",
           "mode": "required",
           "force_new": true
@@ -801,7 +801,7 @@
           "type": "int64",
           "mode": "filter"
         },
-        "is_accessible_by_support_until_date": {
+        "is_accessible_by_support_until": {
           "field": "is_accessible_by_support_until__date",
           "type": "string",
           "mode": "computed"
@@ -831,11 +831,6 @@
           "type": "int64",
           "mode": "filter"
         },
-        "release_id": {
-          "field": "should_be_running__release",
-          "type": "int64",
-          "mode": "filter"
-        },
         "repository_url": {
           "field": "is_stored_at__repository_url",
           "type": "string",
@@ -849,6 +844,11 @@
         "slug": {
           "field": "slug",
           "type": "string",
+          "mode": "filter"
+        },
+        "target_release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
           "mode": "filter"
         },
         "uuid": {
@@ -931,13 +931,13 @@
           "type": "string",
           "mode": "computed"
         },
-        "id": {
-          "field": "id",
+        "host_application_id": {
+          "field": "on__application",
           "type": "int64",
           "mode": "filter"
         },
-        "on_application_id": {
-          "field": "on__application",
+        "id": {
+          "field": "id",
           "type": "int64",
           "mode": "filter"
         },
@@ -955,6 +955,11 @@
       "attributes": {
         "application_id": {
           "field": "application",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "available_since_release_id": {
+          "field": "available_since__release",
           "type": "int64",
           "mode": "filter"
         },
@@ -976,11 +981,6 @@
         "profile_name": {
           "field": "catalogs__profile_name",
           "type": "string",
-          "mode": "filter"
-        },
-        "release_id": {
-          "field": "available_since__release",
-          "type": "int64",
           "mode": "filter"
         }
       }
@@ -1025,7 +1025,7 @@
           "type": "int64",
           "mode": "filter"
         },
-        "changed_api_heartbeat_state_on_date": {
+        "changed_api_heartbeat_state_on": {
           "field": "changed_api_heartbeat_state_on__date",
           "type": "string",
           "mode": "computed"
@@ -1086,7 +1086,7 @@
           "type": "string",
           "mode": "filter"
         },
-        "is_accessible_by_support_until_date": {
+        "is_accessible_by_support_until": {
           "field": "is_accessible_by_support_until__date",
           "type": "string",
           "mode": "computed"
@@ -1106,7 +1106,7 @@
           "type": "bool",
           "mode": "filter"
         },
-        "is_locked_until_date": {
+        "is_locked_until": {
           "field": "is_locked_until__date",
           "type": "string",
           "mode": "computed"
@@ -1114,17 +1114,6 @@
         "is_online": {
           "field": "is_online",
           "type": "bool",
-          "mode": "filter"
-        },
-        "is_pinned_on_release": {
-          "field": "is_pinned_on__release",
-          "via": "commit",
-          "type": "string",
-          "mode": "computed"
-        },
-        "is_running_release_id": {
-          "field": "is_running__release",
-          "type": "int64",
           "mode": "filter"
         },
         "is_undervolted": {
@@ -1192,6 +1181,12 @@
           "type": "string",
           "mode": "filter"
         },
+        "os_release": {
+          "field": "should_be_operated_by__release",
+          "via": "raw_version",
+          "type": "string",
+          "mode": "computed"
+        },
         "os_variant": {
           "field": "os_variant",
           "type": "string",
@@ -1212,6 +1207,12 @@
           "type": "string",
           "mode": "filter"
         },
+        "pinned_release": {
+          "field": "is_pinned_on__release",
+          "via": "commit",
+          "type": "string",
+          "mode": "computed"
+        },
         "provisioning_progress": {
           "field": "provisioning_progress",
           "type": "int64",
@@ -1227,24 +1228,13 @@
           "type": "string",
           "mode": "filter"
         },
+        "running_release_id": {
+          "field": "is_running__release",
+          "type": "int64",
+          "mode": "filter"
+        },
         "service_instance_id": {
           "field": "is_managed_by__service_instance",
-          "type": "int64",
-          "mode": "filter"
-        },
-        "should_be_managed_by_release_id": {
-          "field": "should_be_managed_by__release",
-          "type": "int64",
-          "mode": "filter"
-        },
-        "should_be_operated_by_release": {
-          "field": "should_be_operated_by__release",
-          "via": "raw_version",
-          "type": "string",
-          "mode": "computed"
-        },
-        "should_be_running_release_id": {
-          "field": "should_be_running__release",
           "type": "int64",
           "mode": "filter"
         },
@@ -1268,9 +1258,19 @@
           "type": "int64",
           "mode": "filter"
         },
+        "supervisor_release_id": {
+          "field": "should_be_managed_by__release",
+          "type": "int64",
+          "mode": "filter"
+        },
         "supervisor_version": {
           "field": "supervisor_version",
           "type": "string",
+          "mode": "filter"
+        },
+        "target_release_id": {
+          "field": "should_be_running__release",
+          "type": "int64",
           "mode": "filter"
         },
         "update_status": {
@@ -1353,11 +1353,6 @@
       "root": "resin",
       "preview": true,
       "attributes": {
-        "application_id": {
-          "field": "on__application",
-          "type": "int64",
-          "mode": "filter"
-        },
         "created_at": {
           "field": "created_at",
           "type": "string",
@@ -1365,6 +1360,11 @@
         },
         "device_id": {
           "field": "device",
+          "type": "int64",
+          "mode": "filter"
+        },
+        "host_application_id": {
+          "field": "on__application",
           "type": "int64",
           "mode": "filter"
         },
@@ -1587,6 +1587,11 @@
           "type": "string",
           "mode": "computed"
         },
+        "created_by_user_id": {
+          "field": "is_created_by__user",
+          "type": "int64",
+          "mode": "filter"
+        },
         "end_timestamp": {
           "field": "end_timestamp",
           "type": "string",
@@ -1607,7 +1612,7 @@
           "type": "bool",
           "mode": "filter"
         },
-        "is_finalized_at_date": {
+        "is_finalized_at": {
           "field": "is_finalized_at__date",
           "type": "string",
           "mode": "computed"
@@ -1701,11 +1706,6 @@
           "field": "update_timestamp",
           "type": "string",
           "mode": "computed"
-        },
-        "user_id": {
-          "field": "is_created_by__user",
-          "type": "int64",
-          "mode": "filter"
         },
         "variant": {
           "field": "variant",

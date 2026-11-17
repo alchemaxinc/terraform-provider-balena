@@ -110,6 +110,25 @@ Every table of the pinned models and what the generator does with it. Default ro
 | `user_public_key` | v7 | open | generated | `balena_user_public_key` (resource, data source) | writable columns: resource and data source |
 | `user_role` | resin | open | excluded | - | internal: only the unversioned model has it and open-balena-api grants users no access |
 
+## Names that keep their verb
+
+Columns whose verb-stripped name collides in their table and that no `names` entry in `schema/overrides.yaml` covers, in every table that is not excluded (report only).
+
+| Table | API field | Name | Collides with |
+| --- | --- | --- | --- |
+| `delta` | `originates_from__image` | `originates_from_image_id` | `produces__image` |
+| `delta` | `produces__image` | `produces_image_id` | `originates_from__image` |
+| `organization__has_private_access_to__device_type` | `has_private_access_to__device_type` | `has_private_access_to_device_type` | `device_type` |
+| `organization__has_private_access_to__device_type` | `is_accessible_privately_by__organization` | `is_accessible_privately_by_organization_id` | `organization` |
+| `user__has_direct_access_to__application` | `has_direct_access_to__application` | `has_direct_access_to_application_id` | `application` |
+| `user__has_direct_access_to__application` | `is_directly_accessible_by__user` | `is_directly_accessible_by_user_id` | `user` |
+
+## Sticky names the rules would now give differently
+
+Names kept from `schema/surface.lock.json` that the current rules and `names` map would change; `generate -fresh-names` applies them (report only).
+
+None.
+
 ## Columns of in-scope tables
 
 ### `balena_application`
@@ -124,16 +143,16 @@ Every table of the pinned models and what the generator does with it. Default ro
 | `class` | `is_of__class` | string | optional_computed | filter |
 | `created_at` | `created_at` | string | computed | computed |
 | `device_type` | `is_for__device_type → device_type.slug` | string | required (forces replacement) | computed |
-| `is_accessible_by_support_until_date` | `is_accessible_by_support_until__date` | string | optional | computed |
+| `is_accessible_by_support_until` | `is_accessible_by_support_until__date` | string | optional | computed |
 | `is_archived` | `is_archived` | bool | optional_computed | filter |
 | `is_discoverable` | `is_discoverable` | bool | computed | filter |
 | `is_host` | `is_host` | bool | computed | filter |
 | `is_public` | `is_public` | bool | optional_computed | filter |
 | `organization_id` | `organization → organization` | int64 | required (forces replacement) | filter |
-| `release_id` | `should_be_running__release → release` | int64 | optional_computed | filter |
 | `repository_url` | `is_stored_at__repository_url` | string | optional | filter |
 | `should_track_latest_release` | `should_track_latest_release` | bool | optional_computed | filter |
 | `slug` | `slug` | string | optional_computed | filter |
+| `target_release_id` | `should_be_running__release → release` | int64 | optional_computed | filter |
 | `uuid` | `uuid` | string | optional_computed | filter |
 | - | `actor` | - | skipped: references actor, which has no columns besides its id | - |
 
@@ -169,7 +188,7 @@ Every table of the pinned models and what the generator does with it. Default ro
 | `id` | `id` | int64 | computed | filter |
 | `application_id` | `application → application` | int64 | required (forces replacement) | filter |
 | `created_at` | `created_at` | string | computed | computed |
-| `on_application_id` | `on__application → application` | int64 | required (forces replacement) | filter |
+| `host_application_id` | `on__application → application` | int64 | required (forces replacement) | filter |
 | `profile_name` | `activates__profile_name` | string | required (forces replacement) | filter |
 | - | `modified_at` | - | skipped: changes on every write, and balena-cloud does not let users read it on every table | - |
 
@@ -185,10 +204,10 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | --- | --- | --- | --- | --- |
 | `id` | `id` | int64 | - | filter |
 | `application_id` | `application → application` | int64 | - | filter |
+| `available_since_release_id` | `available_since__release → release` | int64 | - | filter |
 | `created_at` | `created_at` | string | - | computed |
 | `description` | `description` | string | - | filter |
 | `profile_name` | `catalogs__profile_name` | string | - | filter |
-| `release_id` | `available_since__release → release` | int64 | - | filter |
 | - | `modified_at` | - | skipped: changes on every write, and balena-cloud does not let users read it on every table | - |
 
 ### `balena_application_tag`
@@ -211,7 +230,7 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | `id` | `id` | int64 | computed | filter |
 | `api_heartbeat_state` | `api_heartbeat_state` | string | - | filter |
 | `application_id` | `belongs_to__application → application` | int64 | - | filter |
-| `changed_api_heartbeat_state_on_date` | `changed_api_heartbeat_state_on__date` | string | - | computed |
+| `changed_api_heartbeat_state_on` | `changed_api_heartbeat_state_on__date` | string | - | computed |
 | `cpu_id` | `cpu_id` | string | - | filter |
 | `cpu_temp` | `cpu_temp` | int64 | - | filter |
 | `cpu_usage` | `cpu_usage` | int64 | - | filter |
@@ -222,14 +241,12 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | `device_type` | `is_of__device_type → device_type.slug` | string | - | computed |
 | `download_progress` | `download_progress` | int64 | - | filter |
 | `ip_address` | `ip_address` | string | - | filter |
-| `is_accessible_by_support_until_date` | `is_accessible_by_support_until__date` | string | - | computed |
+| `is_accessible_by_support_until` | `is_accessible_by_support_until__date` | string | - | computed |
 | `is_active` | `is_active` | bool | - | filter |
 | `is_connected_to_vpn` | `is_connected_to_vpn` | bool | - | filter |
 | `is_frozen` | `is_frozen` | bool | - | filter |
-| `is_locked_until_date` | `is_locked_until__date` | string | - | computed |
+| `is_locked_until` | `is_locked_until__date` | string | - | computed |
 | `is_online` | `is_online` | bool | - | filter |
-| `is_pinned_on_release` | `is_pinned_on__release → release.commit` | string | optional | computed |
-| `is_running_release_id` | `is_running__release → release` | int64 | - | filter |
 | `is_undervolted` | `is_undervolted` | bool | - | filter |
 | `is_web_accessible` | `is_web_accessible` | bool | - | filter |
 | `last_connectivity_event` | `last_connectivity_event` | string | - | computed |
@@ -243,22 +260,24 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | `memory_total` | `memory_total` | int64 | - | filter |
 | `memory_usage` | `memory_usage` | int64 | - | filter |
 | `note` | `note` | string | - | filter |
+| `os_release` | `should_be_operated_by__release → release.raw_version` | string | optional_computed | computed |
 | `os_variant` | `os_variant` | string | - | filter |
 | `os_version` | `os_version` | string | - | filter |
 | `overall_progress` | `overall_progress` | int64 | - | filter |
 | `overall_status` | `overall_status` | string | - | filter |
+| `pinned_release` | `is_pinned_on__release → release.commit` | string | optional | computed |
 | `provisioning_progress` | `provisioning_progress` | int64 | - | filter |
 | `provisioning_state` | `provisioning_state` | string | - | filter |
 | `public_address` | `public_address` | string | - | filter |
+| `running_release_id` | `is_running__release → release` | int64 | - | filter |
 | `service_instance_id` | `is_managed_by__service_instance → service_instance` | int64 | - | filter |
-| `should_be_managed_by_release_id` | `should_be_managed_by__release → release` | int64 | - | filter |
-| `should_be_operated_by_release` | `should_be_operated_by__release → release.raw_version` | string | optional_computed | computed |
-| `should_be_running_release_id` | `should_be_running__release → release` | int64 | - | filter |
 | `status` | `status` | string | - | filter |
 | `storage_block_device` | `storage_block_device` | string | - | filter |
 | `storage_total` | `storage_total` | int64 | - | filter |
 | `storage_usage` | `storage_usage` | int64 | - | filter |
+| `supervisor_release_id` | `should_be_managed_by__release → release` | int64 | - | filter |
 | `supervisor_version` | `supervisor_version` | string | - | filter |
+| `target_release_id` | `should_be_running__release → release` | int64 | - | filter |
 | `update_status` | `update_status` | string | - | filter |
 | `user_id` | `belongs_to__user → user` | int64 | - | filter |
 | `uuid` | `uuid` | string | required (forces replacement) | filter |
@@ -295,9 +314,9 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | Attribute | API field | Type | Resource | Data source |
 | --- | --- | --- | --- | --- |
 | `id` | `id` | int64 | computed | filter |
-| `application_id` | `on__application → application` | int64 | required (forces replacement) | filter |
 | `created_at` | `created_at` | string | computed | computed |
 | `device_id` | `device → device` | int64 | required (forces replacement) | filter |
+| `host_application_id` | `on__application → application` | int64 | required (forces replacement) | filter |
 | `is_active` | `is_active` | bool | optional_computed | filter |
 | `profile_name` | `overrides__profile_name` | string | required (forces replacement) | filter |
 | - | `modified_at` | - | skipped: changes on every write, and balena-cloud does not let users read it on every table | - |
@@ -386,10 +405,11 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | `composition` | `composition` | string | - | computed |
 | `contract` | `contract` | string | - | computed |
 | `created_at` | `created_at` | string | - | computed |
+| `created_by_user_id` | `is_created_by__user → user` | int64 | - | filter |
 | `end_timestamp` | `end_timestamp` | string | - | computed |
 | `invalidation_reason` | `invalidation_reason` | string | - | filter |
 | `is_final` | `is_final` | bool | - | filter |
-| `is_finalized_at_date` | `is_finalized_at__date` | string | - | computed |
+| `is_finalized_at` | `is_finalized_at__date` | string | - | computed |
 | `is_invalidated` | `is_invalidated` | bool | - | filter |
 | `is_passing_tests` | `is_passing_tests` | bool | - | filter |
 | `known_issue_list` | `known_issue_list` | string | - | filter |
@@ -408,7 +428,6 @@ SBVR necessities the provider does not check before apply (the API enforces them
 | `start_timestamp` | `start_timestamp` | string | - | computed |
 | `status` | `status` | string | - | filter |
 | `update_timestamp` | `update_timestamp` | string | - | computed |
-| `user_id` | `is_created_by__user → user` | int64 | - | filter |
 | `variant` | `variant` | string | - | filter |
 | `version` | `version` | string | - | computed |
 

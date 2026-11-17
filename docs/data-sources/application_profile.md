@@ -25,8 +25,8 @@ data "balena_application_profile" "example" {
 ### Optional
 
 - `application_id` (Number) ID of the referenced `application` (API field `application`). Changing it replaces the resource. Selects the row when configured.
+- `host_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource. Selects the row when configured.
 - `id` (Number) Numeric ID of the application profile. Selects the row when configured.
-- `on_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource. Selects the row when configured.
 - `profile_name` (String) API field `activates__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource. Selects the row when configured.
 
 ### Read-Only

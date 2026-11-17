@@ -14,9 +14,9 @@ Manages a device (the `device` resource of the `/v7` API). A device joins balena
 
 ```terraform
 resource "balena_device" "example" {
-  is_pinned_on_release          = "f2a97d4338b09ef613a17961f4fafbc2"
-  should_be_operated_by_release = "6.0.10+rev1"
-  uuid                          = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
+  os_release     = "6.0.10+rev1"
+  pinned_release = "f2a97d4338b09ef613a17961f4fafbc2"
+  uuid           = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
 }
 ```
 
@@ -31,8 +31,8 @@ resource "balena_device" "example" {
 ### Optional
 
 - `device_name` (String) API field `device_name` (short text). The API sets a value when none is configured. Note: an adopted device keeps its name unless one is configured.
-- `is_pinned_on_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.
-- `should_be_operated_by_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.
+- `os_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.
+- `pinned_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.
 
 ### Read-Only
 

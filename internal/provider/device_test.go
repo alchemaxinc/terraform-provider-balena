@@ -74,15 +74,15 @@ func TestDeviceAdoptsPinsUnpinsAndUpdatesHostOS(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: deviceConfig(srv.URL, `
-  device_name                   = "new-name"
-  is_pinned_on_release          = "commit-two"
-  should_be_operated_by_release = "6.1.0+rev1"
+  device_name    = "new-name"
+  pinned_release = "commit-two"
+  os_release     = "6.1.0+rev1"
 `),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					f.check("new-name", f.commitTwo, f.os610),
 					resource.TestCheckResourceAttr("balena_device.test", "id", fmt.Sprint(f.device)),
-					resource.TestCheckResourceAttr("balena_device.test", "is_pinned_on_release", "commit-two"),
-					resource.TestCheckResourceAttr("balena_device.test", "should_be_operated_by_release", "6.1.0+rev1"),
+					resource.TestCheckResourceAttr("balena_device.test", "pinned_release", "commit-two"),
+					resource.TestCheckResourceAttr("balena_device.test", "os_release", "6.1.0+rev1"),
 				),
 			},
 			{
@@ -90,9 +90,9 @@ func TestDeviceAdoptsPinsUnpinsAndUpdatesHostOS(t *testing.T) {
 				Config: deviceConfig(srv.URL, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					f.check("new-name", nil, f.os610),
-					resource.TestCheckNoResourceAttr("balena_device.test", "is_pinned_on_release"),
+					resource.TestCheckNoResourceAttr("balena_device.test", "pinned_release"),
 					resource.TestCheckResourceAttr("balena_device.test", "device_name", "new-name"),
-					resource.TestCheckResourceAttr("balena_device.test", "should_be_operated_by_release", "6.1.0+rev1"),
+					resource.TestCheckResourceAttr("balena_device.test", "os_release", "6.1.0+rev1"),
 					func(*terraform.State) error {
 						patches := f.patches("device")
 						last := patches[len(patches)-1]
@@ -126,7 +126,7 @@ func TestDeviceUnknownHostOSVersionFails(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testFactories(),
 		Steps: []resource.TestStep{{
-			Config:      deviceConfig(srv.URL, `  should_be_operated_by_release = "9.9.9"`),
+			Config:      deviceConfig(srv.URL, `  os_release = "9.9.9"`),
 			ExpectError: regexp.MustCompile(`host OS release "9.9.9" not found`),
 		}},
 	})

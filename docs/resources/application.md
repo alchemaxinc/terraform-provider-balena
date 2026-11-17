@@ -27,20 +27,20 @@ resource "balena_application" "example" {
 ### Required
 
 - `app_name` (String) API field `app_name` (text). Between 4 and 100 characters.
-- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource. Note: device types are known by slug; their ids differ between balena environments.
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource.
 - `organization_id` (Number) ID of the referenced `organization` (API field `organization`). Changing it replaces the resource.
 
 ### Optional
 
 - `application_type_id` (Number) ID of the referenced `application_type` (API field `application_type`). The API sets a value when none is configured. Note: a hook picks the application type.
 - `class` (String) API field `is_of__class` (short text). One of `fleet`, `block`, `app`. The API sets a value when none is configured. Note: a hook defaults the class to fleet.
-- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).
+- `is_accessible_by_support_until` (String) API field `is_accessible_by_support_until__date` (date time).
 - `is_archived` (Boolean) API field `is_archived` (boolean). The API sets a value when none is configured.
 - `is_public` (Boolean) API field `is_public` (boolean). The API sets a value when none is configured.
-- `release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured.
 - `repository_url` (String) API field `is_stored_at__repository_url` (text).
 - `should_track_latest_release` (Boolean) API field `should_track_latest_release` (boolean). The API sets a value when none is configured.
 - `slug` (String) API field `slug` (short text). Between 6 and 321 characters. The API sets a value when none is configured. Unique.
+- `target_release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured.
 - `uuid` (String) API field `uuid` (text). Exactly 32 characters. The API sets a value when none is configured. Unique.
 
 ### Read-Only

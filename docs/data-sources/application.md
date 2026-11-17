@@ -33,14 +33,14 @@ data "balena_application" "example" {
 - `is_host` (Boolean) API field `is_host` (boolean). Selects the row when configured.
 - `is_public` (Boolean) API field `is_public` (boolean). The API sets a value when none is configured. Selects the row when configured.
 - `organization_id` (Number) ID of the referenced `organization` (API field `organization`). Changing it replaces the resource. Selects the row when configured.
-- `release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured. Selects the row when configured.
 - `repository_url` (String) API field `is_stored_at__repository_url` (text). Selects the row when configured.
 - `should_track_latest_release` (Boolean) API field `should_track_latest_release` (boolean). The API sets a value when none is configured. Selects the row when configured.
 - `slug` (String) API field `slug` (short text). Between 6 and 321 characters. The API sets a value when none is configured. Unique. Selects the row when configured.
+- `target_release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). The API sets a value when none is configured. Selects the row when configured.
 - `uuid` (String) API field `uuid` (text). Exactly 32 characters. The API sets a value when none is configured. Unique. Selects the row when configured.
 
 ### Read-Only
 
 - `created_at` (String) API field `created_at` (date time).
-- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource. Note: device types are known by slug; their ids differ between balena environments.
-- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_for__device_type`, resolved to its ID). Changing it replaces the resource.
+- `is_accessible_by_support_until` (String) API field `is_accessible_by_support_until__date` (date time).

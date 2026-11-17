@@ -394,9 +394,9 @@ func TestAccDeviceProfileOverride_basic(t *testing.T) {
 provider "balena" {}
 
 resource "balena_device_profile_override" "test" {
-  device_id      = %s
-  profile_name   = %q
-  application_id = %s
+  device_id           = %s
+  profile_name        = %q
+  host_application_id = %s
   %s
 }
 `, deviceID, profileName, hostAppID, active)
@@ -424,7 +424,7 @@ resource "balena_device_profile_override" "test" {
 
 // TestAccDevice_basic adopts a device, renames, pins and unpins it. An API token cannot create a device, so the test
 // needs BALENA_TEST_DEVICE_UUID and BALENA_TEST_RELEASE_COMMIT (a successful release of the device's fleet, ideally the
-// one it already runs). It does not set should_be_operated_by_release, so the device does not reboot.
+// one it already runs). It does not set os_release, so the device does not reboot.
 func TestAccDevice_basic(t *testing.T) {
 	testAccPreCheck(t)
 	uuid := os.Getenv("BALENA_TEST_DEVICE_UUID")
@@ -449,15 +449,15 @@ resource "balena_device" "test" {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: config(fmt.Sprintf("is_pinned_on_release = %q", commit)),
+				Config: config(fmt.Sprintf("pinned_release = %q", commit)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("balena_device.test", "device_name", deviceName),
-					resource.TestCheckResourceAttr("balena_device.test", "is_pinned_on_release", commit),
+					resource.TestCheckResourceAttr("balena_device.test", "pinned_release", commit),
 				),
 			},
 			{
 				Config: config(""),
-				Check:  resource.TestCheckNoResourceAttr("balena_device.test", "is_pinned_on_release"),
+				Check:  resource.TestCheckNoResourceAttr("balena_device.test", "pinned_release"),
 			},
 			{
 				ResourceName:      "balena_device.test",

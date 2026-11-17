@@ -27,6 +27,7 @@ data "balena_release" "example" {
 - `application_id` (Number) ID of the referenced `application` (API field `belongs_to__application`). Selects the row when configured.
 - `build_log` (String) API field `build_log` (text). Selects the row when configured.
 - `commit` (String) API field `commit` (short text). Selects the row when configured.
+- `created_by_user_id` (Number) ID of the referenced `user` (API field `is_created_by__user`). Selects the row when configured.
 - `id` (Number) Numeric ID of the release. Selects the row when configured.
 - `invalidation_reason` (String) API field `invalidation_reason` (text). Selects the row when configured.
 - `is_final` (Boolean) API field `is_final` (boolean). Selects the row when configured.
@@ -46,7 +47,6 @@ data "balena_release" "example" {
 - `semver_prerelease` (String) API field `semver_prerelease` (short text). Selects the row when configured.
 - `source` (String) API field `source` (short text). Selects the row when configured.
 - `status` (String) API field `status` (short text). Selects the row when configured.
-- `user_id` (Number) ID of the referenced `user` (API field `is_created_by__user`). Selects the row when configured.
 - `variant` (String) API field `variant` (short text). Selects the row when configured.
 
 ### Read-Only
@@ -55,7 +55,7 @@ data "balena_release" "example" {
 - `contract` (String) API field `contract`, as a JSON string.
 - `created_at` (String) API field `created_at` (date time).
 - `end_timestamp` (String) API field `end_timestamp` (date time).
-- `is_finalized_at_date` (String) API field `is_finalized_at__date` (date time).
+- `is_finalized_at` (String) API field `is_finalized_at__date` (date time).
 - `start_timestamp` (String) API field `start_timestamp` (date time).
 - `update_timestamp` (String) API field `update_timestamp` (date time).
 - `version` (String) API field `version`, as a JSON string.

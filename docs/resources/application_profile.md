@@ -14,9 +14,9 @@ Manages an application profile (the `application_profile` resource of the `/resi
 
 ```terraform
 resource "balena_application_profile" "example" {
-  application_id    = 123456
-  on_application_id = 123456
-  profile_name      = "example-profile-name"
+  application_id      = 123456
+  host_application_id = 123456
+  profile_name        = "example-profile-name"
 }
 ```
 
@@ -27,7 +27,7 @@ resource "balena_application_profile" "example" {
 ### Required
 
 - `application_id` (Number) ID of the referenced `application` (API field `application`). Changing it replaces the resource.
-- `on_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
+- `host_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
 - `profile_name` (String) API field `activates__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource.
 
 ### Read-Only

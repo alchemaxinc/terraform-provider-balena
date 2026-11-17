@@ -14,9 +14,9 @@ Manages a device profile override (the `device_profile_override` resource of the
 
 ```terraform
 resource "balena_device_profile_override" "example" {
-  application_id = 123456
-  device_id      = 123456
-  profile_name   = "example-profile-name"
+  device_id           = 123456
+  host_application_id = 123456
+  profile_name        = "example-profile-name"
 }
 ```
 
@@ -26,8 +26,8 @@ resource "balena_device_profile_override" "example" {
 
 ### Required
 
-- `application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
 - `device_id` (Number) ID of the referenced `device` (API field `device`). Changing it replaces the resource.
+- `host_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource.
 - `profile_name` (String) API field `overrides__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource.
 
 ### Optional

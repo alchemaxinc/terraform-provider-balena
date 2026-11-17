@@ -39,7 +39,6 @@ data "balena_device" "example" {
 - `is_connected_to_vpn` (Boolean) API field `is_connected_to_vpn` (boolean). Selects the row when configured.
 - `is_frozen` (Boolean) API field `is_frozen` (boolean). Selects the row when configured.
 - `is_online` (Boolean) API field `is_online` (boolean). Selects the row when configured.
-- `is_running_release_id` (Number) ID of the referenced `release` (API field `is_running__release`). Selects the row when configured.
 - `is_undervolted` (Boolean) API field `is_undervolted` (boolean). Selects the row when configured.
 - `is_web_accessible` (Boolean) API field `is_web_accessible` (boolean). Selects the row when configured.
 - `latitude` (String) API field `latitude` (short text). Selects the row when configured.
@@ -57,27 +56,28 @@ data "balena_device" "example" {
 - `provisioning_progress` (Number) API field `provisioning_progress` (integer). Selects the row when configured.
 - `provisioning_state` (String) API field `provisioning_state` (short text). Selects the row when configured.
 - `public_address` (String) API field `public_address` (short text). Selects the row when configured.
+- `running_release_id` (Number) ID of the referenced `release` (API field `is_running__release`). Selects the row when configured.
 - `service_instance_id` (Number) ID of the referenced `service_instance` (API field `is_managed_by__service_instance`). Selects the row when configured.
-- `should_be_managed_by_release_id` (Number) ID of the referenced `release` (API field `should_be_managed_by__release`). Selects the row when configured.
-- `should_be_running_release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). Selects the row when configured.
 - `status` (String) API field `status` (short text). Selects the row when configured.
 - `storage_block_device` (String) API field `storage_block_device` (short text). Selects the row when configured.
 - `storage_total` (Number) API field `storage_total` (integer). Selects the row when configured.
 - `storage_usage` (Number) API field `storage_usage` (integer). Selects the row when configured.
+- `supervisor_release_id` (Number) ID of the referenced `release` (API field `should_be_managed_by__release`). Selects the row when configured.
 - `supervisor_version` (String) API field `supervisor_version` (short text). Selects the row when configured.
+- `target_release_id` (Number) ID of the referenced `release` (API field `should_be_running__release`). Selects the row when configured.
 - `update_status` (String) API field `update_status` (short text). Selects the row when configured.
 - `user_id` (Number) ID of the referenced `user` (API field `belongs_to__user`). Selects the row when configured.
 - `uuid` (String) API field `uuid` (text). At most 62 characters. Changing it replaces the resource. Unique. Note: the uuid selects the device to adopt. Selects the row when configured.
 
 ### Read-Only
 
-- `changed_api_heartbeat_state_on_date` (String) API field `changed_api_heartbeat_state_on__date` (date time).
+- `changed_api_heartbeat_state_on` (String) API field `changed_api_heartbeat_state_on__date` (date time).
 - `created_at` (String) API field `created_at` (date time).
-- `device_type` (String) `slug` of the referenced `device_type` (API field `is_of__device_type`, resolved to its ID). Note: device types are known by slug; their ids differ between balena environments.
-- `is_accessible_by_support_until_date` (String) API field `is_accessible_by_support_until__date` (date time).
-- `is_locked_until_date` (String) API field `is_locked_until__date` (date time).
-- `is_pinned_on_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.
+- `device_type` (String) `slug` of the referenced `device_type` (API field `is_of__device_type`, resolved to its ID).
+- `is_accessible_by_support_until` (String) API field `is_accessible_by_support_until__date` (date time).
+- `is_locked_until` (String) API field `is_locked_until__date` (date time).
 - `last_connectivity_event` (String) API field `last_connectivity_event` (date time).
 - `last_update_status_event` (String) API field `last_update_status_event` (date time).
 - `last_vpn_event` (String) API field `last_vpn_event` (date time).
-- `should_be_operated_by_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.
+- `os_release` (String) `raw_version` of the referenced `release` (API field `should_be_operated_by__release`, resolved to its ID). The API sets a value when none is configured. Note: the host OS is set by version, for example 6.0.10+rev1.
+- `pinned_release` (String) `commit` of the referenced `release` (API field `is_pinned_on__release`, resolved to its ID). Note: a pin is set by release commit; null unpins the device so it tracks its fleet.

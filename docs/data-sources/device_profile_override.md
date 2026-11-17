@@ -24,8 +24,8 @@ data "balena_device_profile_override" "example" {
 
 ### Optional
 
-- `application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource. Selects the row when configured.
 - `device_id` (Number) ID of the referenced `device` (API field `device`). Changing it replaces the resource. Selects the row when configured.
+- `host_application_id` (Number) ID of the referenced `application` (API field `on__application`). Changing it replaces the resource. Selects the row when configured.
 - `id` (Number) Numeric ID of the device profile override. Selects the row when configured.
 - `is_active` (Boolean) API field `is_active` (boolean). The API sets a value when none is configured. Selects the row when configured.
 - `profile_name` (String) API field `overrides__profile_name` (short text). Between 2 and 100 characters. Changing it replaces the resource. Selects the row when configured.
