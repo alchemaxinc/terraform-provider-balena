@@ -38,15 +38,34 @@ const (
 var (
 	IDENT_RE = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 	NAME_RE  = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+	// VALID_NAME_RE is the framework's attribute name pattern (fwschema.ValidAttributeNameRegex).
+	VALID_NAME_RE = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 )
 
 // Overrides is schema/overrides.yaml.
 type Overrides struct {
 	// Scope lists the tables the provider manages. Every other table is reported as unscoped.
-	Scope  []string                  `yaml:"scope"`
-	Rules  RuleOverrides             `yaml:"rules"`
-	Hooks  map[string]*HookDecl      `yaml:"hooks"`
-	Tables map[string]*TableOverride `yaml:"tables"`
+	Scope []string      `yaml:"scope"`
+	Rules RuleOverrides `yaml:"rules"`
+	// Names gives an API field a role name in every table that has it, ahead of the rules and the surface lock.
+	Names map[string]*NameEntry `yaml:"names"`
+	// References exposes every reference to a table by one of its unique columns instead of its id.
+	References map[string]*ReferenceEntry `yaml:"references"`
+	Hooks      map[string]*HookDecl       `yaml:"hooks"`
+	Tables     map[string]*TableOverride  `yaml:"tables"`
+}
+
+// NameEntry is the attribute name of an API field in every table. References still get `_id` when they are exposed
+// as an id.
+type NameEntry struct {
+	Name   string `yaml:"name"`
+	Reason string `yaml:"reason"`
+}
+
+// ReferenceEntry exposes references to a table by one of its unique columns.
+type ReferenceEntry struct {
+	By     string `yaml:"by"`
+	Reason string `yaml:"reason"`
 }
 
 // RuleOverrides are field rules matched by table-name suffix.
@@ -60,9 +79,9 @@ type RuleOverrides struct {
 type FieldRule struct {
 	TableSuffix string   `yaml:"table_suffix"`
 	Tables      []string `yaml:"tables"`
-	Field       string `yaml:"field"`
-	Rule        string `yaml:"rule"`
-	Reason      string `yaml:"reason"`
+	Field       string   `yaml:"field"`
+	Rule        string   `yaml:"rule"`
+	Reason      string   `yaml:"reason"`
 }
 
 // HookDecl declares a named Go hook and the API columns ("<table>.<field>") it uses.
@@ -151,6 +170,21 @@ func ParseOverrides(data []byte) (*Overrides, error) {
 			if kind == "sensitive" && r.Rule != "" {
 				add("rules.sensitive[%d]: rule is not used here", i)
 			}
+		}
+	}
+	for field, n := range o.Names {
+		switch {
+		case n == nil || strings.TrimSpace(n.Reason) == "":
+			add("names.%s: reason is required", field)
+		case !VALID_NAME_RE.MatchString(n.Name) || TERRAFORM_RESERVED[n.Name]:
+			add("names.%s: %q is not a valid, unreserved attribute name", field, n.Name)
+		case strings.HasSuffix(n.Name, "_id"):
+			add("names.%s: give the name without _id; references get it from the rules", field)
+		}
+	}
+	for table, r := range o.References {
+		if r == nil || r.By == "" || strings.TrimSpace(r.Reason) == "" {
+			add("references.%s: by and reason are required", table)
 		}
 	}
 	for name, h := range o.Hooks {

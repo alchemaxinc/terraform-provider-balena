@@ -96,6 +96,9 @@ type Attr struct {
 	// Stable marks a computed value that never changes once set (ids, creation time, server-generated identifiers).
 	Stable      bool   `json:"stable,omitempty"`
 	Description string `json:"-"`
+	// NameSource and CollidesWith explain the name, for the coverage report.
+	NameSource   string   `json:"-"`
+	CollidesWith []string `json:"-"`
 	// sbvrType keeps the source type for descriptions.
 	sbvrType string
 	field    *Field
@@ -136,6 +139,8 @@ func BuildSpecs(ir *IR, o *Overrides, cv *ConfigVars, old *SurfaceLock, hooks ma
 			specs = append(specs, s)
 		}
 	}
+	_, namingProblems := NamingPreview(ir, o, old)
+	problems = append(problems, namingProblems...)
 	for kind, rules := range map[string][]*FieldRule{"sensitive": o.Rules.Sensitive, "var_names": o.Rules.VarNames} {
 		for i, r := range rules {
 			if !usedRules[r] {
@@ -177,6 +182,139 @@ func BuildSpecs(ir *IR, o *Overrides, cv *ConfigVars, old *SurfaceLock, hooks ma
 	return specs, nil
 }
 
+// NamingPreview names the columns of every table that is not excluded, as BuildSpecs would (unscoped tables
+// included, so a later scope change holds no surprise), and validates the names map and the references entries
+// against all of them: an entry that applies to no column of any locked root, or that only repeats what the rules
+// give, is an error. Entries that apply only to unscoped tables are allowed.
+func NamingPreview(ir *IR, o *Overrides, old *SurfaceLock) (map[string][]*Attr, []string) {
+	preview := map[string][]*Attr{}
+	var problems []string
+	usedRefs := map[string]bool{}
+	applied, differs := map[string]bool{}, map[string]bool{}
+	for _, t := range ir.Tables {
+		if t.Class == nil || t.Class.Status == STATUS_EXCLUDED {
+			continue
+		}
+		to := o.Tables[t.Name]
+		if to == nil {
+			to = &TableOverride{}
+		}
+		attrs, _, p := exposedAttrs(ir, t, o, to, nil, usedRefs)
+		if t.Class.Status == STATUS_UNSCOPED {
+			// Scoped tables report column problems through BuildSpecs.
+			problems = append(problems, p...)
+		}
+		if err := nameAttributes(attrs, t.Class.TypeName, to, o.Names, old); err != nil {
+			if t.Class.Status == STATUS_UNSCOPED {
+				problems = append(problems, t.Name+" (unscoped): "+err.Error())
+			}
+			continue
+		}
+		preview[t.Name] = attrs
+		// What the rules alone would name each mapped column decides whether a names entry changes anything.
+		bare := make([]*Attr, len(attrs))
+		for k, a := range attrs {
+			bare[k] = &Attr{Field: a.Field, Encoding: a.Encoding, RefTable: a.RefTable, RefField: a.RefField}
+		}
+		if err := nameAttributes(bare, "", nil, nil, nil); err != nil {
+			continue
+		}
+		for k, a := range attrs {
+			if n := o.Names[a.Field]; n != nil {
+				applied[a.Field] = true
+				if bare[k].Name != withSuffix(a, n.Name) {
+					differs[a.Field] = true
+				}
+			}
+		}
+	}
+	// An entry may name a column the roots this IR draws from lack (a promotion candidate dropping it), but not one
+	// that no locked root has at all.
+	known := map[string]bool{}
+	for _, tables := range ir.byRoot {
+		for name, t := range tables {
+			// Tables this IR excludes do not count; tables only another root has do.
+			if it := ir.Table(name); it == nil || it.Class == nil || it.Class.Status != STATUS_EXCLUDED {
+				for _, f := range t.Fields {
+					known[f.Name] = true
+				}
+			}
+		}
+	}
+	for _, field := range sortedKeys(o.Names) {
+		switch {
+		case !applied[field] && !known[field]:
+			problems = append(problems, "names."+field+": no column of any table in any locked root has this API field")
+		case applied[field] && !differs[field]:
+			problems = append(problems, "names."+field+": a no-op, the rules already give this name everywhere")
+		}
+	}
+	for _, target := range sortedKeys(o.References) {
+		r := o.References[target]
+		tt := ir.Table(target)
+		switch {
+		case tt == nil:
+			problems = append(problems, "references."+target+": no such table")
+		case tt.Field(r.By) == nil || !tt.Field(r.By).Unique:
+			problems = append(problems, "references."+target+": "+r.By+" is not a unique column of "+target)
+		case !usedRefs[target]:
+			problems = append(problems, "references."+target+": no exposed column of any table references "+target)
+		}
+	}
+	sort.Strings(problems)
+	return preview, problems
+}
+
+// StickyDrift is an attribute whose name comes from the surface lock but that the current rules and names map would
+// name differently: what `generate -fresh-names` would rename.
+type StickyDrift struct {
+	Table, Field, Locked, Rule string
+}
+
+// StickyDrifts compares a preview made with the surface lock to one made without it.
+func StickyDrifts(sticky, fresh map[string][]*Attr) []StickyDrift {
+	var out []StickyDrift
+	for _, table := range sortedKeys(sticky) {
+		byField := map[string]*Attr{}
+		for _, a := range fresh[table] {
+			byField[a.key()] = a
+		}
+		for _, a := range sticky[table] {
+			if f := byField[a.key()]; a.NameSource == NAME_SRC_LOCK && f != nil && f.Name != a.Name {
+				out = append(out, StickyDrift{Table: table, Field: a.Field, Locked: a.Name, Rule: f.Name})
+			}
+		}
+	}
+	return out
+}
+
+// Collision is a column that keeps its verb because its stripped name collides and no names entry covers it.
+type Collision struct {
+	Table, Field, Name string
+	With               []string
+}
+
+// Collisions lists, for every table the preview names, the columns that fell back to their full name.
+func Collisions(preview map[string][]*Attr) []Collision {
+	var out []Collision
+	for _, table := range sortedKeys(preview) {
+		for _, a := range preview[table] {
+			if a.NameSource == NAME_SRC_COLLISION {
+				with := append([]string{}, a.CollidesWith...)
+				sort.Strings(with)
+				out = append(out, Collision{Table: table, Field: a.Field, Name: a.Name, With: with})
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Table != out[j].Table {
+			return out[i].Table < out[j].Table
+		}
+		return out[i].Field < out[j].Field
+	})
+	return out
+}
+
 func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock, hooks map[string]bool,
 	usedRules map[*FieldRule]bool, usedHooks map[string]bool) (*Spec, []string) {
 	var problems []string
@@ -195,68 +333,9 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 		Resource:   t.Class.Resource,
 		DataSource: t.Class.DataSource,
 	}
-	// Columns.
-	for _, f := range t.Fields {
-		if f.Kind == KIND_FK {
-			target := ir.Table(f.Target)
-			if target == nil {
-				add("%s references unknown table %s", f.Name, f.Target)
-				continue
-			}
-			if !hasDataColumns(target) {
-				s.Skipped = append(s.Skipped, Skipped{f.Name, "references " + f.Target + ", which has no columns besides its id"})
-				continue
-			}
-		}
-		if f.Name == "modified_at" {
-			s.Skipped = append(s.Skipped, Skipped{f.Name, "changes on every write, and balena-cloud does not let users read it on every table"})
-			continue
-		}
-		if isPaymentField(f.Name) {
-			s.Skipped = append(s.Skipped, Skipped{f.Name, "payment or billing column"})
-			continue
-		}
-		if reason, ok := UNSUPPORTED_TYPES[f.Type]; ok {
-			s.Skipped = append(s.Skipped, Skipped{f.Name, reason})
-			continue
-		}
-		typ, ok := SBVR_TYPES[f.Type]
-		if !ok {
-			add("%s has unsupported type %q", f.Name, f.Type)
-			continue
-		}
-		a := &Attr{Field: f.Name, Type: typ, Encoding: ENC_PLAIN, sbvrType: f.Type, field: f}
-		switch {
-		case f.Kind == KIND_FK:
-			a.Encoding = ENC_REF
-			a.RefTable = f.Target
-		case f.Type == "JSON":
-			a.Encoding = ENC_JSON
-		}
-		if fo := to.Fields[f.Name]; fo != nil && fo.ReferenceBy != "" {
-			target := ir.Table(f.Target)
-			switch {
-			case f.Kind != KIND_FK:
-				add("fields.%s.reference_by on a column that is not a reference", f.Name)
-			case target.Field(fo.ReferenceBy) == nil:
-				add("fields.%s.reference_by: %s has no column %s", f.Name, f.Target, fo.ReferenceBy)
-			case fo.Resolver == "" && !target.Field(fo.ReferenceBy).Unique:
-				add("fields.%s.reference_by: %s.%s is not unique, so it needs a resolver hook", f.Name, f.Target, fo.ReferenceBy)
-			default:
-				a.Encoding = ENC_REF_BY
-				a.RefField = fo.ReferenceBy
-				a.Type = SBVR_TYPES[target.Field(fo.ReferenceBy).Type]
-				a.Resolver = fo.Resolver
-				if fo.Resolver != "" {
-					if o.Hooks[fo.Resolver] == nil {
-						add("fields.%s.resolver %s is not declared under hooks", f.Name, fo.Resolver)
-					}
-					usedHooks[fo.Resolver] = true
-				}
-			}
-		}
-		s.Attributes = append(s.Attributes, a)
-	}
+	attrs, skipped, colProblems := exposedAttrs(ir, t, o, to, usedHooks, nil)
+	s.Attributes, s.Skipped = attrs, skipped
+	problems = append(problems, colProblems...)
 	for field := range to.Fields {
 		found := false
 		for _, a := range s.Attributes {
@@ -266,7 +345,7 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 			add("fields.%s: no such exposed column", field)
 		}
 	}
-	if err := nameAttributes(s, to, old); err != nil {
+	if err := nameAttributes(s.Attributes, s.TypeName, to, o.Names, old); err != nil {
 		add("%v", err)
 	}
 
@@ -394,6 +473,95 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 	return s, problems
 }
 
+// exposedAttrs selects and encodes the columns of a table, before naming. usedRefs, when set, records the
+// references.<table> entries it applied.
+func exposedAttrs(ir *IR, t *Table, o *Overrides, to *TableOverride, usedHooks map[string]bool, usedRefs map[string]bool) ([]*Attr, []Skipped, []string) {
+	var attrs []*Attr
+	var skipped []Skipped
+	var problems []string
+	add := func(format string, args ...any) {
+		problems = append(problems, fmt.Sprintf("%s: ", t.Name)+fmt.Sprintf(format, args...))
+	}
+	for _, f := range t.Fields {
+		if f.Kind == KIND_FK {
+			target := ir.Table(f.Target)
+			if target == nil {
+				add("%s references unknown table %s", f.Name, f.Target)
+				continue
+			}
+			if !hasDataColumns(target) {
+				skipped = append(skipped, Skipped{f.Name, "references " + f.Target + ", which has no columns besides its id"})
+				continue
+			}
+		}
+		if f.Name == "modified_at" {
+			skipped = append(skipped, Skipped{f.Name, "changes on every write, and balena-cloud does not let users read it on every table"})
+			continue
+		}
+		if isPaymentField(f.Name) {
+			skipped = append(skipped, Skipped{f.Name, "payment or billing column"})
+			continue
+		}
+		if reason, ok := UNSUPPORTED_TYPES[f.Type]; ok {
+			skipped = append(skipped, Skipped{f.Name, reason})
+			continue
+		}
+		typ, ok := SBVR_TYPES[f.Type]
+		if !ok {
+			add("%s has unsupported type %q", f.Name, f.Type)
+			continue
+		}
+		a := &Attr{Field: f.Name, Type: typ, Encoding: ENC_PLAIN, sbvrType: f.Type, field: f}
+		switch {
+		case f.Kind == KIND_FK:
+			a.Encoding = ENC_REF
+			a.RefTable = f.Target
+		case f.Type == "JSON":
+			a.Encoding = ENC_JSON
+		}
+		// A reference is exposed by a column of the referenced row when the table override says so for this column,
+		// or when references.<target> says so for every reference to the target.
+		refBy, resolver, what := "", "", ""
+		if fo := to.Fields[f.Name]; fo != nil && fo.ReferenceBy != "" {
+			refBy, resolver, what = fo.ReferenceBy, fo.Resolver, "fields."+f.Name+".reference_by"
+			if r := o.References[f.Target]; r != nil && r.By == refBy && resolver == "" {
+				add("%s is a no-op: references.%s already exposes %s by %s", what, f.Target, f.Target, r.By)
+			}
+		} else if r := o.References[f.Target]; r != nil && f.Kind == KIND_FK {
+			refBy, what = r.By, "references."+f.Target
+			if usedRefs != nil {
+				usedRefs[f.Target] = true
+			}
+		}
+		if refBy != "" {
+			target := ir.Table(f.Target)
+			switch {
+			case f.Kind != KIND_FK:
+				add("%s on a column that is not a reference", what)
+			case target.Field(refBy) == nil:
+				add("%s: %s has no column %s", what, f.Target, refBy)
+			case resolver == "" && !target.Field(refBy).Unique:
+				add("%s: %s.%s is not unique, so it needs a resolver hook", what, f.Target, refBy)
+			default:
+				a.Encoding = ENC_REF_BY
+				a.RefField = refBy
+				a.Type = SBVR_TYPES[target.Field(refBy).Type]
+				a.Resolver = resolver
+				if resolver != "" {
+					if o.Hooks[resolver] == nil {
+						add("%s: resolver %s is not declared under hooks", what, resolver)
+					}
+					if usedHooks != nil {
+						usedHooks[resolver] = true
+					}
+				}
+			}
+		}
+		attrs = append(attrs, a)
+	}
+	return attrs, skipped, problems
+}
+
 // ruleMode is the resource mode the rules give a column.
 func ruleMode(f *Field, a *Attr) string {
 	switch {
@@ -418,20 +586,40 @@ func ruleMode(f *Field, a *Attr) string {
 	}
 }
 
-// GENERIC_REMAINDERS are words that do not name a value on their own, so a verb is never stripped down to them
-// ("is_finalized_at__date" stays "is_finalized_at_date").
+// GENERIC_REMAINDERS are words that do not name a value on their own: a field that ends in one drops it instead of
+// its verb ("is_finalized_at__date" is "is_finalized_at").
 var GENERIC_REMAINDERS = map[string]bool{"date": true}
 
-// strippedName drops the leading verb of an SBVR field name ("is_for__device_type" -> "device_type").
+// RESERVED_SUFFIX is appended to a rule-derived name Terraform reserves ("provider" becomes "provider_name").
+const RESERVED_SUFFIX = "_name"
+
+// Name sources, for the coverage report.
+const (
+	NAME_SRC_ID        = "id"
+	NAME_SRC_OVERRIDE  = "table override"
+	NAME_SRC_MAP       = "names map"
+	NAME_SRC_LOCK      = "surface lock"
+	NAME_SRC_STRIPPED  = "verb stripped"
+	NAME_SRC_PLAIN     = "verbless"
+	NAME_SRC_COLLISION = "verb kept: collision"
+)
+
+// strippedName drops the leading verb of an SBVR field name ("is_for__device_type" -> "device_type"), or a generic
+// remainder ("is_locked_until__date" -> "is_locked_until").
 func strippedName(field string) string {
-	if _, after, ok := strings.Cut(field, "__"); ok && !GENERIC_REMAINDERS[after] {
-		return strings.ReplaceAll(after, "__", "_")
+	before, after, ok := strings.Cut(field, "__")
+	switch {
+	case !ok:
+		return fullName(field)
+	case GENERIC_REMAINDERS[after]:
+		return fullName(before)
 	}
-	return fullName(field)
+	return strings.ToLower(strings.ReplaceAll(after, "__", "_"))
 }
 
+// fullName is the field name with its double underscores collapsed.
 func fullName(field string) string {
-	return strings.ReplaceAll(field, "__", "_")
+	return strings.ToLower(strings.ReplaceAll(field, "__", "_"))
 }
 
 func withSuffix(a *Attr, base string) string {
@@ -441,44 +629,53 @@ func withSuffix(a *Attr, base string) string {
 	return base
 }
 
-// nameAttributes assigns attribute names. Names in the committed surface lock are sticky; explicit override names
-// come next; every other column gets its name with the leading verb stripped, or its full name when the stripped
-// name is taken or shared with another new column (unless exactly one of the sharers has no verb, which then keeps
-// the stripped name). References get an `_id` suffix unless they are exposed by a column of the referenced row.
-func nameAttributes(s *Spec, to *TableOverride, old *SurfaceLock) error {
+// nameAttributes assigns attribute names, in this order of precedence: a table override's name, the names map (by
+// API field, in every table), the committed surface lock (names are sticky), and the rules. The rules strip the
+// leading verb (or a generic remainder such as `__date`); when stripped names collide, the one column without a verb
+// keeps the stripped name and the others keep their full name with `__` collapsed (all of them do when none is
+// verbless). Rule names are lowercased, and a rule name Terraform reserves gets RESERVED_SUFFIX. References get `_id`
+// unless they are exposed by a column of the referenced row. Every name must match the framework's attribute pattern.
+func nameAttributes(attrs []*Attr, typeName string, to *TableOverride, names map[string]*NameEntry, old *SurfaceLock) error {
 	taken := map[string]*Attr{}
-	assign := func(a *Attr, name string) error {
-		if other, ok := taken[name]; ok {
-			return fmt.Errorf("attribute name %s is used by both %s and %s; add a name override", name, other.Field, a.Field)
+	assign := func(a *Attr, name, source string, rule bool) error {
+		if rule && TERRAFORM_RESERVED[name] {
+			name += RESERVED_SUFFIX
+		}
+		if !VALID_NAME_RE.MatchString(name) {
+			return fmt.Errorf("attribute name %q (%s) is not a valid Terraform attribute name", name, a.Field)
 		}
 		if TERRAFORM_RESERVED[name] {
-			return fmt.Errorf("attribute name %s (%s) is reserved by Terraform; add a name override", name, a.Field)
+			return fmt.Errorf("attribute name %s (%s) is reserved by Terraform", name, a.Field)
 		}
-		a.Name = name
+		if other, ok := taken[name]; ok {
+			return fmt.Errorf("attribute name %s is used by both %s and %s; add a names entry", name, other.Field, a.Field)
+		}
+		a.Name, a.NameSource = name, source
 		taken[name] = a
 		return nil
 	}
-	locked := old.names(s.TypeName)
+	locked := old.names(typeName)
 	var pending []*Attr
-	for _, a := range s.Attributes {
-		if fo := to.Fields[a.Field]; fo != nil && fo.Name != "" {
-			if err := assign(a, fo.Name); err != nil {
-				return err
-			}
-			continue
+	for _, a := range attrs {
+		var err error
+		switch {
+		case a.Field == "id":
+			err = assign(a, "id", NAME_SRC_ID, false)
+		case to != nil && to.Fields[a.Field] != nil && to.Fields[a.Field].Name != "":
+			err = assign(a, to.Fields[a.Field].Name, NAME_SRC_OVERRIDE, false)
+		case names[a.Field] != nil:
+			err = assign(a, withSuffix(a, names[a.Field].Name), NAME_SRC_MAP, false)
+		default:
+			pending = append(pending, a)
 		}
-		if a.Field == "id" {
-			if err := assign(a, "id"); err != nil {
-				return err
-			}
-			continue
+		if err != nil {
+			return err
 		}
-		pending = append(pending, a)
 	}
 	var fresh []*Attr
 	for _, a := range pending {
 		if name, ok := locked[a.key()]; ok && taken[name] == nil {
-			if err := assign(a, name); err != nil {
+			if err := assign(a, name, NAME_SRC_LOCK, false); err != nil {
 				return err
 			}
 			continue
@@ -486,19 +683,22 @@ func nameAttributes(s *Spec, to *TableOverride, old *SurfaceLock) error {
 		fresh = append(fresh, a)
 	}
 	groups := map[string][]*Attr{}
-	fulls := map[string]bool{}
+	fulls := map[string]*Attr{}
 	for _, a := range fresh {
 		stripped := withSuffix(a, strippedName(a.Field))
 		groups[stripped] = append(groups[stripped], a)
-		fulls[withSuffix(a, fullName(a.Field))] = true
+		fulls[withSuffix(a, fullName(a.Field))] = a
 	}
 	for _, stripped := range sortedKeys(groups) {
 		members := groups[stripped]
-		winner := (*Attr)(nil)
-		if taken[stripped] == nil {
+		var winner, blocker *Attr
+		if blocker = taken[stripped]; blocker == nil {
 			if len(members) == 1 {
-				if full := withSuffix(members[0], fullName(members[0].Field)); full == stripped || !fulls[stripped] {
+				owner := fulls[stripped]
+				if owner == nil || owner == members[0] {
 					winner = members[0]
+				} else {
+					blocker = owner
 				}
 			} else {
 				var verbless []*Attr
@@ -513,11 +713,24 @@ func nameAttributes(s *Spec, to *TableOverride, old *SurfaceLock) error {
 			}
 		}
 		for _, a := range members {
-			name := withSuffix(a, fullName(a.Field))
-			if a == winner {
-				name = stripped
+			name, source := withSuffix(a, fullName(a.Field)), NAME_SRC_PLAIN
+			switch {
+			case a == winner && name == stripped:
+				source = NAME_SRC_PLAIN
+			case a == winner:
+				name, source = stripped, NAME_SRC_STRIPPED
+			case name != stripped:
+				source = NAME_SRC_COLLISION
+				for _, other := range members {
+					if other != a {
+						a.CollidesWith = append(a.CollidesWith, other.Field)
+					}
+				}
+				if blocker != nil {
+					a.CollidesWith = append(a.CollidesWith, blocker.Field)
+				}
 			}
-			if err := assign(a, name); err != nil {
+			if err := assign(a, name, source, true); err != nil {
 				return err
 			}
 		}

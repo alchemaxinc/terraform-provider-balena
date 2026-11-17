@@ -138,13 +138,19 @@ func TestCrossCheckFailsClosed(t *testing.T) {
 	}
 }
 
+// attrs builds a spec from field names: a trailing "!" marks a reference exposed by id, a trailing "~" a reference
+// exposed by a column of the referenced row.
 func attrs(fields ...string) *Spec {
 	s := &Spec{TypeName: "balena_t"}
 	for _, f := range fields {
 		a := &Attr{Field: f, Encoding: ENC_PLAIN}
-		if strings.HasSuffix(f, "!") {
+		switch {
+		case strings.HasSuffix(f, "!"):
 			a.Field = strings.TrimSuffix(f, "!")
 			a.Encoding = ENC_REF
+		case strings.HasSuffix(f, "~"):
+			a.Field = strings.TrimSuffix(f, "~")
+			a.Encoding = ENC_REF_BY
 		}
 		s.Attributes = append(s.Attributes, a)
 	}
@@ -160,12 +166,16 @@ func names(s *Spec) string {
 }
 
 func TestNamingRules(t *testing.T) {
-	empty := &SurfaceLock{}
+	roleNames := map[string]*NameEntry{
+		"should_be_running__release": {Name: "target_release", Reason: "r"},
+		"is_pinned_on__release":      {Name: "pinned_release", Reason: "r"},
+	}
 	tests := []struct {
 		name  string
 		spec  *Spec
 		lock  *SurfaceLock
 		to    *TableOverride
+		names map[string]*NameEntry
 		want  string
 		error string
 	}{
@@ -185,9 +195,14 @@ func TestNamingRules(t *testing.T) {
 			want: "application=application_id on__application=on_application_id",
 		},
 		{
-			name: "a generic remainder keeps its verb",
-			spec: attrs("is_finalized_at__date"),
-			want: "is_finalized_at__date=is_finalized_at_date",
+			name: "a generic remainder is dropped instead of the verb",
+			spec: attrs("is_finalized_at__date", "is_locked_until__date", "changed_api_heartbeat_state_on__date"),
+			want: "is_finalized_at__date=is_finalized_at is_locked_until__date=is_locked_until changed_api_heartbeat_state_on__date=changed_api_heartbeat_state_on",
+		},
+		{
+			name: "a dropped remainder that collides with a column keeps it",
+			spec: attrs("is_locked_until", "is_locked_until__date"),
+			want: "is_locked_until=is_locked_until is_locked_until__date=is_locked_until_date",
 		},
 		{
 			name: "locked names are sticky; a new colliding field keeps its verb",
@@ -198,28 +213,51 @@ func TestNamingRules(t *testing.T) {
 			want: "should_be_running__release=release_id is_pinned_on__release=is_pinned_on_release_id",
 		},
 		{
-			name: "an override name wins",
-			spec: attrs("on__application!"),
-			to:   &TableOverride{Fields: map[string]*FieldOverride{"on__application": {Name: "host_application_id", Reason: "r"}}},
-			want: "on__application=host_application_id",
+			name: "the names map wins over the lock; references by id get _id, by a column stay bare",
+			spec: attrs("should_be_running__release!", "is_pinned_on__release~", "is_running__release!"),
+			lock: &SurfaceLock{Resources: map[string]*SurfaceType{"balena_t": {Attributes: map[string]*SurfaceAttr{
+				"release_id": {Field: "should_be_running__release"},
+			}}}},
+			names: roleNames,
+			want:  "should_be_running__release=target_release_id is_pinned_on__release=pinned_release is_running__release=release_id",
 		},
 		{
-			name:  "Terraform reserved names fail",
-			spec:  attrs("has__count"),
+			name:  "a table override name wins over the names map",
+			spec:  attrs("is_pinned_on__release!"),
+			to:    &TableOverride{Fields: map[string]*FieldOverride{"is_pinned_on__release": {Name: "pin_id", Reason: "r"}}},
+			names: roleNames,
+			want:  "is_pinned_on__release=pin_id",
+		},
+		{
+			name: "rule names are lowercased",
+			spec: attrs("includes__SLA"),
+			want: "includes__SLA=sla",
+		},
+		{
+			name: "a reserved rule name gets a suffix",
+			spec: attrs("provider", "has__count"),
+			want: "provider=provider_name has__count=count_name",
+		},
+		{
+			name:  "a suffixed reserved name that collides fails",
+			spec:  attrs("provider", "provider_name"),
+			error: "is used by both",
+		},
+		{
+			name:  "an invalid rule name fails",
+			spec:  attrs("rank__1st"),
+			error: "not a valid Terraform attribute name",
+		},
+		{
+			name:  "a reserved override name fails",
+			spec:  attrs("x"),
+			to:    &TableOverride{Fields: map[string]*FieldOverride{"x": {Name: "provider", Reason: "r"}}},
 			error: "reserved by Terraform",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			lock := tc.lock
-			if lock == nil {
-				lock = empty
-			}
-			to := tc.to
-			if to == nil {
-				to = &TableOverride{}
-			}
-			err := nameAttributes(tc.spec, to, lock)
+			err := nameAttributes(tc.spec.Attributes, tc.spec.TypeName, tc.to, tc.names, tc.lock)
 			if tc.error != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.error) {
 					t.Errorf("err = %v, want %q", err, tc.error)
@@ -236,6 +274,59 @@ func TestNamingRules(t *testing.T) {
 	}
 }
 
+// TestNamingAllTables names every table of the IR, excluded ones included, with the repository's names map and no
+// surface lock: every name must be valid, and dropping a `__date` remainder must never collide.
+func TestNamingAllTables(t *testing.T) {
+	in := loadInputs(t)
+	o, err := LoadOverrides(REPO)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ir, _, err := BuildIR(in, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Classify(ir, o, map[string]bool{"resin": true}); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, tb := range ir.Tables {
+		to := o.Tables[tb.Name]
+		if to == nil {
+			to = &TableOverride{}
+		}
+		attrs, _, problems := exposedAttrs(ir, tb, o, to, nil, nil)
+		if len(problems) > 0 {
+			t.Errorf("%s: %v", tb.Name, problems)
+			continue
+		}
+		if err := nameAttributes(attrs, tb.Class.TypeName, to, o.Names, nil); err != nil {
+			t.Errorf("%s: %v", tb.Name, err)
+			continue
+		}
+		for _, a := range attrs {
+			got[tb.Name+"."+a.Field] = a.Name
+			if strings.HasSuffix(a.Field, "__date") && a.NameSource == NAME_SRC_COLLISION {
+				t.Errorf("%s.%s: dropping __date collides (%v)", tb.Name, a.Field, a.CollidesWith)
+			}
+		}
+	}
+	for field, want := range map[string]string{
+		"social_service_account.provider":                                        "provider_name",
+		"support_tier.includes__SLA":                                             "sla",
+		"device.is_locked_until__date":                                           "is_locked_until",
+		"release.is_finalized_at__date":                                          "is_finalized_at",
+		"device.should_be_managed_by__release":                                   "supervisor_release_id",
+		"user.has_legacy_link_to__organization":                                  "legacy_organization_id",
+		"device_type_alias.device_type":                                          "device_type",
+		"application__can_use__application_as_host.can_use__application_as_host": "host_application_id",
+	} {
+		if got[field] != want {
+			t.Errorf("%s = %q, want %q", field, got[field], want)
+		}
+	}
+}
+
 func TestOverridesValidation(t *testing.T) {
 	tests := map[string]string{
 		"unknown key":             "scope: [application]\nbogus: 1\n",
@@ -247,6 +338,11 @@ func TestOverridesValidation(t *testing.T) {
 		"resolver without ref":    "tables:\n  device:\n    fields:\n      x: {resolver: h, mode: optional, reason: r}\n",
 		"rule needs one matcher":  "rules:\n  sensitive:\n    - {field: value, reason: r}\n",
 		"duplicate scope":         "scope: [a, a]\n",
+		"name without reason":     "names:\n  on__application: {name: host_application}\n",
+		"name with _id":           "names:\n  on__application: {name: host_application_id, reason: r}\n",
+		"invalid name":            "names:\n  on__application: {name: Host, reason: r}\n",
+		"reserved name":           "names:\n  on__application: {name: provider, reason: r}\n",
+		"reference without by":    "references:\n  device_type: {reason: r}\n",
 		"unknown hook step":       "tables:\n  a:\n    reason: r\n    hooks: {update: h}\n",
 	}
 	for name, src := range tests {
@@ -307,6 +403,21 @@ func TestOverridesSemanticChecks(t *testing.T) {
 		{"override outside the scope", func(o *Overrides) {
 			o.Tables["team"] = &TableOverride{Reason: "r", Resource: new(bool)}
 		}, "outside the scope"},
+		{"names entry matching no column", func(o *Overrides) {
+			o.Names["no_such__field"] = &NameEntry{Name: "x", Reason: "r"}
+		}, "no column of any table in any locked root"},
+		{"no-op names entry", func(o *Overrides) {
+			o.Names["app_name"] = &NameEntry{Name: "app_name", Reason: "r"}
+		}, "a no-op"},
+		{"reference by a column that is not unique", func(o *Overrides) {
+			o.References["device_type"] = &ReferenceEntry{By: "name", Reason: "r"}
+		}, "is not a unique column"},
+		{"reference to a table nothing references", func(o *Overrides) {
+			o.References["device_type_alias"] = &ReferenceEntry{By: "is_referenced_by__alias", Reason: "r"}
+		}, "no exposed column of any table references"},
+		{"field reference_by that repeats references", func(o *Overrides) {
+			o.Tables["application"].Fields["is_for__device_type"] = &FieldOverride{ReferenceBy: "slug", Reason: "r"}
+		}, "already exposes device_type by slug"},
 		{"non-unique reference_by without resolver", func(o *Overrides) {
 			o.Tables["device"].Fields["is_pinned_on__release"].Resolver = ""
 		}, "needs a resolver hook"},
@@ -386,6 +497,29 @@ func TestSurfaceDiffLevels(t *testing.T) {
 		if _, level := SurfaceDiff(base(), n); level != tc.want {
 			t.Errorf("%s: level = %s, want %s", tc.name, level, tc.want)
 		}
+	}
+}
+
+// TestStickyDrifts checks that a locked name the current rules would change is kept and reported.
+func TestStickyDrifts(t *testing.T) {
+	res, err := Generate(REPO)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock := &SurfaceLock{Format: SURFACE_FORMAT, Resources: map[string]*SurfaceType{}, DataSources: map[string]*SurfaceType{
+		"balena_device": {Table: "device", Attributes: map[string]*SurfaceAttr{
+			"is_locked_until_date": {Field: "is_locked_until__date"},
+		}},
+	}}
+	sticky, problems := NamingPreview(res.IR, res.Overrides, lock)
+	if len(problems) > 0 {
+		t.Fatal(problems)
+	}
+	fresh, _ := NamingPreview(res.IR, res.Overrides, nil)
+	drifts := StickyDrifts(sticky, fresh)
+	want := StickyDrift{Table: "device", Field: "is_locked_until__date", Locked: "is_locked_until_date", Rule: "is_locked_until"}
+	if len(drifts) != 1 || drifts[0] != want {
+		t.Errorf("drifts = %+v", drifts)
 	}
 }
 

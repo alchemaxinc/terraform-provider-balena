@@ -19,10 +19,11 @@ func init() {
 func cmdGenerate(args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("generate", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "repository root")
+	fresh := fs.Bool("fresh-names", false, "name every attribute by the current rules and names map, ignoring the committed surface lock (an intentional rename)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	res, err := gen.Generate(*repo)
+	res, err := gen.GenerateWith(*repo, gen.Options{FreshNames: *fresh})
 	if err != nil {
 		return err
 	}

@@ -157,7 +157,7 @@ var BASELINE = []string{
 }
 
 // renderCoverage renders the gap report.
-func renderCoverage(ir *IR, specs []*Spec) []byte {
+func renderCoverage(ir *IR, specs []*Spec, collisions []Collision, drifts []StickyDrift) []byte {
 	var b bytes.Buffer
 	w := func(format string, args ...any) { _, _ = fmt.Fprintf(&b, format, args...) }
 	bySpec := map[string]*Spec{}
@@ -221,6 +221,30 @@ func renderCoverage(ir *IR, specs []*Spec) []byte {
 			tf = "`" + c.TypeName + "` (" + strings.Join(kinds, ", ") + ")"
 		}
 		w("| `%s` | %s | %s | %s | %s | %s |\n", t.Name, t.Root, t.Provenance, c.Status, tf, escapeCell(c.Reason))
+	}
+	w("\n## Names that keep their verb\n\n")
+	w("Columns whose verb-stripped name collides in their table and that no `names` entry in `schema/overrides.yaml` covers, in every table that is not excluded (report only).\n\n")
+	if len(collisions) == 0 {
+		w("None.\n")
+	} else {
+		w("| Table | API field | Name | Collides with |\n| --- | --- | --- | --- |\n")
+		for _, c := range collisions {
+			var with []string
+			for _, f := range c.With {
+				with = append(with, "`"+f+"`")
+			}
+			w("| `%s` | `%s` | `%s` | %s |\n", c.Table, c.Field, c.Name, strings.Join(with, ", "))
+		}
+	}
+	w("\n## Sticky names the rules would now give differently\n\n")
+	w("Names kept from `schema/surface.lock.json` that the current rules and `names` map would change; `generate -fresh-names` applies them (report only).\n\n")
+	if len(drifts) == 0 {
+		w("None.\n")
+	} else {
+		w("| Table | API field | Locked name | Rule name |\n| --- | --- | --- | --- |\n")
+		for _, d := range drifts {
+			w("| `%s` | `%s` | `%s` | `%s` |\n", d.Table, d.Field, d.Locked, d.Rule)
+		}
 	}
 	w("\n## Columns of in-scope tables\n\n")
 	for _, s := range specs {

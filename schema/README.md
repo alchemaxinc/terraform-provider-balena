@@ -48,12 +48,22 @@ typings leave out). Columns only balena-cloud has are recorded as `cloud-only`.
 - **Validators.** SBVR length bounds and TypeScript enums on writable string columns, and `/config/vars` name rules
   where `overrides.yaml` applies them.
 - **Type names.** `balena_` plus the API resource name, with the `__` of link-table names collapsed: no abbreviations.
-- **Attribute names.** The leading verb of a column is stripped (`is_for__device_type` becomes `device_type`) unless
-  that leaves a bare `date`. References get `_id`, except references exposed by a column of the referenced row
-  (`device_type` is a slug). When stripped names collide, the one column without a verb keeps the stripped name and the
-  others keep their full name with `__` collapsed (`is_pinned_on_release_id`); with no such column all keep their full
-  name. Names already in `surface.lock.json` never change: a new column whose name would collide keeps its full name.
-  Terraform-reserved names fail generation.
+- **Attribute names**, in order of precedence:
+
+  1. a table override's `name`;
+  2. the `names` map in `overrides.yaml`: a role name per API field, in every table (`should_be_running__release` is
+     `target_release`, `is_pinned_on__release` is `pinned_release`);
+  3. the name in `surface.lock.json`: names are sticky, so neither a rule change nor a new upstream column renames an
+     existing attribute;
+  4. the rules: strip the leading verb (`is_for__device_type` is `device_type`), or drop a generic remainder instead
+     (`is_locked_until__date` is `is_locked_until`). When stripped names collide, the one column without a verb keeps
+     the stripped name and the others keep their full name with `__` collapsed; `coverage.md` lists them, and a `names`
+     entry fixes any that read badly. Rule names are lowercased, and a name Terraform reserves gets `_name`
+     (`provider` is `provider_name`).
+
+  References get `_id`, except references exposed by a column of the referenced row, which stay bare (`device_type` is
+  a slug; `references` and `reference_by` below). Booleans, the API's own names (`app_name`, `class`) and type names
+  are kept as they are. Every name must match `^[a-z_][a-z0-9_]*$`, or generation fails.
 
 ## overrides.yaml
 
@@ -63,11 +73,14 @@ columns fail generation.
 
 - `scope`: the tables the provider manages.
 - `rules.sensitive`, `rules.var_names`: column rules by table suffix or table list.
+- `names`: role names by API field, applied in every table, unscoped ones included. An entry no column of any locked
+  root has, or one that only repeats what the rules give, fails generation.
+- `references`: expose every reference to a table by one of its unique columns (`device_type` by `slug`).
 - `hooks`: named Go hooks with the API columns they use. `TestHooksUseOnlyDeclaredColumns` runs every hook against a
   fake API and fails when it touches an undeclared column; `make contract` checks the declared columns live.
 - `tables.<table>`: `resource: false`, `resource_fields` (resource subset), `import_by` (unique column),
-  `hooks.create` / `hooks.delete`, and per column `mode`, `force_new`, `sensitive`, `name`, `reference_by` (expose a
-  reference by a unique column of the referenced row, or by any column with a `resolver` hook).
+  `hooks.create` / `hooks.delete`, and per column `mode`, `force_new`, `sensitive`, `name`, `reference_by` (expose one
+  reference by a column of the referenced row, unique or resolved by a `resolver` hook).
 
 ## Gates
 
@@ -80,6 +93,19 @@ All offline gates are deterministic and fail closed:
   the title's conventional commit type is smaller.
 - `make contract` (needs `BALENA_API_TOKEN`): read-only `GET /<root>/<table>?$top=1&$select=<columns>` for every spec
   and hook. Pine.js answers 401 to an unknown column, so a 200 proves every column.
+
+## Renaming on purpose
+
+Generation never renames an attribute by itself. To rename:
+
+- one API field everywhere: add a `names` entry and run `make generate`;
+- after changing a naming rule: run `make generate ARGS=-fresh-names`, which names every attribute by the current
+  rules and `names` map instead of the lock (`coverage.md` lists the sticky names a fresh run would change).
+
+Commit the regenerated `surface.lock.json` with the rest. Every renamed attribute shows in the surface diff as removed
+and added, so the pull request needs a `feat!` title (the surface compatibility check enforces it). The weekly workflow
+never renames: it does not pass `-fresh-names`, and the agent it starts may only touch `overrides.yaml` and hooks in a
+draft pull request a human reviews.
 
 ## Widening the scope
 

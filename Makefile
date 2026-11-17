@@ -57,8 +57,8 @@ fetch: ## Re-pin the upstream models (network). ARGS="-latest" or ARGS="-open-ba
 	go run ./cmd/balena-schema fetch $(ARGS)
 
 .PHONY: generate
-generate: ## Generate the IR, surface lock, coverage report, Go specs and examples from schema/ (offline)
-	go run ./cmd/balena-schema generate
+generate: ## Generate the IR, surface lock, coverage report, Go specs and examples (offline); ARGS=-fresh-names renames
+	go run ./cmd/balena-schema generate $(ARGS)
 
 .PHONY: check-generate
 check-generate: ## Verify the lock, cross-check sources, gap-check tables and fail when generated files are stale

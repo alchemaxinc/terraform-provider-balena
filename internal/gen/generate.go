@@ -30,6 +30,21 @@ func Generate(repoDir string) (*Result, error) {
 // GenerateForRoot is Generate with the given API root preferred over the locked default root (tables the root lacks
 // fall back to the unversioned root). It is how a new root (v8) is evaluated before it is promoted.
 func GenerateForRoot(repoDir, root string) (*Result, error) {
+	return GenerateWith(repoDir, Options{Root: root})
+}
+
+// Options adjust a generation.
+type Options struct {
+	// Root is preferred over the locked default root when set.
+	Root string
+	// FreshNames ignores the committed surface lock when naming, so the current rules (and the names map) name every
+	// attribute. Only an intentional rename uses it; the surface diff then shows every renamed attribute.
+	FreshNames bool
+}
+
+// GenerateWith is Generate with options.
+func GenerateWith(repoDir string, opts Options) (*Result, error) {
+	root := opts.Root
 	in, err := LoadInputs(repoDir)
 	if err != nil {
 		return nil, err
@@ -70,6 +85,9 @@ func GenerateForRoot(repoDir, root string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if opts.FreshNames {
+		old = &SurfaceLock{Format: SURFACE_FORMAT}
+	}
 	specs, err := BuildSpecs(ir, o, in.ConfigVars, old, hooks)
 	if err != nil {
 		return nil, err
@@ -82,7 +100,9 @@ func GenerateForRoot(repoDir, root string) (*Result, error) {
 	if res.Files[SURFACE_LOCK_PATH], err = surface.Marshal(); err != nil {
 		return nil, err
 	}
-	res.Files[COVERAGE_PATH] = renderCoverage(ir, specs)
+	naming, _ := NamingPreview(ir, o, old)
+	fresh, _ := NamingPreview(ir, o, nil)
+	res.Files[COVERAGE_PATH] = renderCoverage(ir, specs, Collisions(naming), StickyDrifts(naming, fresh))
 	if res.Files[SPECS_PATH], err = renderGoSpecs(specs, o); err != nil {
 		return nil, err
 	}
