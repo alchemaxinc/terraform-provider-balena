@@ -25,8 +25,7 @@ jobs:
       version: ${{ steps.release.outputs.version }}
 
     steps:
-      - &create-app-token
-        name: Create temporary GitHub App Token
+      - name: Create temporary GitHub App Token
         id: app
         uses: actions/create-github-app-token@v3
         with:
@@ -55,8 +54,6 @@ jobs:
       contents: write
 
     steps:
-      - *create-app-token
-
       - &checkout-code-full
         name: Checkout code (full)
         uses: actions/checkout@v7
@@ -84,7 +81,9 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+          # The workflow token publishes the release, so this job, which runs GoReleaser and holds the signing key in
+          # `production`, never sees the GitHub App key. No workflow runs on release events.
+          GITHUB_TOKEN: ${{ github.token }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
 
   semantic-release-flowing-tags:
