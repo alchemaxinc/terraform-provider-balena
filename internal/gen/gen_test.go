@@ -487,7 +487,7 @@ func TestSurfaceDiffLevels(t *testing.T) {
 		{"validator removed", func(l *SurfaceLock) {
 			l.Resources["balena_x"].Attributes["name"].Validators = []string{"length:1..100"}
 		}, LEVEL_FIX},
-		{"sensitive added", func(l *SurfaceLock) { l.Resources["balena_x"].Attributes["note"].Sensitive = true }, LEVEL_FIX},
+		{"sensitive added", func(l *SurfaceLock) { l.Resources["balena_x"].Attributes["note"].Sensitive = true }, LEVEL_BREAKING},
 		{"root moved", func(l *SurfaceLock) { l.Resources["balena_x"].Root = "v8" }, LEVEL_FEAT},
 		{"data source filter dropped", func(l *SurfaceLock) { l.DataSources["balena_x"].Attributes["name"].Mode = DS_COMPUTED }, LEVEL_BREAKING},
 	}
@@ -541,5 +541,72 @@ func TestGenerateForOtherRoot(t *testing.T) {
 	changes, level := SurfaceDiff(def.Surface, res.Surface)
 	if level == LEVEL_NONE || len(changes) == 0 {
 		t.Errorf("moving every table to /resin must show in the diff")
+	}
+}
+
+// TestModeChangeLevels pins the level of every mode change of resource and data source attributes.
+func TestModeChangeLevels(t *testing.T) {
+	type pair = [2]string
+	want := map[bool]map[pair]string{
+		true: {
+			{MODE_REQUIRED, MODE_OPTIONAL}:          LEVEL_FEAT,
+			{MODE_REQUIRED, MODE_OPTIONAL_COMPUTED}: LEVEL_FEAT,
+			{MODE_REQUIRED, MODE_COMPUTED}:          LEVEL_BREAKING, // set in every configuration, then rejected
+			{MODE_OPTIONAL, MODE_REQUIRED}:          LEVEL_BREAKING,
+			{MODE_OPTIONAL, MODE_OPTIONAL_COMPUTED}: LEVEL_FEAT,
+			{MODE_OPTIONAL, MODE_COMPUTED}:          LEVEL_BREAKING,
+			{MODE_OPTIONAL_COMPUTED, MODE_REQUIRED}: LEVEL_BREAKING,
+			{MODE_OPTIONAL_COMPUTED, MODE_OPTIONAL}: LEVEL_BREAKING,
+			{MODE_OPTIONAL_COMPUTED, MODE_COMPUTED}: LEVEL_BREAKING,
+			{MODE_COMPUTED, MODE_REQUIRED}:          LEVEL_BREAKING,
+			{MODE_COMPUTED, MODE_OPTIONAL}:          LEVEL_BREAKING, // unset in every configuration, then planned as null
+			{MODE_COMPUTED, MODE_OPTIONAL_COMPUTED}: LEVEL_FEAT,
+		},
+		false: {
+			{DS_FILTER, DS_COMPUTED}: LEVEL_BREAKING,
+			{DS_COMPUTED, DS_FILTER}: LEVEL_FEAT,
+		},
+	}
+	modes := map[bool][]string{
+		true:  {MODE_REQUIRED, MODE_OPTIONAL, MODE_OPTIONAL_COMPUTED, MODE_COMPUTED},
+		false: {DS_FILTER, DS_COMPUTED},
+	}
+	for _, resource := range []bool{true, false} {
+		table := DATA_SOURCE_MODE_CHANGES
+		if resource {
+			table = RESOURCE_MODE_CHANGES
+		}
+		if len(table) != len(want[resource]) {
+			t.Errorf("resource=%v: %d classified mode changes, want %d", resource, len(table), len(want[resource]))
+		}
+		for _, o := range modes[resource] {
+			for _, n := range modes[resource] {
+				if o == n {
+					continue
+				}
+				c, ok := table[pair{o, n}]
+				if !ok || c.Reason == "" {
+					t.Errorf("resource=%v %s -> %s is not classified with a reason", resource, o, n)
+				}
+				if c.Level != want[resource][pair{o, n}] {
+					t.Errorf("resource=%v %s -> %s = %s, want %s", resource, o, n, c.Level, want[resource][pair{o, n}])
+				}
+				old := &SurfaceLock{Format: SURFACE_FORMAT, Resources: map[string]*SurfaceType{}, DataSources: map[string]*SurfaceType{}}
+				new := &SurfaceLock{Format: SURFACE_FORMAT, Resources: map[string]*SurfaceType{}, DataSources: map[string]*SurfaceType{}}
+				kind := old.DataSources
+				newKind := new.DataSources
+				if resource {
+					kind, newKind = old.Resources, new.Resources
+				}
+				kind["balena_x"] = &SurfaceType{Table: "x", Root: "v7", Attributes: map[string]*SurfaceAttr{"a": {Field: "a", Type: "string", Mode: o}}}
+				newKind["balena_x"] = &SurfaceType{Table: "x", Root: "v7", Attributes: map[string]*SurfaceAttr{"a": {Field: "a", Type: "string", Mode: n}}}
+				if _, level := SurfaceDiff(old, new); level != want[resource][pair{o, n}] {
+					t.Errorf("SurfaceDiff resource=%v %s -> %s = %s, want %s", resource, o, n, level, want[resource][pair{o, n}])
+				}
+			}
+		}
+	}
+	if c := modeChangeOf(true, "write_only", MODE_OPTIONAL); c.Level != LEVEL_BREAKING {
+		t.Errorf("an unknown mode change is %s, want %s", c.Level, LEVEL_BREAKING)
 	}
 }

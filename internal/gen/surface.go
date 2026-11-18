@@ -264,18 +264,8 @@ func diffAttr(add func(string, string, ...any), what string, o, n *SurfaceAttr, 
 		add(LEVEL_BREAKING, "%s type %s -> %s", what, o.Type, n.Type)
 	}
 	if o.Mode != n.Mode {
-		level := LEVEL_BREAKING
-		switch {
-		case !resource && o.Mode == DS_COMPUTED:
-			level = LEVEL_FEAT
-		case resource && o.Mode == MODE_REQUIRED:
-			level = LEVEL_FEAT
-		case resource && o.Mode == MODE_COMPUTED && n.Mode != MODE_REQUIRED:
-			level = LEVEL_FEAT
-		case resource && o.Mode == MODE_OPTIONAL && n.Mode == MODE_OPTIONAL_COMPUTED:
-			level = LEVEL_FEAT
-		}
-		add(level, "%s mode %s -> %s", what, o.Mode, n.Mode)
+		c := modeChangeOf(resource, o.Mode, n.Mode)
+		add(c.Level, "%s mode %s -> %s: %s", what, o.Mode, n.Mode, c.Reason)
 	}
 	if o.ForceNew != n.ForceNew {
 		level := LEVEL_FEAT
@@ -285,13 +275,56 @@ func diffAttr(add func(string, string, ...any), what string, o, n *SurfaceAttr, 
 		add(level, "%s force_new %v -> %v", what, o.ForceNew, n.ForceNew)
 	}
 	if o.Sensitive != n.Sensitive {
-		level := LEVEL_FIX
+		// Both ways break: a newly sensitive value fails every root output that exposes it without sensitive = true,
+		// and a value that stops being sensitive shows in plans and logs.
+		reason := "outputs that expose it need sensitive = true"
 		if !n.Sensitive {
-			level = LEVEL_BREAKING
+			reason = "its values show in plans and logs"
 		}
-		add(level, "%s sensitive %v -> %v", what, o.Sensitive, n.Sensitive)
+		add(LEVEL_BREAKING, "%s sensitive %v -> %v: %s", what, o.Sensitive, n.Sensitive, reason)
 	}
 	diffValidators(add, what, o.Validators, n.Validators)
+}
+
+// ModeChange is the level of an attribute mode change and why.
+type ModeChange struct {
+	Level  string
+	Reason string
+}
+
+// RESOURCE_MODE_CHANGES classifies every change of a resource attribute's mode. Only a change no existing
+// configuration or state can trip over is a feature.
+var RESOURCE_MODE_CHANGES = map[[2]string]ModeChange{
+	{MODE_REQUIRED, MODE_OPTIONAL}:          {LEVEL_FEAT, "configurations that set it stay valid"},
+	{MODE_REQUIRED, MODE_OPTIONAL_COMPUTED}: {LEVEL_FEAT, "configurations that set it stay valid"},
+	{MODE_REQUIRED, MODE_COMPUTED}:          {LEVEL_BREAKING, "configurations that set it fail"},
+	{MODE_OPTIONAL, MODE_REQUIRED}:          {LEVEL_BREAKING, "configurations that leave it out fail"},
+	{MODE_OPTIONAL, MODE_OPTIONAL_COMPUTED}: {LEVEL_FEAT, "configurations that leave it out keep the value the API sets instead of null"},
+	{MODE_OPTIONAL, MODE_COMPUTED}:          {LEVEL_BREAKING, "configurations that set it fail"},
+	{MODE_OPTIONAL_COMPUTED, MODE_REQUIRED}: {LEVEL_BREAKING, "configurations that leave it out fail"},
+	{MODE_OPTIONAL_COMPUTED, MODE_OPTIONAL}: {LEVEL_BREAKING, "configurations that leave it out plan to clear the value the API set"},
+	{MODE_OPTIONAL_COMPUTED, MODE_COMPUTED}: {LEVEL_BREAKING, "configurations that set it fail"},
+	{MODE_COMPUTED, MODE_REQUIRED}:          {LEVEL_BREAKING, "configurations, which cannot set it yet, fail"},
+	{MODE_COMPUTED, MODE_OPTIONAL}:          {LEVEL_BREAKING, "configurations, which cannot set it yet, plan to clear the value the API set"},
+	{MODE_COMPUTED, MODE_OPTIONAL_COMPUTED}: {LEVEL_FEAT, "configurations, which cannot set it yet, keep the value the API sets"},
+}
+
+// DATA_SOURCE_MODE_CHANGES classifies every change of a data source attribute's mode.
+var DATA_SOURCE_MODE_CHANGES = map[[2]string]ModeChange{
+	{DS_FILTER, DS_COMPUTED}: {LEVEL_BREAKING, "configurations that select by it fail"},
+	{DS_COMPUTED, DS_FILTER}: {LEVEL_FEAT, "configurations select as before and can select by it too"},
+}
+
+// modeChangeOf classifies a mode change; a change the tables do not know is breaking.
+func modeChangeOf(resource bool, o, n string) ModeChange {
+	changes := DATA_SOURCE_MODE_CHANGES
+	if resource {
+		changes = RESOURCE_MODE_CHANGES
+	}
+	if c, ok := changes[[2]string{o, n}]; ok {
+		return c
+	}
+	return ModeChange{LEVEL_BREAKING, "unknown mode change"}
 }
 
 func viaSuffix(via string) string {
