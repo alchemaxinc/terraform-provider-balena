@@ -139,3 +139,60 @@ func TestParseVendoredSBVR(t *testing.T) {
 		}
 	}
 }
+
+// TestLengthNecessities checks that only the unconditional length forms bound a column; any other length necessity,
+// a conditional one in particular, is recorded as unsupported instead of applied.
+func TestLengthNecessities(t *testing.T) {
+	const src = `Vocabulary: balena
+
+Term: name
+	Concept Type: Short Text (Type)
+Term: note
+	Concept Type: Text (Type)
+Term: handle
+	Concept Type: Short Text (Type)
+Term: composition
+	Concept Type: JSON (Type)
+
+Term: application
+
+Fact type: application has name
+	Necessity: each application has at most one name.
+	Necessity: each application has a name that has a Length (Type) that is greater than 3 and is less than or equal to 50.
+Fact type: application has note
+	Necessity: each application has at most one note.
+	Necessity: each application that has a note, has a note that has a Length (Type) that is less than or equal to 100.
+Fact type: application has handle
+	Necessity: each application has at most one handle.
+	Necessity: each handle of an application, has a Length (Type) that is greater than or equal to 2.
+	Necessity: each application that is archived, has a handle that has a Length (Type) that is less than or equal to 5.
+	Necessity: each application that has a note, has a handle that has a Length (Type) that is less than or equal to 6.
+	Necessity: it is necessary that each application has a handle that has a Length (Type) that is less than or equal to 7.
+	Necessity: each application has a handle that has a Length (Type) that is less than or equal to 8 or is equal to 0.
+Fact type: application has composition
+	Necessity: each application has at most one composition.
+	Necessity: each application has a composition that is represented by a Text (Type) that has a Length (Type) that is less than or equal to 9.
+`
+	m, err := Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := m.Tables["application"]
+	for _, tc := range []struct {
+		field    string
+		min, max int
+	}{{"name", 4, 50}, {"note", 0, 100}, {"handle", 2, 0}, {"composition", 0, 9}} {
+		f := app.Field(tc.field)
+		if f == nil || f.MinLength != tc.min || f.MaxLength != tc.max {
+			t.Errorf("%s = %+v, want lengths %d..%d", tc.field, f, tc.min, tc.max)
+		}
+	}
+	if len(app.Unsupported) != 4 {
+		t.Errorf("unsupported = %q, want the 4 conditional or unknown forms", app.Unsupported)
+	}
+	for _, u := range app.Unsupported {
+		if !strings.Contains(u, "handle") {
+			t.Errorf("unexpected unsupported necessity %q", u)
+		}
+	}
+}

@@ -105,9 +105,16 @@ var (
 	QUALIFIER_RE  = regexp.MustCompile(`\s*\((Auth|balena)\)`)
 	PRIMITIVE_RE  = regexp.MustCompile(`^(.+) \(Type\)$`)
 	DEFINITION_RE = regexp.MustCompile(`"([^"]*)"`)
-	LENGTH_RE     = regexp.MustCompile(`length \(type\) that is (.+?)\.?$`)
-	BOUND_RE      = regexp.MustCompile(`^(greater than or equal to|greater than|less than or equal to|less than|equal to) ([0-9]+)$`)
-	CARDINALITY   = regexp.MustCompile(`(exactly|at most) one `)
+	// The length necessities the reader understands. All of them bound a column unconditionally; the condition of
+	// LENGTH_IF_SET_RE only says the column is set, which a length implies.
+	//   each <subject> has a <term> [that is represented by a Text (Type)] that has a Length (Type) that is <bounds>
+	//   each <subject> that has a <term>, has a <term> [...] that has a Length (Type) that is <bounds>
+	//   each <term> of a <subject>, has a Length (Type) that is <bounds>
+	LENGTH_PLAIN_RE  = regexp.MustCompile(`^each (.+?) (has|needs) an? (.+?)(?: that is represented by a text \(type\))? that has a length \(type\) that is (.+)$`)
+	LENGTH_IF_SET_RE = regexp.MustCompile(`^each (.+?) that (has|needs) an? (.+?), (has|needs) an? (.+?)(?: that is represented by a text \(type\))? that has a length \(type\) that is (.+)$`)
+	LENGTH_OF_RE     = regexp.MustCompile(`^each (.+?) of an? (.+?), has a length \(type\) that is (.+)$`)
+	BOUND_RE         = regexp.MustCompile(`^(greater than or equal to|greater than|less than or equal to|less than|equal to) ([0-9]+)$`)
+	CARDINALITY      = regexp.MustCompile(`(exactly|at most) one `)
 )
 
 // Parse reads an SBVR file.
@@ -549,17 +556,14 @@ func (b *builder) termAt(s string) string {
 func (b *builder) necessity(tb *Table, n, subject string, fields []*Field) {
 	text := strings.ToLower(normalise(n))
 	text = strings.TrimSuffix(text, ".")
-	if lm := LENGTH_RE.FindStringSubmatch(text); lm != nil {
-		if strings.Contains(text, "filename (type)") || strings.Contains(text, "content type (type)") {
-			tb.Unsupported = append(tb.Unsupported, n)
-			return
-		}
-		target := b.lengthField(text, fields)
+	if strings.Contains(text, "length (type)") {
+		target, bounds := lengthTarget(text, subject, fields)
 		if target == nil {
 			tb.Unsupported = append(tb.Unsupported, n)
 			return
 		}
-		for _, clause := range strings.Split(lm[1], " and is ") {
+		minLength, maxLength := target.MinLength, target.MaxLength
+		for _, clause := range strings.Split(bounds, " and is ") {
 			bm := BOUND_RE.FindStringSubmatch(strings.TrimSpace(clause))
 			if bm == nil {
 				tb.Unsupported = append(tb.Unsupported, n)
@@ -568,18 +572,19 @@ func (b *builder) necessity(tb *Table, n, subject string, fields []*Field) {
 			v, _ := strconv.Atoi(bm[2])
 			switch bm[1] {
 			case "greater than or equal to":
-				target.MinLength = maxInt(target.MinLength, v)
+				minLength = maxInt(minLength, v)
 			case "greater than":
-				target.MinLength = maxInt(target.MinLength, v+1)
+				minLength = maxInt(minLength, v+1)
 			case "less than or equal to":
-				target.MaxLength = minPositive(target.MaxLength, v)
+				maxLength = minPositive(maxLength, v)
 			case "less than":
-				target.MaxLength = minPositive(target.MaxLength, v-1)
+				maxLength = minPositive(maxLength, v-1)
 			case "equal to":
-				target.MinLength = maxInt(target.MinLength, v)
-				target.MaxLength = minPositive(target.MaxLength, v)
+				minLength = maxInt(minLength, v)
+				maxLength = minPositive(maxLength, v)
 			}
 		}
+		target.MinLength, target.MaxLength = minLength, maxLength
 		return
 	}
 	a, card, c := b.cardinalityTerms(n)
@@ -613,22 +618,34 @@ func (b *builder) isSubjectRole(t string, fields []*Field, self *Field) bool {
 	return false
 }
 
-// lengthField finds the primitive field a length necessity talks about.
-func (b *builder) lengthField(text string, fields []*Field) *Field {
-	head := text[:strings.Index(text, "length (type)")]
-	var found *Field
-	for _, f := range fields {
-		if f.Type == "" {
-			continue
+// lengthTarget returns the primitive field of the fact type a length necessity bounds and the bounds text, when the
+// necessity has one of the unconditional forms the reader understands (see LENGTH_PLAIN_RE); nil otherwise.
+func lengthTarget(text, subject string, fields []*Field) (*Field, string) {
+	var term, bounds string
+	if m := LENGTH_IF_SET_RE.FindStringSubmatch(text); m != nil {
+		if m[1] != subject || m[2] != m[4] || m[3] != m[5] {
+			return nil, ""
 		}
-		if strings.Contains(" "+head, " "+f.term+" ") || strings.Contains(" "+head, " "+f.term+",") {
-			if found != nil && found != f {
-				return nil
-			}
-			found = f
+		term, bounds = m[3], m[6]
+	} else if m := LENGTH_PLAIN_RE.FindStringSubmatch(text); m != nil {
+		if m[1] != subject {
+			return nil, ""
+		}
+		term, bounds = m[3], m[4]
+	} else if m := LENGTH_OF_RE.FindStringSubmatch(text); m != nil {
+		if m[2] != subject {
+			return nil, ""
+		}
+		term, bounds = m[1], m[3]
+	} else {
+		return nil, ""
+	}
+	for _, f := range fields {
+		if f.Type != "" && f.term == term {
+			return f, bounds
 		}
 	}
-	return found
+	return nil, ""
 }
 
 func maxInt(a, b int) int {
