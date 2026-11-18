@@ -1,9 +1,10 @@
 package sbvr
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/alchemaxinc/terraform-provider-balena/internal/gen/sources"
 )
 
 const SAMPLE = `Vocabulary: balena
@@ -124,18 +125,53 @@ func TestParseRejectsUnknownLines(t *testing.T) {
 	}
 }
 
+// MIN_TABLES is the lower bound of tables in every vendored SBVR file, so a file that silently loses tables fails here.
+const MIN_TABLES = 40
+
+// TestParseVendoredSBVR parses the SBVR files of every root in the lock. The files of the roots a generation draws
+// from (the default root and /resin) must parse. A file only a newer root uses blocks only that root's promotion,
+// which promote-root reports, so it is logged here.
 func TestParseVendoredSBVR(t *testing.T) {
-	for _, path := range []string{"../../../schema/upstream/open-balena-api/src/balena.sbvr", "../../../schema/upstream/open-balena-api/src/translations/v7/v7.sbvr"} {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
+	const repo = "../../.."
+	lock, err := sources.ReadLock(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := lock.Files(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected := map[string]bool{}
+	for _, name := range []string{lock.DefaultRoot, sources.ROOT_UNVERSIONED} {
+		r, ok := lock.Root(name)
+		if !ok {
+			t.Fatalf("the lock lacks root %s", name)
 		}
-		m, err := Parse(string(data))
-		if err != nil {
-			t.Fatalf("%s: %v", path, err)
+		for _, ref := range r.Constraints {
+			selected[ref] = true
 		}
-		if len(m.Tables) < 40 {
-			t.Errorf("%s: %d tables", path, len(m.Tables))
+	}
+	seen := map[string]bool{}
+	for _, r := range lock.Roots {
+		for _, ref := range r.Constraints {
+			if seen[ref] {
+				continue
+			}
+			seen[ref] = true
+			m, err := Parse(string(files[ref]))
+			switch {
+			case err != nil && selected[ref]:
+				t.Errorf("%s (root %s): %v", ref, r.Name, err)
+			case err != nil:
+				t.Logf("%s (root %s) does not parse, which blocks only that root's promotion: %v", ref, r.Name, err)
+			case len(m.Tables) < MIN_TABLES:
+				t.Errorf("%s (root %s): %d tables, want at least %d", ref, r.Name, len(m.Tables), MIN_TABLES)
+			}
+		}
+	}
+	for ref := range selected {
+		if !seen[ref] {
+			t.Errorf("%s is not parsed", ref)
 		}
 	}
 }
