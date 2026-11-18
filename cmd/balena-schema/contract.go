@@ -64,6 +64,9 @@ func cmdContract(args []string, stdout io.Writer) error {
 	if failures := gen.ContractFailures(checks); len(failures) > 0 {
 		return fmt.Errorf("%d of %d contract checks failed:\n%s", len(failures), len(checks), strings.Join(failures, "\n"))
 	}
-	_, _ = fmt.Fprintf(stdout, "ok: %d contract checks passed\n", len(checks))
+	if !*asJSON {
+		// With -json, stdout is the JSON document alone; the exit status says whether every check passed.
+		_, _ = fmt.Fprintf(stdout, "ok: %d contract checks passed\n", len(checks))
+	}
 	return nil
 }

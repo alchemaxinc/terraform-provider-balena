@@ -100,22 +100,29 @@ func RunContract(ctx context.Context, c *balena.Client, checks []*ContractCheck)
 			}
 			continue
 		}
+		// Pine.js wraps rows in a "d" array; anything else is not the API this contract describes.
 		var resp struct {
-			D []map[string]json.RawMessage `json:"d"`
+			D *[]map[string]json.RawMessage `json:"d"`
 		}
 		if err := json.Unmarshal(data, &resp); err != nil {
 			chk.Status = CONTRACT_FAIL
 			chk.Detail = "undecodable response: " + err.Error()
 			continue
 		}
+		if resp.D == nil {
+			chk.Status = CONTRACT_FAIL
+			chk.Detail = `response lacks the "d" array of rows`
+			continue
+		}
+		rows := *resp.D
 		chk.Status = CONTRACT_OK
-		if len(resp.D) == 0 {
+		if len(rows) == 0 {
 			chk.Detail = "200, no rows visible; the selected columns exist"
 			continue
 		}
 		var missing []string
 		for _, f := range chk.Select {
-			if _, ok := resp.D[0][f]; !ok {
+			if _, ok := rows[0][f]; !ok {
 				missing = append(missing, f)
 			}
 		}
