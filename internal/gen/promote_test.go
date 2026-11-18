@@ -434,3 +434,93 @@ func TestPromotionWhenTheCurrentRootBreaks(t *testing.T) {
 		t.Errorf("plan = %+v", plan)
 	}
 }
+
+// replaceLockedFile rewrites a pinned file of a fixture and its hash in the lock.
+func replaceLockedFile(t *testing.T, dir, local, content string) {
+	t.Helper()
+	writeFile(t, dir, local, content)
+	lock, err := sources.ReadLock(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range lock.Sources {
+		for j := range lock.Sources[i].Files {
+			if lock.Sources[i].Files[j].Local == local {
+				lock.Sources[i].Files[j].SHA256 = sources.Sha256Hex([]byte(content))
+			}
+		}
+	}
+	data, err := lock.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, sources.LOCK_PATH, string(data))
+}
+
+// TestAnUnparseableNewRootBlocksOnlyItself checks that a newer root whose model or SBVR does not parse leaves
+// generation and the generated-files check of the current root working, and blocks only its own promotion.
+func TestAnUnparseableNewRootBlocksOnlyItself(t *testing.T) {
+	for _, tc := range []struct{ name, v8ts, v8sbvr, want string }{
+		{"model", "export interface Application {\n", "", "src/types/v8.ts"},
+		{"SBVR", V8_ADDITIVE, "Vocabulary: Auth\n\nthis is not SBVR\n", "src/translations/v8/v8.sbvr"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// writeFixture fails the test when the repository does not generate.
+			dir := writeFixture(t, tc.v8ts, tc.v8sbvr)
+			res, err := Generate(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stale := res.Stale(dir); len(stale) > 0 {
+				t.Errorf("stale: %v", stale)
+			}
+			var v8 *RootInfo
+			for i := range res.IR.Roots {
+				if res.IR.Roots[i].Name == "v8" {
+					v8 = &res.IR.Roots[i]
+				}
+			}
+			if v8 == nil || !strings.Contains(v8.Error, tc.want) {
+				t.Errorf("the IR does not record why v8 does not parse: %+v", v8)
+			}
+			if !strings.Contains(string(res.Files[COVERAGE_PATH]), "`/v8` (`balena-sdk:src/types/v8.ts`): not parsed") {
+				t.Errorf("the coverage report does not say v8 is not parsed")
+			}
+			plan, err := PlanPromotion(dir, "", fakeContract(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.Status != PROMOTION_BLOCKED || !strings.Contains(plan.Reason, "does not parse") || !strings.Contains(plan.Reason, tc.want) {
+				t.Errorf("plan = %+v, want blocked because %s does not parse", plan, tc.want)
+			}
+			if plan.CurrentError != "" {
+				t.Errorf("the current root reports an error: %s", plan.CurrentError)
+			}
+			if err := ApplyPromotion(dir, plan); err == nil {
+				t.Error("a blocked plan must not apply")
+			}
+		})
+	}
+}
+
+// TestAnUnparseableSelectedRootFails checks that the roots a generation draws from must parse: the default root and
+// the unversioned root it falls back to.
+func TestAnUnparseableSelectedRootFails(t *testing.T) {
+	for _, local := range []string{
+		sources.UPSTREAM_DIR + "/" + sources.SOURCE_BALENA_SDK + "/src/types/v7.ts",
+		sources.UPSTREAM_DIR + "/" + sources.SOURCE_OPEN_BALENA_API + "/src/balena-model.ts",
+		sources.UPSTREAM_DIR + "/" + sources.SOURCE_OPEN_BALENA_API + "/src/translations/v7/v7.sbvr",
+	} {
+		t.Run(local, func(t *testing.T) {
+			dir := writeFixture(t, "", "")
+			content := "export interface Application {\n"
+			if strings.HasSuffix(local, ".sbvr") {
+				content = "Vocabulary: Auth\n\nthis is not SBVR\n"
+			}
+			replaceLockedFile(t, dir, local, content)
+			if _, err := Generate(dir); err == nil || !strings.Contains(err.Error(), "does not parse") {
+				t.Errorf("Generate = %v, want a parse error", err)
+			}
+		})
+	}
+}

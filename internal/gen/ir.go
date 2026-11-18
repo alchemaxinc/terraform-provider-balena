@@ -50,6 +50,8 @@ type RootInfo struct {
 	// ModelGenerator is the abstract-sql-to-typescript version the shape file was generated with.
 	ModelGenerator string `json:"model_generator"`
 	Tables         int    `json:"tables"`
+	// Error is why a root the IR does not draw from could not be parsed; it blocks only that root's promotion.
+	Error string `json:"error,omitempty"`
 }
 
 // SourceInfo summarises a pinned upstream.
@@ -143,9 +145,13 @@ type Inputs struct {
 	SBVR        map[string]*sbvr.Model    // by "<source>:<path>"
 	Permissions map[string][]string       // resin table -> verbs
 	ConfigVars  *ConfigVars
+	// parseErrors are the errors of pinned models and SBVR files that do not parse, by reference. They only matter for
+	// the roots a generation draws from (see RootError), so a newer root upstream broke cannot block the current one.
+	parseErrors map[string]error
 }
 
-// LoadInputs verifies the lock and parses every pinned file.
+// LoadInputs verifies the lock and the hashes of every pinned file and parses them. A model or SBVR file that does
+// not parse is kept as an error of the roots that use it (see RootError).
 func LoadInputs(repoDir string) (*Inputs, error) {
 	lock, err := sources.ReadLock(repoDir)
 	if err != nil {
@@ -155,18 +161,20 @@ func LoadInputs(repoDir string) (*Inputs, error) {
 	if err != nil {
 		return nil, err
 	}
-	in := &Inputs{Lock: lock, Models: map[string]*tsmodel.Model{}, SBVR: map[string]*sbvr.Model{}}
+	in := &Inputs{Lock: lock, Models: map[string]*tsmodel.Model{}, SBVR: map[string]*sbvr.Model{}, parseErrors: map[string]error{}}
 	for _, r := range lock.Roots {
 		m, err := tsmodel.Parse(string(files[r.Shape]))
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", r.Shape, err)
+			in.parseErrors[r.Shape] = fmt.Errorf("%s: %w", r.Shape, err)
+			continue
 		}
 		in.Models[r.Name] = m
 	}
 	for _, ref := range lock.FilesByRole(sources.ROLE_CONSTRAINTS) {
 		m, err := sbvr.Parse(string(files[ref]))
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", ref, err)
+			in.parseErrors[ref] = fmt.Errorf("%s: %w", ref, err)
+			continue
 		}
 		in.SBVR[ref] = m
 	}
@@ -185,6 +193,33 @@ func LoadInputs(repoDir string) (*Inputs, error) {
 		return nil, err
 	}
 	return in, nil
+}
+
+// RootError is the parse error of a file the root is built from: its model and SBVR files, and those of the
+// unversioned root every root falls back to. Nil when they all parse.
+func (in *Inputs) RootError(rootName string) error {
+	refs := map[string]bool{}
+	for _, name := range []string{rootName, sources.ROOT_UNVERSIONED} {
+		r, ok := in.Lock.Root(name)
+		if !ok {
+			continue
+		}
+		refs[r.Shape] = true
+		for _, c := range r.Constraints {
+			refs[c] = true
+		}
+	}
+	var errs []string
+	for ref := range refs {
+		if err := in.parseErrors[ref]; err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	sort.Strings(errs)
+	return fmt.Errorf("root %s does not parse: %s", rootName, strings.Join(errs, "; "))
 }
 
 // rootTables builds the tables of one root, cross-checking its TypeScript model against its SBVR files.
@@ -415,6 +450,15 @@ func BuildIR(in *Inputs, preference []string) (*IR, []string, error) {
 	var problems []string
 	byRoot := map[string]map[string]*Table{}
 	for _, r := range in.Lock.Roots {
+		if err := in.RootError(r.Name); err != nil {
+			if contains(preference, r.Name) {
+				return nil, nil, err
+			}
+			// A root the IR does not draw from (a newer, not yet promoted root) that does not parse blocks only its own
+			// promotion.
+			ir.Roots = append(ir.Roots, RootInfo{Name: r.Name, Preview: r.Preview, Shape: r.Shape, Constraints: r.Constraints, Error: err.Error()})
+			continue
+		}
 		tables, p, err := in.rootTables(r.Name)
 		if err != nil {
 			return nil, nil, err

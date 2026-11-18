@@ -183,6 +183,10 @@ func renderCoverage(ir *IR, specs []*Spec, collisions []Collision, drifts []Stic
 
 	// Column coverage against both models, measured like the baseline: distinct non-alias columns.
 	for _, root := range ir.Roots {
+		if root.Error != "" {
+			w("- `/%s` (`%s`): not parsed (%s).\n", root.Name, root.Shape, escapeCell(root.Error))
+			continue
+		}
 		tables, cols, coveredTables, coveredCols := 0, 0, 0, 0
 		for name, t := range ir.byRoot[root.Name] {
 			tables++

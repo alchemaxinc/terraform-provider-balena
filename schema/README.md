@@ -132,7 +132,9 @@ the rules give something unacceptable, run `make contract`, then `make docs`. Th
 ## A new API root (v8)
 
 `fetch` adds every root balena-sdk ships (`src/types/v<N>.ts`, plus `v<N>.sbvr` when open-balena-api has one) to the
-lock without changing `default_root`. Generation only cross-checks the roots it uses, so a new root never blocks it.
+lock without changing `default_root`. Generation parses and cross-checks only the roots it draws tables from (the
+default root and `/resin`), so a new root that does not parse or disagrees with its SBVR never blocks it; it blocks only
+its own promotion. The hashes of every locked file are still verified.
 
 `promote-root` (`make promote-root`, needs `BALENA_API_TOKEN`) takes the newest root newer than `default_root`:
 
