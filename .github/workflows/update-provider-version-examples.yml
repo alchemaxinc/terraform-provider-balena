@@ -12,9 +12,9 @@ on:
         required: false
         type: string
 
+# Every write uses the GitHub App token.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update-provider-version-examples:
