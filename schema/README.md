@@ -133,6 +133,12 @@ the rules give something unacceptable, run `make contract`, then `make docs`. Th
    started with the failing gates' output. The task may only change `schema/overrides.yaml` and the hooks in
    `internal/provider/hooks.go` (`.github/prompts/schema-update.md`); its pull request is a draft for a human.
 
+Privileges are split by job. `regenerate` runs steps 1-4, which build and run repository and upstream code, with only
+the read-only `development` token and no write access; it uploads the generated paths as an artifact. `publish` holds
+the GitHub App key (environment `housekeeping`, `main` only) and runs only git, gh and the helpers of `main`: it copies
+the allowlisted generated paths (`.github/scripts/apply-artifact.sh`) and pushes. The Copilot PAT stays in
+`copilot-agent`. `update-provider-version-examples.yml` is split the same way.
+
 ## A new API root (v8)
 
 `fetch` adds every root balena-sdk ships (`src/types/v<N>.ts`, plus `v<N>.sbvr` when open-balena-api has one) to the

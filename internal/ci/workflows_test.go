@@ -3,6 +3,7 @@ package ci
 
 import (
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -111,4 +112,89 @@ func TestPromotionTextIsSanitised(t *testing.T) {
 	if uses != 2 {
 		t.Errorf("the promotion plan is rendered %d times through sanitize-markdown, want 2 (job summary, pull request)", uses)
 	}
+}
+
+type fullJob struct {
+	Environment any `yaml:"environment"`
+	Steps       []struct {
+		Uses string `yaml:"uses"`
+		Run  string `yaml:"run"`
+	} `yaml:"steps"`
+}
+
+// PRIVILEGED_USES are the only actions a job holding the GitHub App key may use: none of them builds or runs the
+// repository's code.
+var PRIVILEGED_USES = map[string]bool{
+	"actions/create-github-app-token@v3":                  true,
+	"actions/checkout@v7":                                 true,
+	"actions/download-artifact@v8":                        true,
+	"alchemaxinc/composite-toolbox/checkout-and-setup@v1": true,
+	"alchemaxinc/composite-toolbox/check-existing-pr@v1":  true,
+	"alchemaxinc/composite-toolbox/create-pr@v1":          true,
+	"alchemaxinc/composite-toolbox/merge-pr@v1":           true,
+}
+
+// TestPrivilegedJobsRunNoGeneratedCode checks the workflows that publish generated files: the GitHub App key
+// is only read in the `housekeeping` environment, and a job that reads it never builds or runs code from the
+// repository or from upstream. It runs git, gh, the composite actions above and only the helpers of
+// schema-update.sh that validate text.
+func TestPrivilegedJobsRunNoGeneratedCode(t *testing.T) {
+	forbidden := regexp.MustCompile(`(^|[\s;&|(])(go|make|npm|npx|node|terraform|tfplugindocs)\s`)
+	helper := regexp.MustCompile(`schema-update\.sh\s+([a-z-]+)`)
+	safeHelpers := map[string]bool{"title": true, "branch-safe": true, "generated-paths": true}
+	for _, name := range []string{"check-schema.yml", "update-provider-version-examples.yml"} {
+		data, err := os.ReadFile(WORKFLOWS + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var w struct {
+			Jobs map[string]*fullJob `yaml:"jobs"`
+		}
+		if err := yaml.Unmarshal(data, &w); err != nil {
+			t.Fatal(err)
+		}
+		privileged := 0
+		for jobName, j := range w.Jobs {
+			if !strings.Contains(jobSource(t, string(data), jobName), "HOUSEKEEPING_BOT_PRIVATE_KEY") {
+				if j.Environment == "housekeeping" {
+					t.Errorf("%s: %s is in housekeeping without needing the key", name, jobName)
+				}
+				continue
+			}
+			privileged++
+			if j.Environment != "housekeeping" {
+				t.Errorf("%s: %s reads the App key outside the housekeeping environment", name, jobName)
+			}
+			for _, s := range j.Steps {
+				if s.Uses != "" && !PRIVILEGED_USES[s.Uses] {
+					t.Errorf("%s: %s uses %s while holding the App key", name, jobName, s.Uses)
+				}
+				if m := forbidden.FindString(s.Run); m != "" {
+					t.Errorf("%s: %s runs %q while holding the App key", name, jobName, strings.TrimSpace(m))
+				}
+				for _, m := range helper.FindAllStringSubmatch(s.Run, -1) {
+					if !safeHelpers[m[1]] {
+						t.Errorf("%s: %s runs schema-update.sh %s while holding the App key", name, jobName, m[1])
+					}
+				}
+			}
+		}
+		if privileged != 1 {
+			t.Errorf("%s: %d jobs read the App key, want exactly the publish job", name, privileged)
+		}
+	}
+}
+
+// jobSource returns the text of one job of a workflow file.
+func jobSource(t *testing.T, workflow, name string) string {
+	t.Helper()
+	start := strings.Index(workflow, "\n  "+name+":\n")
+	if start < 0 {
+		t.Fatalf("no job %s", name)
+	}
+	rest := workflow[start+1:]
+	if end := regexp.MustCompile(`\n  [a-z][a-z0-9_-]*:\n`).FindStringIndex(rest[1:]); end != nil {
+		return rest[:end[0]+1]
+	}
+	return rest
 }

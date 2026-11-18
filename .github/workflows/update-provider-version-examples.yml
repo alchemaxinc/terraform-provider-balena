@@ -12,7 +12,7 @@ on:
         required: false
         type: string
 
-# Every write uses the GitHub App token.
+# Every write uses the GitHub App token, in the publish job.
 permissions:
   contents: read
 
@@ -24,27 +24,21 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
-    # The GitHub App key lives in this environment, which only `main` may use.
-    environment: housekeeping
+    # Builds the provider to regenerate the docs, so it holds no write token: it uploads the updated files and the
+    # publish job pushes them.
+    permissions:
+      contents: read
+
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
 
     steps:
-      - name: Create temporary GitHub App Token
-        id: app
-        uses: actions/create-github-app-token@v3
+      - name: Checkout code
+        uses: actions/checkout@v7
         with:
-          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
-          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          # Pushes a branch, opens the pull request and enables auto-merge.
-          permission-contents: write
-          permission-pull-requests: write
-
-      - name: Checkout and setup
-        uses: alchemaxinc/composite-toolbox/checkout-and-setup@v1
-        with:
-          shallow: "false"
-          token: ${{ steps.app.outputs.token }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
 
       - name: Determine version
         id: get-version
@@ -110,41 +104,108 @@ jobs:
           make docs
           npx --yes "prettier@${PRETTIER_VERSION}" --write docs/
 
-      - name: Format updated files list
-        id: format-files
+      # Only the files the publish job may commit; it copies nothing else.
+      - name: Collect the updated files
         if: *files-updated
-        env:
-          FILES_UPDATED: ${{ steps.sync-version.outputs.files_updated }}
         run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/updated"
+          mkdir -p "$STAGE"
+          tar -cf - README.md examples/provider/provider.tf docs/index.md | tar -xf - -C "$STAGE"
+
+      - name: Upload the updated files
+        id: upload
+        if: *files-updated
+        uses: actions/upload-artifact@v7
+        with:
+          name: provider-version-examples
+          path: ${{ runner.temp }}/updated
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  publish:
+    name: Publish provider version examples
+    needs: update-provider-version-examples
+    # The environment admits only `main`.
+    if: needs.update-provider-version-examples.outputs.version != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    # The GitHub App key lives in this environment, which only `main` may use. This job runs only git, gh, the
+    # composite actions and the helper scripts of `main`: the updated files arrive as data.
+    environment: housekeeping
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          # Pushes a branch, opens the pull request and enables auto-merge.
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout and setup
+        uses: alchemaxinc/composite-toolbox/checkout-and-setup@v1
+        with:
+          ref: main
+          token: ${{ steps.app.outputs.token }}
+
+      - name: Download the updated files
+        uses: actions/download-artifact@v8
+        with:
+          name: provider-version-examples
+          path: ${{ runner.temp }}/updated
+
+      - name: Apply the updated files
+        id: apply
+        env:
+          VERSION: ${{ needs.update-provider-version-examples.outputs.version }}
+        run: |
+          set -euo pipefail
+          # The version comes from the unprivileged job: check it again before it reaches a branch or a title.
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected version."
+            exit 1
+          fi
+          PATHS=(README.md examples/provider/provider.tf docs/index.md)
+          bash .github/scripts/apply-artifact.sh "$RUNNER_TEMP/updated" . "${PATHS[@]}"
+          CHANGED=$(git diff --name-only -- "${PATHS[@]}" | tr '\n' ' ')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "files=${CHANGED% }" >> "$GITHUB_OUTPUT"
           {
             echo "files_list<<EOF"
-            read -r -a files <<< "$FILES_UPDATED"
-            for file in "${files[@]}"; do
+            for file in $CHANGED; do
               echo "- \`$file\`"
             done
-            echo "- \`docs/index.md\`"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create Pull Request
         id: create-pr
-        if: *files-updated
+        if: steps.apply.outputs.files != ''
         uses: alchemaxinc/composite-toolbox/create-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: "main"
           branch-prefix: "update-provider-version-examples"
-          files: "${{ steps.sync-version.outputs.files_updated }} docs/index.md"
-          commit-message: "docs: update provider examples to v${{ steps.get-version.outputs.version }}"
-          pr-title: "docs: update provider examples to v${{ steps.get-version.outputs.version }}"
+          files: ${{ steps.apply.outputs.files }}
+          commit-message: "docs: update provider examples to v${{ steps.apply.outputs.version }}"
+          pr-title: "docs: update provider examples to v${{ steps.apply.outputs.version }}"
           pr-body: |
             Updates the documented Terraform provider version constraint to the
             latest release.
 
-            **New version**: `${{ steps.get-version.outputs.version }}`
+            **New version**: `${{ steps.apply.outputs.version }}`
 
             **Files updated**:
-            ${{ steps.format-files.outputs.files_list }}
+            ${{ steps.apply.outputs.files_list }}
 
       - name: Enable auto-merge
         if: steps.create-pr.outputs.pr_number != ''
