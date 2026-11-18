@@ -2,6 +2,8 @@ name: Test
 
 on:
   pull_request:
+    # edited: the title decides whether the live jobs run.
+    types: [opened, synchronize, reopened, edited]
   workflow_call:
 
 concurrency:
@@ -53,9 +55,11 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     needs: [unit-test, build]
+    # The live jobs run unless the title is a plain chore (`chore:` or `chore(scope):`); a breaking `chore!` runs them.
     if: &live-api-gate >-
-      github.event_name == 'workflow_call'
-      || !startsWith(github.event.pull_request.title, 'chore')
+      !(startsWith(github.event.pull_request.title, 'chore:')
+        || (startsWith(github.event.pull_request.title, 'chore(')
+            && !contains(github.event.pull_request.title, ')!:')))
 
     environment: &live-api-environment ${{ github.event_name == 'workflow_call' && 'production' || 'development' }}
 

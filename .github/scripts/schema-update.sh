@@ -8,6 +8,7 @@
 #   title <type> <oba-tag> <sdk-tag> [root]      pull request title (at most 100 characters, for commitlint)
 #   branch-safe <tag>                            a tag as a branch name component
 #   sanitize                                     stdin to stdout without control characters or backticks
+#   sanitize-markdown                            sanitize, then neutralise mentions, references, links and HTML
 #   prompt <template> <branch> <title> <log-dir> the agent prompt for failed gates
 set -euo pipefail
 
@@ -113,6 +114,16 @@ cmd_sanitize() {
   LC_ALL=C tr -d '\000-\010\013\014\016-\037\177\140' | cut -c1-300
 }
 
+cmd_sanitize_markdown() {
+  # For text rendered as Markdown outside a code block (a pull request body): no @mention or #123 reference that
+  # notifies anyone (a zero-width space follows the @ or #), no link or image that hides its target (brackets are
+  # escaped), and no raw HTML or <autolink> (angle brackets become entities).
+  local zwsp
+  zwsp=$(printf '\342\200\213')
+  cmd_sanitize | sed -e "s/@/@${zwsp}/g" -e "s/#\([0-9]\)/#${zwsp}\1/g" \
+    -e 's/\[/\\[/g' -e 's/\]/\\]/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
 cmd_prompt() {
   local template=$1 branch=$2 title=$3 dir=$4 prompt name
   prompt=$(cat "$template")
@@ -142,9 +153,10 @@ main() {
     title) cmd_title "$@" ;;
     branch-safe) cmd_branch_safe "$@" ;;
     sanitize) cmd_sanitize ;;
+    sanitize-markdown) cmd_sanitize_markdown ;;
     prompt) cmd_prompt "$@" ;;
     generated-paths) printf '%s\n' "${GENERATED_PATHS[*]}" ;;
-    *) die "usage: $0 <resolve-tag|gates|commit-type|title|branch-safe|sanitize|prompt|generated-paths>" ;;
+    *) die "usage: $0 <resolve-tag|gates|commit-type|title|branch-safe|sanitize|sanitize-markdown|prompt|generated-paths>" ;;
   esac
 }
 

@@ -2,6 +2,8 @@ name: Lint
 
 on:
   pull_request:
+    # edited: check-surface-compatibility compares the title with the surface change.
+    types: [opened, synchronize, reopened, edited]
   workflow_call:
 
 concurrency:
@@ -174,7 +176,7 @@ jobs:
 
       - name: Generate and format docs
         run: |
-          $(go env GOPATH)/bin/tfplugindocs generate --provider-name=balena
+          "$(go env GOPATH)/bin/tfplugindocs" generate --provider-name=balena
           npx prettier@${{ env.PRETTIER_VERSION }} --write docs/
 
       - name: Fail if docs are out of date

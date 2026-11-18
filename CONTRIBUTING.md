@@ -62,3 +62,6 @@ CI runs `sync-terraform-version-in-docs` in `check` mode on every pull request, 
 - `fix:` — bug fix (patch bump)
 - `feat!:` / `BREAKING CHANGE:` — breaking change (major bump)
 - `chore:`, `docs:`, `ci:`, `refactor:` — no release
+
+A pull request titled `chore:` or `chore(scope):` skips the live API tests; every other title, `chore!:` included, runs
+them. Editing the title or description reruns the checks.

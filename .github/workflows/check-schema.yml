@@ -152,7 +152,8 @@ jobs:
           set -euo pipefail
           SUMMARY="$RUNNER_TEMP/promotion.md"
           go run ./cmd/balena-schema promote-root -apply -json -markdown "$SUMMARY" > "$RUNNER_TEMP/promotion.json"
-          cat "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+          # The plan quotes upstream text (parse errors, contract failures): sanitise it wherever it is rendered.
+          head -n 200 "$SUMMARY" | bash .github/scripts/schema-update.sh sanitize-markdown >> "$GITHUB_STEP_SUMMARY"
 
           STATUS=$(jq -r '.status' "$RUNNER_TEMP/promotion.json")
           CANDIDATE=$(jq -r '.candidate // empty' "$RUNNER_TEMP/promotion.json")
@@ -260,7 +261,7 @@ jobs:
             echo "Regenerated from open-balena-api \`${OBA_TAG}\` and balena-sdk \`${SDK_TAG}\`. Every gate passed, so"
             echo "this pull request merges itself once CI passes."
             echo
-            cat "$RUNNER_TEMP/promotion.md"
+            head -n 200 "$RUNNER_TEMP/promotion.md" | bash .github/scripts/schema-update.sh sanitize-markdown
             echo
             echo "Terraform surface change (the commit type comes from it):"
             echo
