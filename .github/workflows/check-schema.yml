@@ -12,6 +12,11 @@ jobs:
   check-schema:
     name: Check for schema updates
     runs-on: ubuntu-latest
+    # Skip instead of failing the environment's branch rule when dispatched elsewhere.
+    if: github.ref == 'refs/heads/main'
+
+    # The GitHub App key lives in this environment, which only `main` may use.
+    environment: housekeeping
 
     permissions:
       contents: write
@@ -33,6 +38,9 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes and deletes schema branches, opens the pull request and enables auto-merge.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout code
         uses: actions/checkout@v7
