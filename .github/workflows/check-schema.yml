@@ -22,82 +22,40 @@ jobs:
     runs-on: ubuntu-latest
 
     # Holds BALENA_API_TOKEN for the read-only contract checks, as in test.yml. Every pull request's tests can already
-    # read that development token, so a branch rule would protect nothing here; the Copilot PAT, which must stay on
-    # `main`, lives in `copilot-agent` below.
+    # read that development token, so a branch rule would protect nothing here. This job builds and runs code from the
+    # repository and from upstream, so it holds no write token: it uploads the generated files and the publish job
+    # pushes them.
     environment: development
 
-    # Pushes and pull requests use the GitHub App token, so pull requests it opens run CI.
     permissions:
       contents: read
 
     outputs:
-      branch: ${{ steps.failure-branch.outputs.branch }}
-      prompt: ${{ steps.prompt.outputs.text }}
+      sha: ${{ steps.checkout.outputs.sha }}
+      changed: ${{ steps.changes.outputs.changed }}
+      ok: ${{ steps.verdict.outputs.ok }}
+      oba: ${{ steps.tags.outputs.oba }}
+      sdk: ${{ steps.tags.outputs.sdk }}
+      root: ${{ steps.promote.outputs.root }}
+      type: ${{ steps.title.outputs.type }}
+      slug: ${{ steps.title.outputs.slug }}
       title: ${{ steps.title.outputs.title }}
+      branch: ${{ steps.title.outputs.branch }}
+      body: ${{ steps.body.outputs.text }}
+      prompt: ${{ steps.prompt.outputs.text }}
 
     steps:
-      - name: Create temporary GitHub App Token
-        id: app
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
-          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          # Pushes branches, deletes swept branches, opens and auto-merges pull requests; nothing else.
-          permission-contents: write
-          permission-pull-requests: write
-
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          token: ${{ steps.app.outputs.token }}
           # A dispatch runs the workflow definition from the ref it was dispatched on, so the files it reads come from
           # that same ref. Scheduled runs resolve to `main`.
           ref: ${{ github.ref }}
+          persist-credentials: false
 
-      - name: Configure git identity
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-          APP_SLUG: ${{ steps.app.outputs.app-slug }}
-        run: |
-          APP_USER_ID=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq ".id")
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-
-      - name: Sweep orphaned schema branches
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          # Copilot copies the schema commit onto a branch of its own, leaving the one pushed here behind once its
-          # task finishes. A running task reads that branch minutes after the push, so keep recent ones.
-          CUTOFF=$(date -u -d '6 hours ago' +%s)
-
-          gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
-            | { grep -E '^(feat|fix|chore)!?/schema-update-' || true; } \
-            | while read -r BRANCH; do
-                if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
-                  continue
-                fi
-
-                PUSHED=$(gh api "repos/${REPOSITORY}/commits/${BRANCH}" --jq '.commit.committer.date' || true)
-
-                if [ -z "$PUSHED" ]; then
-                  echo "Keeping ${BRANCH}: could not read when it was last pushed"
-                  continue
-                fi
-
-                if [ "$(date -u -d "$PUSHED" +%s)" -gt "$CUTOFF" ]; then
-                  echo "Keeping ${BRANCH}: pushed ${PUSHED}, a task may still be reading it"
-                  continue
-                fi
-
-                gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${BRANCH}"
-                echo "::notice::Deleted orphaned branch ${BRANCH}"
-              done
+      - name: Record the regenerated commit
+        id: checkout
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Go
         uses: actions/setup-go@v7
@@ -118,7 +76,7 @@ jobs:
       - name: Resolve the latest upstream tags
         id: tags
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # Each tag is checked against a strict pattern before it is used: it flows into branch names, commit
@@ -137,7 +95,7 @@ jobs:
       # infrastructure problem, not a schema change, and fails the run without starting the agent.
       - name: Pin the upstream models
         env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           OBA_TAG: ${{ steps.tags.outputs.oba }}
           SDK_TAG: ${{ steps.tags.outputs.sdk }}
         run: go run ./cmd/balena-schema fetch -open-balena-api "$OBA_TAG" -balena-sdk "$SDK_TAG"
@@ -227,6 +185,8 @@ jobs:
         env:
           OBA_TAG: ${{ steps.tags.outputs.oba }}
           SDK_TAG: ${{ steps.tags.outputs.sdk }}
+          OBA_BRANCH: ${{ steps.tags.outputs.oba_branch }}
+          SDK_BRANCH: ${{ steps.tags.outputs.sdk_branch }}
           ROOT: ${{ steps.promote.outputs.root }}
           GATES_OK: ${{ steps.gates.outputs.ok }}
         run: |
@@ -244,6 +204,8 @@ jobs:
             echo "type=$TYPE"
             echo "slug=${TYPE%!}"
             echo "title=$TITLE"
+            # The branch the failing state is pushed to for the agent.
+            echo "branch=${TYPE%!}/schema-update-${OBA_BRANCH}-${SDK_BRANCH}"
           } >> "$GITHUB_OUTPUT"
 
           go run ./cmd/balena-schema surface-diff -old "$BASE" -new schema/surface.lock.json > "$RUNNER_TEMP/surface-diff.txt" 2>&1 || true
@@ -279,28 +241,232 @@ jobs:
             echo "${DELIMITER}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Build the agent prompt
+        id: prompt
+        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        env:
+          BRANCH: ${{ steps.title.outputs.branch }}
+          TITLE: ${{ steps.title.outputs.title }}
+        run: |
+          set -euo pipefail
+
+          # The job that starts the task holds the PAT and has no checkout, so the prompt is assembled here and
+          # passed to it. The publish job pushes the branch it names.
+          PROMPT=$(bash .github/scripts/schema-update.sh prompt .github/prompts/schema-update.md "$BRANCH" "$TITLE" "$RUNNER_TEMP/gates")
+
+          DELIMITER="PROMPT_EOF_$(openssl rand -hex 16)"
+          {
+            echo "text<<${DELIMITER}"
+            echo "$PROMPT"
+            echo "${DELIMITER}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Only the generated paths, as git sees them (new files included, ignored files left out), go to the publish job.
+      - name: Collect the generated files
+        if: steps.changes.outputs.changed == 'true' || steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        run: |
+          set -euo pipefail
+          read -r -a PATHS <<< "$(bash .github/scripts/schema-update.sh generated-paths)"
+          STAGE="$RUNNER_TEMP/generated"
+          mkdir -p "$STAGE"
+          git add -A -- "${PATHS[@]}"
+          git ls-files -z -- "${PATHS[@]}" | tar --null -T - -cf - | tar -xf - -C "$STAGE"
+
+      - name: Upload the generated files
+        if: steps.changes.outputs.changed == 'true' || steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated
+          path: ${{ runner.temp }}/generated
+          if-no-files-found: error
+          retention-days: 1
+          # A re-run uploads again under the same name.
+          overwrite: true
+
+      # Set last: an infrastructure failure in any step above leaves it empty, and the publish job then does nothing.
+      - name: Record the verdict
+        id: verdict
+        env:
+          GENERATE_OK: ${{ steps.generate.outputs.ok }}
+          GATES_OK: ${{ steps.gates.outputs.ok }}
+        run: |
+          if [ "$GENERATE_OK" = "true" ] && [ "$GATES_OK" = "true" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail the run when a gate failed
+        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        run: |
+          echo "::error::A schema gate failed. Nothing was merged; the publish job pushes the failing state for a Copilot task."
+          exit 1
+
+  publish:
+    name: Publish the regenerated files
+    needs: regenerate
+    # The regenerate job fails on purpose when a gate fails, after uploading the failing state for the agent. The
+    # environment admits only `main`, so a dispatch from another branch regenerates and checks but publishes nothing.
+    if: always() && needs.regenerate.result != 'cancelled' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    # The GitHub App key lives in this environment, which only `main` may use. This job runs only git, gh, the
+    # composite actions and the helper scripts of `main`: the regenerated files arrive as data and are never executed.
+    environment: housekeeping
+
+    # Pushes and pull requests use the GitHub App token, so pull requests it opens run CI.
+    permissions:
+      contents: read
+
+    outputs:
+      branch: ${{ steps.failure-branch.outputs.branch }}
+      title: ${{ steps.check.outputs.title }}
+
+    steps:
+      - name: Create temporary GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.HOUSEKEEPING_BOT_APP_ID }}
+          private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          # Pushes branches, deletes swept branches, opens and auto-merges pull requests; nothing else.
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app.outputs.token }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git identity
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: |
+          APP_USER_ID=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq ".id")
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Sweep orphaned schema branches
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Copilot copies the schema commit onto a branch of its own, leaving the one pushed here behind once its
+          # task finishes. A running task reads that branch minutes after the push, so keep recent ones.
+          CUTOFF=$(date -u -d '6 hours ago' +%s)
+
+          gh api "repos/${REPOSITORY}/branches" --paginate --jq '.[].name' \
+            | { grep -E '^(feat|fix|chore)!?/schema-update-' || true; } \
+            | while read -r BRANCH; do
+                if gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q .; then
+                  continue
+                fi
+
+                PUSHED=$(gh api "repos/${REPOSITORY}/commits/${BRANCH}" --jq '.commit.committer.date' || true)
+
+                if [ -z "$PUSHED" ]; then
+                  echo "Keeping ${BRANCH}: could not read when it was last pushed"
+                  continue
+                fi
+
+                if [ "$(date -u -d "$PUSHED" +%s)" -gt "$CUTOFF" ]; then
+                  echo "Keeping ${BRANCH}: pushed ${PUSHED}, a task may still be reading it"
+                  continue
+                fi
+
+                gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${BRANCH}"
+                echo "::notice::Deleted orphaned branch ${BRANCH}"
+              done
+
+      # The regenerate job runs upstream code, so its outputs are untrusted: the title and branch are derived again with
+      # the helpers of `main` and must match, and the regenerated commit must be on `main`.
+      - name: Check the regenerated state
+        id: check
+        if: >-
+          (needs.regenerate.outputs.ok == 'true' && needs.regenerate.outputs.changed == 'true')
+          || needs.regenerate.outputs.ok == 'false'
+        env:
+          SHA: ${{ needs.regenerate.outputs.sha }}
+          TYPE: ${{ needs.regenerate.outputs.type }}
+          SLUG: ${{ needs.regenerate.outputs.slug }}
+          TITLE: ${{ needs.regenerate.outputs.title }}
+          BRANCH: ${{ needs.regenerate.outputs.branch }}
+          OBA_TAG: ${{ needs.regenerate.outputs.oba }}
+          SDK_TAG: ${{ needs.regenerate.outputs.sdk }}
+          ROOT: ${{ needs.regenerate.outputs.root }}
+        run: |
+          set -euo pipefail
+          if [[ ! $SHA =~ ^[0-9a-f]{40}$ ]] || ! git merge-base --is-ancestor "$SHA" HEAD; then
+            echo "::error::The regenerated commit is not on main."
+            exit 1
+          fi
+          EXPECTED_TITLE=$(bash .github/scripts/schema-update.sh title "$TYPE" "$OBA_TAG" "$SDK_TAG" "$ROOT")
+          POSTFIX="$(bash .github/scripts/schema-update.sh branch-safe "$OBA_TAG")-$(bash .github/scripts/schema-update.sh branch-safe "$SDK_TAG")"
+          if [ "$TITLE" != "$EXPECTED_TITLE" ] || [ "$SLUG" != "${TYPE%!}" ] || [ "$BRANCH" != "${SLUG}/schema-update-${POSTFIX}" ]; then
+            echo "::error::The regenerate job's title or branch does not match its tags."
+            exit 1
+          fi
+          # Branch from the commit that was regenerated, as main may have moved since.
+          git checkout -q --detach "$SHA"
+          {
+            echo "title=$EXPECTED_TITLE"
+            echo "slug=${TYPE%!}"
+            echo "postfix=$POSTFIX"
+            echo "branch=${TYPE%!}/schema-update-${POSTFIX}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download the generated files
+        if: steps.check.outcome == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: generated
+          path: ${{ runner.temp }}/generated
+
+      - name: Apply the generated files
+        id: changes
+        if: steps.check.outcome == 'success'
+        env:
+          REGENERATE_OK: ${{ needs.regenerate.outputs.ok }}
+        run: |
+          set -euo pipefail
+          read -r -a PATHS <<< "$(bash .github/scripts/schema-update.sh generated-paths)"
+          # Copies only regular files under the generated paths and rejects everything else.
+          bash .github/scripts/apply-artifact.sh "$RUNNER_TEMP/generated" . "${PATHS[@]}"
+          if [ -n "$(git status --porcelain -- "${PATHS[@]}")" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$REGENERATE_OK" = "true" ]; then
+            echo "::warning::The regenerate job reported changes, but its files match main; nothing to publish."
+          fi
+
       - name: Look for an existing pull request
         id: existing-pr
-        if: steps.body.outcome == 'success'
+        if: needs.regenerate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true'
         uses: alchemaxinc/composite-toolbox/check-existing-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: main
-          pr-title: ${{ steps.title.outputs.title }}
+          pr-title: ${{ steps.check.outputs.title }}
 
       - name: Create the pull request
         id: create-pr
-        if: steps.body.outcome == 'success' && steps.existing-pr.outputs.exists == 'false'
+        if: needs.regenerate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true' && steps.existing-pr.outputs.exists == 'false'
         uses: alchemaxinc/composite-toolbox/create-pr@v1
         with:
           token: ${{ steps.app.outputs.token }}
           base-branch: main
-          branch-prefix: ${{ steps.title.outputs.slug }}/schema-update
-          branch-postfix: ${{ steps.tags.outputs.oba_branch }}-${{ steps.tags.outputs.sdk_branch }}
+          branch-prefix: ${{ steps.check.outputs.slug }}/schema-update
+          branch-postfix: ${{ steps.check.outputs.postfix }}
           files: "schema docs examples internal/provider/zz_generated_specs.go"
-          commit-message: ${{ steps.title.outputs.title }}
-          pr-title: ${{ steps.title.outputs.title }}
-          pr-body: ${{ steps.body.outputs.text }}
+          commit-message: ${{ steps.check.outputs.title }}
+          pr-title: ${{ steps.check.outputs.title }}
+          pr-body: ${{ needs.regenerate.outputs.body }}
 
       - name: Enable auto-merge
         if: steps.create-pr.outputs.pr_number != ''
@@ -312,16 +478,13 @@ jobs:
 
       - name: Push the failing state for the agent
         id: failure-branch
-        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
+        if: needs.regenerate.outputs.ok == 'false'
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          SLUG: ${{ steps.title.outputs.slug }}
-          TITLE: ${{ steps.title.outputs.title }}
-          OBA_BRANCH: ${{ steps.tags.outputs.oba_branch }}
-          SDK_BRANCH: ${{ steps.tags.outputs.sdk_branch }}
+          TITLE: ${{ steps.check.outputs.title }}
+          BRANCH: ${{ steps.check.outputs.branch }}
         run: |
           set -euo pipefail
-          BRANCH="${SLUG}/schema-update-${OBA_BRANCH}-${SDK_BRANCH}"
 
           # Copilot opens the pull request. A task started against a head_ref that already has an open pull request
           # only answers review comments and drops the prompt, so refuse to start one that would silently do nothing.
@@ -339,37 +502,11 @@ jobs:
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Build the agent prompt
-        id: prompt
-        if: steps.failure-branch.outputs.branch != ''
-        env:
-          BRANCH: ${{ steps.failure-branch.outputs.branch }}
-          TITLE: ${{ steps.title.outputs.title }}
-        run: |
-          set -euo pipefail
-
-          # The job that starts the task holds the PAT and has no checkout, so the prompt is assembled here and
-          # passed to it.
-          PROMPT=$(bash .github/scripts/schema-update.sh prompt .github/prompts/schema-update.md "$BRANCH" "$TITLE" "$RUNNER_TEMP/gates")
-
-          DELIMITER="PROMPT_EOF_$(openssl rand -hex 16)"
-          {
-            echo "text<<${DELIMITER}"
-            echo "$PROMPT"
-            echo "${DELIMITER}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Fail the run when a gate failed
-        if: steps.generate.outputs.ok != 'true' || steps.gates.outputs.ok != 'true'
-        run: |
-          echo "::error::A schema gate failed. Nothing was merged; a Copilot task was started on the pushed branch."
-          exit 1
-
   start-copilot-task:
     name: Start Copilot task
-    needs: regenerate
-    # The regenerate job fails on purpose when a gate fails, after pushing the branch for the agent.
-    if: always() && needs.regenerate.outputs.branch != ''
+    needs: [regenerate, publish]
+    # The regenerate job fails on purpose when a gate fails; the publish job then pushes the branch for the agent.
+    if: always() && needs.publish.outputs.branch != ''
     runs-on: ubuntu-latest
 
     # Limited to `main` by a deployment branch rule: workflow_dispatch runs the workflow definition from the dispatched
@@ -392,7 +529,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
-          BRANCH: ${{ needs.regenerate.outputs.branch }}
+          BRANCH: ${{ needs.publish.outputs.branch }}
           PROMPT: ${{ needs.regenerate.outputs.prompt }}
         run: |
           set -euo pipefail
@@ -435,7 +572,7 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           TASK_ID: ${{ steps.task.outputs.task_id }}
-          TITLE: ${{ needs.regenerate.outputs.title }}
+          TITLE: ${{ needs.publish.outputs.title }}
         run: |
           set -euo pipefail
 
