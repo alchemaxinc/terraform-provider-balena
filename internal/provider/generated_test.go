@@ -48,6 +48,9 @@ func stringFor(a *AttributeSpec, variant int) string {
 	if len(a.OneOf) > 0 {
 		return a.OneOf[variant%len(a.OneOf)]
 	}
+	if a.DateTime {
+		return fmt.Sprintf("2026-12-%02dT00:00:00Z", 1+variant%28)
+	}
 	n := 8
 	if a.MinLength > n {
 		n = a.MinLength

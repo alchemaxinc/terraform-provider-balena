@@ -173,7 +173,7 @@ func (r *odataResource) body(ctx context.Context, id int64, planned, current map
 			continue
 		}
 		if current != nil {
-			if cv, ok := current[a.Name]; ok && pv.Equal(cv) {
+			if cv, ok := current[a.Name]; ok && sameValue(a, pv, cv) {
 				continue
 			}
 		}
@@ -218,6 +218,9 @@ func (r *odataResource) Create(ctx context.Context, req resource.CreateRequest, 
 			resp.Diagnostics.AddError("Error creating "+r.spec.TypeSuffix, err.Error())
 			return
 		}
+		if !r.keepID(ctx, id, &resp.State, &resp.Diagnostics) {
+			return
+		}
 		row, err := r.read(ctx, id)
 		if err != nil {
 			resp.Diagnostics.AddError("Error reading "+r.spec.TypeSuffix, err.Error())
@@ -254,8 +257,18 @@ func (r *odataResource) Create(ctx context.Context, req resource.CreateRequest, 
 			resp.Diagnostics.AddError("Error creating "+r.spec.TypeSuffix, err.Error())
 			return
 		}
+		if !r.keepID(ctx, id, &resp.State, &resp.Diagnostics) {
+			return
+		}
 	}
 	r.finish(ctx, id, planned, &resp.State, &resp.Diagnostics)
+}
+
+// keepID writes the id of the row a new resource represents into the state before anything else can fail, so a later
+// error leaves a tainted resource that Terraform replaces instead of an orphaned row it forgets.
+func (r *odataResource) keepID(ctx context.Context, id int64, state attributeSetter, diags *diag.Diagnostics) bool {
+	diags.Append(state.SetAttribute(ctx, path.Root("id"), types.Int64Value(id))...)
+	return !diags.HasError()
 }
 
 // finish reads the row back and writes the state.
@@ -309,6 +322,9 @@ func (r *odataResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("Error reading "+r.spec.TypeSuffix, err.Error())
 		return
 	}
+	prior, diags := getValues(ctx, req.State, r.spec, inResource)
+	resp.Diagnostics.Append(diags...)
+	keepNotation(r.spec, prior, values)
 	resp.Diagnostics.Append(setValues(ctx, &resp.State, values)...)
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/alchemaxinc/terraform-provider-balena/internal/balena"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -197,6 +198,41 @@ func setValues(ctx context.Context, s attributeSetter, values map[string]attr.Va
 		diags.Append(s.SetAttribute(ctx, path.Root(name), v)...)
 	}
 	return diags
+}
+
+// sameValue reports whether two values of an attribute are equal. Date-times are equal when they name the same
+// instant: the API answers `2026-12-01T00:00:00.000Z` for `2026-12-01T01:00:00+01:00`.
+func sameValue(a *AttributeSpec, x, y attr.Value) bool {
+	if x.Equal(y) {
+		return true
+	}
+	if !a.DateTime {
+		return false
+	}
+	xt, xok := instant(x)
+	yt, yok := instant(y)
+	return xok && yok && xt.Equal(yt)
+}
+
+func instant(v attr.Value) (time.Time, bool) {
+	s, ok := v.(types.String)
+	if !ok || s.IsNull() || s.IsUnknown() {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339Nano, s.ValueString())
+	return t, err == nil
+}
+
+// keepNotation keeps the prior notation of date-times the API returned as the same instant, so equal instants never
+// show as a change.
+func keepNotation(spec *TableSpec, prior, values map[string]attr.Value) {
+	for _, a := range spec.Attributes {
+		if p, ok := prior[a.Name]; ok && a.DateTime {
+			if v, ok := values[a.Name]; ok && !p.Equal(v) && sameValue(a, p, v) {
+				values[a.Name] = p
+			}
+		}
+	}
 }
 
 // filterValue converts a configured data source attribute to the value its $filter compares with.

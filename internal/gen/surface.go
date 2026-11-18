@@ -168,6 +168,9 @@ func surfaceAttr(a *Attr, mode string) *SurfaceAttr {
 	if a.VarName != nil {
 		sa.Validators = append(sa.Validators, "var_name:"+a.VarName.Describe())
 	}
+	if a.DateTime && a.Writable() {
+		sa.Validators = append(sa.Validators, "date_time:rfc3339")
+	}
 	return sa
 }
 

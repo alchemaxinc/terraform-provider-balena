@@ -319,3 +319,26 @@ func TestLiteral(t *testing.T) {
 		t.Errorf("EscapeFilter = %s", got)
 	}
 }
+
+// TestTransportErrorsHideTheQuery checks that a failed request does not repeat its $filter, which can hold the value of
+// a sensitive attribute.
+func TestTransportErrorsHideTheQuery(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	url := srv.URL
+	srv.Close()
+	c := NewClient(url, "test-token", "0.0.0-test", WithMaxRetries(0), WithTimeout(time.Second))
+	_, err := c.List(context.Background(), "v7", "application_environment_variable", Query{
+		Select: []string{"id"},
+		Filter: Eq("value", "s3cret-value"),
+		Top:    2,
+	})
+	if err == nil {
+		t.Fatal("expected a transport error")
+	}
+	if strings.Contains(err.Error(), "s3cret") || strings.Contains(err.Error(), "filter") {
+		t.Errorf("error leaks the query: %v", err)
+	}
+	if !strings.Contains(err.Error(), "GET /v7/application_environment_variable") {
+		t.Errorf("error lacks the method and path: %v", err)
+	}
+}

@@ -110,6 +110,9 @@ func renderGoSpecs(specs []*Spec, o *Overrides) ([]byte, error) {
 			if a.Stable {
 				fields = append(fields, "Stable: true")
 			}
+			if a.DateTime {
+				fields = append(fields, "DateTime: true")
+			}
 			if a.MinLength > 0 {
 				fields = append(fields, "MinLength: "+strconv.Itoa(a.MinLength))
 			}

@@ -31,7 +31,13 @@ type fakePine struct {
 	lambda func(table, term string, row map[string]any) bool
 	// deleteStatus forces the status of DELETE on a table.
 	deleteStatus map[string]int
-	requests     []fakeRequest
+	// getByIDStatus forces the status of GET by id on a table.
+	getByIDStatus map[string]int
+	// canonical rewrites written values of a column as the API stores them, by column name.
+	canonical map[string]func(any) any
+	// afterWrite derives server-set columns of a table after every POST or PATCH.
+	afterWrite map[string]func(row map[string]any)
+	requests   []fakeRequest
 }
 
 type fakeRequest struct {
@@ -46,12 +52,15 @@ var FAKE_PATH_RE = regexp.MustCompile(`^/([a-z0-9]+)/([a-z_]+)(?:\(([0-9]+)\))?$
 
 func newFakePine(t *testing.T) *fakePine {
 	f := &fakePine{
-		t:            t,
-		fields:       map[string]map[string]bool{},
-		refs:         map[string]map[string]string{},
-		rows:         map[string]map[int64]map[string]any{},
-		nextID:       1000,
-		deleteStatus: map[string]int{},
+		t:             t,
+		fields:        map[string]map[string]bool{},
+		refs:          map[string]map[string]string{},
+		rows:          map[string]map[int64]map[string]any{},
+		nextID:        1000,
+		deleteStatus:  map[string]int{},
+		getByIDStatus: map[string]int{},
+		canonical:     map[string]func(any) any{},
+		afterWrite:    map[string]func(row map[string]any){},
 	}
 	known := func(table, field string) {
 		if f.fields[table] == nil {
@@ -170,6 +179,8 @@ func (f *fakePine) serve(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	switch {
+	case r.Method == http.MethodGet && m[3] != "" && f.getByIDStatus[table] != 0:
+		f.fail(w, f.getByIDStatus[table], "forced failure")
 	case r.Method == http.MethodGet:
 		f.get(w, table, id, m[3] != "", query)
 	case r.Method == http.MethodPost && m[3] == "":
@@ -181,7 +192,10 @@ func (f *fakePine) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		for k, v := range body {
-			row[k] = normalise(v)
+			row[k] = f.store(k, v)
+		}
+		if derive := f.afterWrite[table]; derive != nil {
+			derive(row)
 		}
 		f.rows[table][f.nextID] = row
 		w.WriteHeader(http.StatusCreated)
@@ -193,7 +207,10 @@ func (f *fakePine) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for k, v := range body {
-			row[k] = normalise(v)
+			row[k] = f.store(k, v)
+		}
+		if derive := f.afterWrite[table]; derive != nil {
+			derive(row)
 		}
 		w.WriteHeader(http.StatusOK)
 	case r.Method == http.MethodDelete && m[3] != "":
@@ -210,6 +227,15 @@ func (f *fakePine) serve(w http.ResponseWriter, r *http.Request) {
 	default:
 		f.fail(w, http.StatusMethodNotAllowed, "")
 	}
+}
+
+// store normalises a written value and applies the column's canonical form.
+func (f *fakePine) store(column string, v any) any {
+	v = normalise(v)
+	if c := f.canonical[column]; c != nil && v != nil {
+		v = c(v)
+	}
+	return v
 }
 
 // normalise turns JSON numbers into int64 (or float64).

@@ -88,7 +88,9 @@ type AttributeSpec struct {
 	ForceNew   bool
 	Sensitive  bool
 	// Stable marks a value that never changes once set, so plans keep the prior value.
-	Stable      bool
+	Stable bool
+	// DateTime marks an RFC 3339 date-time: values that name the same instant are equal, whatever their notation.
+	DateTime    bool
 	MinLength   int
 	MaxLength   int
 	OneOf       []string

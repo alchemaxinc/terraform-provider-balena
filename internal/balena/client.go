@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -412,7 +413,8 @@ func (c *Client) Do(ctx context.Context, method, rawPath string, body any) ([]by
 		}
 		req, err := http.NewRequestWithContext(ctx, method, u, reqBody)
 		if err != nil {
-			return nil, err
+			// The error quotes the URL, query included.
+			return nil, fmt.Errorf("building %s %s: invalid request", method, withoutQuery(rawPath))
 		}
 		req.Header.Set("Authorization", "Bearer "+c.apiToken)
 		req.Header.Set("Content-Type", "application/json")
@@ -420,7 +422,7 @@ func (c *Client) Do(ctx context.Context, method, rawPath string, body any) ([]by
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			lastErr = fmt.Errorf("executing request: %w", err)
+			lastErr = fmt.Errorf("executing %s %s: %w", method, withoutQuery(rawPath), transportCause(err))
 			if ctx.Err() != nil || attempt == c.maxRetries {
 				return nil, lastErr
 			}
@@ -447,6 +449,24 @@ func (c *Client) Do(ctx context.Context, method, rawPath string, body any) ([]by
 		lastErr = apiErr
 	}
 	return nil, lastErr
+}
+
+// withoutQuery drops the query string of a path: a $filter can hold values that must not reach diagnostics or logs,
+// such as the value of a sensitive attribute a data source selects on.
+func withoutQuery(rawPath string) string {
+	if i := strings.IndexByte(rawPath, '?'); i >= 0 {
+		return rawPath[:i]
+	}
+	return rawPath
+}
+
+// transportCause unwraps the *url.Error of a failed request, whose text repeats the full URL with its query string.
+func transportCause(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return err
 }
 
 // isRetryableStatus reports whether the given HTTP status code should trigger a retry.

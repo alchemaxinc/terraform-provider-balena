@@ -93,8 +93,10 @@ type Attr struct {
 	MaxLength      int          `json:"max_length,omitempty"`
 	OneOf          []string     `json:"one_of,omitempty"`
 	VarName        *VarNameRule `json:"var_name,omitempty"`
-	// Stable marks a computed value that never changes once set (ids, creation time, server-generated identifiers).
-	Stable      bool   `json:"stable,omitempty"`
+	// Stable marks a computed value that never changes once set (the id and the creation time).
+	Stable bool `json:"stable,omitempty"`
+	// DateTime marks a date-time column: values that name the same instant are equal.
+	DateTime    bool   `json:"date_time,omitempty"`
 	Description string `json:"-"`
 	// NameSource and CollidesWith explain the name, for the coverage report.
 	NameSource   string   `json:"-"`
@@ -375,7 +377,9 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 	for _, a := range s.Attributes {
 		f := a.field
 		fo := to.Fields[f.Name]
-		a.Stable = f.Name == "id" || f.Name == "created_at" || (f.Unique && !f.Nullable)
+		// Only values that can never change keep their prior value in plans; anything the API may derive again
+		// (a slug from a name) must become unknown when the resource changes, so it is read back after apply.
+		a.Stable = f.Name == "id" || f.Name == "created_at"
 		a.DataSourceMode = DS_COMPUTED
 		if (a.Encoding == ENC_PLAIN || a.Encoding == ENC_REF) && a.sbvrType != "Date Time" && a.sbvrType != "Date" {
 			a.DataSourceMode = DS_FILTER
@@ -511,7 +515,8 @@ func exposedAttrs(ir *IR, t *Table, o *Overrides, to *TableOverride, usedHooks m
 			add("%s has unsupported type %q", f.Name, f.Type)
 			continue
 		}
-		a := &Attr{Field: f.Name, Type: typ, Encoding: ENC_PLAIN, sbvrType: f.Type, field: f}
+		a := &Attr{Field: f.Name, Type: typ, Encoding: ENC_PLAIN, sbvrType: f.Type, field: f,
+			DateTime: f.Type == "Date Time" && f.Kind != KIND_FK}
 		switch {
 		case f.Kind == KIND_FK:
 			a.Encoding = ENC_REF
