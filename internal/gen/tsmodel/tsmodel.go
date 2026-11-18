@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // Kind is the kind of a model field.
@@ -287,12 +288,72 @@ func parseInterface(name string, body []string, firstLine int) (*Interface, erro
 	return iface, nil
 }
 
+// literalMask reports, for every rune, whether it belongs to a string literal or a block comment, delimiters
+// included: brackets, separators and whitespace there are text, not syntax. An unterminated literal or comment runs
+// to the end, which leaves the statement unbalanced.
+func literalMask(rs []rune) []bool {
+	mask := make([]bool, len(rs))
+	for i := 0; i < len(rs); i++ {
+		var end int
+		switch ch := rs[i]; {
+		case ch == '\'' || ch == '"':
+			for end = i + 1; end < len(rs) && rs[end] != ch; end++ {
+				if rs[end] == '\\' {
+					end++
+				}
+			}
+		case ch == '/' && i+1 < len(rs) && rs[i+1] == '*':
+			end = len(rs) - 1
+			for j := i + 3; j < len(rs); j++ {
+				if rs[j] == '/' && rs[j-1] == '*' {
+					end = j
+					break
+				}
+			}
+		default:
+			continue
+		}
+		for j := i; j <= end && j < len(rs); j++ {
+			mask[j] = true
+		}
+		i = end
+	}
+	return mask
+}
+
+// normaliseSpace collapses every run of whitespace outside string literals into one space and trims the ends; the
+// text of literals stays exactly as written.
+func normaliseSpace(s string) string {
+	rs := []rune(s)
+	mask := literalMask(rs)
+	var b strings.Builder
+	space := false
+	for i, ch := range rs {
+		if !mask[i] && unicode.IsSpace(ch) {
+			space = true
+			continue
+		}
+		if space && b.Len() > 0 {
+			b.WriteByte(' ')
+		}
+		space = false
+		b.WriteRune(ch)
+	}
+	return b.String()
+}
+
 // parseFields splits a section body into `name?: type` statements at depth 0 and classifies each.
 func parseFields(body, section string) ([]Field, error) {
 	var stmts []string
 	depth := 0
 	var cur strings.Builder
-	for _, ch := range body {
+	rs := []rune(body)
+	mask := literalMask(rs)
+	for i, ch := range rs {
+		if mask[i] {
+			cur.WriteRune(ch)
+			continue
+		}
 		switch ch {
 		case '{', '[', '<', '(':
 			depth++
@@ -325,7 +386,7 @@ func parseFields(body, section string) ([]Field, error) {
 			experimental = true
 			stmt = stmt[len(cm[0]):]
 		}
-		fm := FIELD_RE.FindStringSubmatch(strings.Join(strings.Fields(stmt), " "))
+		fm := FIELD_RE.FindStringSubmatch(normaliseSpace(stmt))
 		if fm == nil {
 			return nil, fmt.Errorf("cannot parse field %q", truncate(stmt))
 		}
@@ -354,7 +415,13 @@ func splitUnion(t string) []string {
 	var out []string
 	depth := 0
 	var cur strings.Builder
-	for _, ch := range t {
+	rs := []rune(t)
+	mask := literalMask(rs)
+	for i, ch := range rs {
+		if mask[i] {
+			cur.WriteRune(ch)
+			continue
+		}
 		switch ch {
 		case '{', '[', '<', '(':
 			depth++

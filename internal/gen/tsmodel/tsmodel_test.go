@@ -121,3 +121,33 @@ func TestParseVendoredModels(t *testing.T) {
 		}
 	}
 }
+
+// TestParseKeepsLiteralsExactly checks that whitespace, separators and brackets inside string literals are kept as
+// written, while whitespace between tokens still does not matter.
+func TestParseKeepsLiteralsExactly(t *testing.T) {
+	src := strings.Replace(SAMPLE, "\t\tis_of__class: 'fleet' | 'block' | 'app';\n\t\tshould_be_running__release:\n",
+		"\t\t/** @experimental it's new */\n\t\tnote?: string;\n\t\tis_of__class:\n\t\t\t| 'fleet  one'\n\t\t\t| 'block\tx'\n\t\t\t| 'a;b'\n\t\t\t| 'c|d'\n\t\t\t| '{e'\n\t\t\t| ' f ';\n\t\tshould_be_running__release:\n", 1)
+	if src == SAMPLE {
+		t.Fatal("the sample did not change")
+	}
+	m, err := Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, ok := m.Interfaces["Application"].ReadField("is_of__class")
+	want := []string{"fleet  one", "block\tx", "a;b", "c|d", "{e", " f "}
+	if !ok || f.Kind != KIND_ENUM || strings.Join(f.Enum, "\x00") != strings.Join(want, "\x00") {
+		t.Errorf("is_of__class = %+v, want enum %q", f, want)
+	}
+	if n, ok := m.Interfaces["Application"].ReadField("note"); !ok || !n.Experimental {
+		t.Errorf("note = %+v", n)
+	}
+	if got := normaliseSpace("a \t\n b 'x \t y'  \"p  q\"  "); got != "a b 'x \t y' \"p  q\"" {
+		t.Errorf("normaliseSpace = %q", got)
+	}
+	for _, bad := range []string{"'open", "/* open"} {
+		if _, err := parseFields("x: "+bad+";", "Read"); err == nil {
+			t.Errorf("an unterminated %q must not parse", bad)
+		}
+	}
+}
