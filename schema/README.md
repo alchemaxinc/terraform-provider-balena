@@ -72,7 +72,10 @@ hooks that are not declared, not used, or have no Go function in `internal/provi
 columns fail generation.
 
 - `scope`: the tables the provider manages.
-- `rules.sensitive`, `rules.var_names`: column rules by table suffix or table list.
+- `rules.sensitive`, `rules.var_names`: column rules by table suffix or table list. An in-scope column whose API name
+  looks like a secret (`token`, `secret`, `password`/`passwd`, `credential`, `private_key`, `api_key`/`apikey`,
+  `auth_key`; not `public_key`) and that is not `Hashed` fails generation until a `rules.sensitive` entry or its own
+  `sensitive: true` or `false` decides it.
 - `names`: role names by API field, applied in every table, unscoped ones included. An entry no column of any locked
   root has, or one that only repeats what the rules give, fails generation.
 - `references`: expose every reference to a table by one of its unique columns (`device_type` by `slug`).
@@ -80,7 +83,8 @@ columns fail generation.
   fake API and fails when it touches an undeclared column; `make contract` checks the declared columns live.
 - `tables.<table>`: `resource: false`, `resource_fields` (resource subset), `import_by` (unique column),
   `hooks.create` / `hooks.delete`, and per column `mode`, `force_new`, `sensitive`, `name`, `reference_by` (expose one
-  reference by a column of the referenced row, unique or resolved by a `resolver` hook).
+  reference by a column of the referenced row, unique or resolved by a `resolver` hook). Like a `names` entry, a column
+  entry may be for a column only another locked root's table has (`device.api_secret` exists only in `/resin`).
 
 ## Gates
 

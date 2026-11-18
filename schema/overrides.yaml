@@ -152,6 +152,10 @@ tables:
         reference_by: raw_version
         resolver: deviceHostOSRelease
         reason: the host OS is set by version, for example 6.0.10+rev1
+      api_secret:
+        sensitive: true
+        reason: >-
+          the device's API secret authenticates it to balena; only /resin has the column, as plain Short Text
   organization:
     reason: the API refuses to delete an organization with an API token, so destroying it only removes it from the state.
     hooks:

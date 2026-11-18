@@ -534,6 +534,10 @@ func TestGenerateForOtherRoot(t *testing.T) {
 	if app == nil || app.Root != "resin" || app.Attributes["app_name"] == nil || app.Attributes["device_type"] == nil {
 		t.Fatalf("balena_application on resin = %+v", app)
 	}
+	// Only /resin has device.api_secret; its override decides it is sensitive there and is allowed for /v7.
+	if a := res.Surface.DataSources["balena_device"].Attributes["api_secret"]; a == nil || !a.Sensitive {
+		t.Errorf("balena_device.api_secret on resin = %+v, want sensitive", a)
+	}
 	def, err := Generate(REPO)
 	if err != nil {
 		t.Fatal(err)

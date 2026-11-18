@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -335,6 +336,25 @@ func Collisions(preview map[string][]*Attr) []Collision {
 	return out
 }
 
+// inAnyRoot reports whether some parsed locked root's version of the table has the column.
+func (ir *IR) inAnyRoot(table, field string) bool {
+	for _, tables := range ir.byRoot {
+		if t := tables[table]; t != nil && t.Field(field) != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// SECRET_LIKE_RE matches API field names that suggest a secret value.
+var SECRET_LIKE_RE = regexp.MustCompile(`(?i)token|secret|passw(or)?d|credential|private_?key|api_?key|auth_?key`)
+
+// looksSecret reports whether a column's name suggests a secret the models do not mark (Hashed columns are always
+// sensitive). Public keys are not secrets.
+func looksSecret(f *Field) bool {
+	return f.Type != "Hashed" && SECRET_LIKE_RE.MatchString(f.Name) && !strings.Contains(strings.ToLower(f.Name), "public_key")
+}
+
 func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock, hooks map[string]bool,
 	usedRules map[*FieldRule]bool, usedHooks map[string]bool) (*Spec, []string) {
 	var problems []string
@@ -361,7 +381,9 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 		for _, a := range s.Attributes {
 			found = found || a.Field == field
 		}
-		if !found {
+		// Like a names entry, a column override may be for a column only another locked root's table has: it applies
+		// when a generation draws the table from that root.
+		if !found && (t.Field(field) != nil || !ir.inAnyRoot(t.Name, field)) {
 			add("fields.%s: no such exposed column", field)
 		}
 	}
@@ -430,17 +452,24 @@ func buildSpec(ir *IR, t *Table, o *Overrides, cv *ConfigVars, old *SurfaceLock,
 			}
 		}
 		a.Sensitive = f.Type == "Hashed"
+		ruled := false
 		for _, r := range o.Rules.Sensitive {
 			if r.matches(t.Name) && r.Field == f.Name {
 				usedRules[r] = true
-				a.Sensitive = true
+				a.Sensitive, ruled = true, true
 			}
 		}
-		if fo != nil && fo.Sensitive != nil {
-			if *fo.Sensitive == a.Sensitive {
+		// A column whose name looks like a secret needs a decision with a reason: a sensitive rule, or the column's
+		// own sensitive override, which is then never a no-op.
+		undecided := looksSecret(f) && !ruled
+		switch {
+		case fo != nil && fo.Sensitive != nil:
+			if *fo.Sensitive == a.Sensitive && !undecided {
 				add("fields.%s.sensitive is a no-op", f.Name)
 			}
 			a.Sensitive = *fo.Sensitive
+		case undecided:
+			add("fields.%s looks like a secret: set tables.%s.fields.%s.sensitive to true or false, with a reason", f.Name, t.Name, f.Name)
 		}
 		for _, r := range o.Rules.VarNames {
 			if r.matches(t.Name) && r.Field == f.Name {

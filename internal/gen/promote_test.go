@@ -2,6 +2,7 @@ package gen
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -584,5 +585,72 @@ func TestCollisionReportIsAFixedPoint(t *testing.T) {
 	}
 	if surface.Resources["balena_application_tag"] == nil || surface.Resources["balena_application_tag"].Attributes["has_colour"] == nil {
 		t.Errorf("balena_application_tag is not generated with has_colour")
+	}
+}
+
+// TestSecretLikeColumnsNeedADecision checks that an in-scope column whose name looks like a secret fails generation
+// until a sensitive rule or its own sensitive override decides it, and that such an override is never a no-op.
+func TestSecretLikeColumnsNeedADecision(t *testing.T) {
+	// A cloud-only application column named like a secret, and one named like a public key.
+	v7 := strings.Replace(strings.Replace(FIXTURE_CLOUD_TS,
+		"\t\tapp_name: Types['Text']['Read'];\n", "\t\tapp_name: Types['Text']['Read'];\n\t\tregistry_Token: Types['Short Text']['Read'] | null;\n\t\tssh_public_key: Types['Short Text']['Read'] | null;\n", 1),
+		"\t\tapp_name: Types['Text']['Write'];\n", "\t\tapp_name: Types['Text']['Write'];\n\t\tregistry_Token: Types['Short Text']['Write'] | null;\n\t\tssh_public_key: Types['Short Text']['Write'] | null;\n", 1)
+	const field = `
+    fields:
+      registry_Token:
+        sensitive: %s
+        reason: test`
+	const rule = `
+rules:
+  sensitive:
+    - tables: [application]
+      field: registry_Token
+      reason: test
+`
+	for _, tc := range []struct {
+		name, overrides string
+		sensitive       bool
+		err             string
+	}{
+		{"undecided", FIXTURE_OVERRIDES, false, "registry_Token looks like a secret"},
+		{"sensitive", FIXTURE_OVERRIDES + "tables:\n  application:" + fmt.Sprintf(field, "true"), true, ""},
+		{"not sensitive", FIXTURE_OVERRIDES + "tables:\n  application:" + fmt.Sprintf(field, "false"), false, ""},
+		{"rule", FIXTURE_OVERRIDES + rule, true, ""},
+		{"rule and no-op override", FIXTURE_OVERRIDES + rule + "tables:\n  application:" + fmt.Sprintf(field, "true"), true, "fields.registry_Token.sensitive is a no-op"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := writeFixture(t, "", "")
+			replaceLockedFile(t, dir, sources.UPSTREAM_DIR+"/"+sources.SOURCE_BALENA_SDK+"/src/types/v7.ts", v7)
+			writeFile(t, dir, OVERRIDES_PATH, tc.overrides)
+			res, err := Generate(dir)
+			if tc.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("Generate = %v, want an error with %q", err, tc.err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			app := res.Surface.Resources["balena_application"]
+			if a := app.Attributes["registry_token"]; a == nil || a.Sensitive != tc.sensitive {
+				t.Errorf("registry_token = %+v, want sensitive %v", a, tc.sensitive)
+			}
+			if a := app.Attributes["ssh_public_key"]; a == nil || a.Sensitive {
+				t.Errorf("ssh_public_key = %+v, want a plain attribute", a)
+			}
+		})
+	}
+	for name, want := range map[string]bool{
+		"token": true, "registry_token": true, "API_KEY": true, "apikey": true, "has_password_set": true, "passwd": true,
+		"client_secret": true, "credentials": true, "private_key": true, "auth_key": true,
+		"public_key": false, "user_public_key": false, "app_name": false, "keyword": false,
+	} {
+		if got := looksSecret(&Field{Name: name, Type: "Short Text"}); got != want {
+			t.Errorf("looksSecret(%s) = %v, want %v", name, got, want)
+		}
+	}
+	if looksSecret(&Field{Name: "password", Type: "Hashed"}) {
+		t.Error("Hashed columns are always sensitive and need no decision")
 	}
 }
