@@ -27,6 +27,13 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      # terraform-plugin-testing uses the terraform on PATH. Without one it downloads a copy for each test, and running
+      # a freshly written binary while parallel tests write theirs can fail with "text file busy".
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
       - name: Run unit tests
         run: make test-unit
 

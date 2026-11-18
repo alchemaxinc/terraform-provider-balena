@@ -1,0 +1,8 @@
+# Vendored upstream files must stay byte-identical to the hashes in schema/sources.lock.json.
+schema/upstream/
+
+# Written by `make generate` and `make fetch`; `make check-generate` fails if they drift.
+schema/sources.lock.json
+schema/model.json
+schema/surface.lock.json
+schema/coverage.md
