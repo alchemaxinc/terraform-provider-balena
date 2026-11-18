@@ -524,3 +524,65 @@ func TestAnUnparseableSelectedRootFails(t *testing.T) {
 		})
 	}
 }
+
+// generateTwice generates and writes the repository, then checks that generating again changes nothing, and returns
+// the coverage report.
+func generateTwice(t *testing.T, dir string) string {
+	t.Helper()
+	res, err := Generate(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := res.Write(dir); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Generate(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stale := again.Stale(dir); len(stale) > 0 {
+		t.Errorf("a second generation changes %v", stale)
+	}
+	return string(again.Files[COVERAGE_PATH])
+}
+
+// TestCollisionReportIsAFixedPoint checks that the collision report keeps its rows once the names are in the surface
+// lock, for a new colliding column of a generated table and for a colliding table that becomes generated.
+func TestCollisionReportIsAFixedPoint(t *testing.T) {
+	dir := writeFixture(t, "", "")
+	writeFile(t, dir, OVERRIDES_PATH, "scope:\n  - application\n  - organization\n")
+	generateTwice(t, dir)
+
+	// Two cloud-only columns per table whose verb-stripped names collide.
+	v7 := strings.Replace(strings.Replace(strings.Replace(strings.Replace(FIXTURE_CLOUD_TS,
+		"\t\tapp_name: Types['Text']['Read'];\n", "\t\tapp_name: Types['Text']['Read'];\n\t\tis_public__note: Types['Short Text']['Read'] | null;\n\t\thas__note: Types['Short Text']['Read'] | null;\n", 1),
+		"\t\tapp_name: Types['Text']['Write'];\n", "\t\tapp_name: Types['Text']['Write'];\n\t\tis_public__note: Types['Short Text']['Write'] | null;\n\t\thas__note: Types['Short Text']['Write'] | null;\n", 1),
+		"\t\tvalue: Types['Text']['Read'];\n", "\t\tvalue: Types['Text']['Read'];\n\t\tis_for__colour: Types['Short Text']['Read'] | null;\n\t\thas__colour: Types['Short Text']['Read'] | null;\n", 1),
+		"\t\tvalue: Types['Text']['Write'];\n", "\t\tvalue: Types['Text']['Write'];\n\t\tis_for__colour: Types['Short Text']['Write'] | null;\n\t\thas__colour: Types['Short Text']['Write'] | null;\n", 1)
+	replaceLockedFile(t, dir, sources.UPSTREAM_DIR+"/"+sources.SOURCE_BALENA_SDK+"/src/types/v7.ts", v7)
+	rows := []string{
+		"| `application` | `has__note` | `has_note` | `is_public__note` |",
+		"| `application` | `is_public__note` | `is_public_note` | `has__note` |",
+		"| `application_tag` | `has__colour` | `has_colour` | `is_for__colour` |",
+		"| `application_tag` | `is_for__colour` | `is_for_colour` | `has__colour` |",
+	}
+	check := func(step, coverage string) {
+		for _, row := range rows {
+			if !strings.Contains(coverage, row) {
+				t.Errorf("%s: the coverage report lacks %s", step, row)
+			}
+		}
+	}
+	check("new colliding columns", generateTwice(t, dir))
+
+	writeFile(t, dir, OVERRIDES_PATH, FIXTURE_OVERRIDES)
+	coverage := generateTwice(t, dir)
+	check("newly scoped table", coverage)
+	surface, err := ReadSurfaceLock(filepath.Join(dir, filepath.FromSlash(SURFACE_LOCK_PATH)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if surface.Resources["balena_application_tag"] == nil || surface.Resources["balena_application_tag"].Attributes["has_colour"] == nil {
+		t.Errorf("balena_application_tag is not generated with has_colour")
+	}
+}

@@ -296,16 +296,34 @@ type Collision struct {
 	With               []string
 }
 
-// Collisions lists, for every table the preview names, the columns that fell back to their full name.
+// Collisions lists, for every table the preview names, the columns that keep their verb because another column of
+// the table claims their verb-stripped name, and that neither a names entry nor a table override names. It reads the
+// names, not where they came from: a name the surface lock keeps reports as on the generation that first gave it, so
+// a second generation renders the same report.
 func Collisions(preview map[string][]*Attr) []Collision {
 	var out []Collision
 	for _, table := range sortedKeys(preview) {
-		for _, a := range preview[table] {
-			if a.NameSource == NAME_SRC_COLLISION {
-				with := append([]string{}, a.CollidesWith...)
-				sort.Strings(with)
-				out = append(out, Collision{Table: table, Field: a.Field, Name: a.Name, With: with})
+		attrs := preview[table]
+		for _, a := range attrs {
+			if a.NameSource != NAME_SRC_COLLISION && a.NameSource != NAME_SRC_LOCK {
+				continue
 			}
+			full, stripped := withSuffix(a, fullName(a.Field)), withSuffix(a, strippedName(a.Field))
+			if a.Name != full || full == stripped {
+				continue
+			}
+			var with []string
+			for _, b := range attrs {
+				if b != a && (b.Name == stripped || withSuffix(b, strippedName(b.Field)) == stripped || withSuffix(b, fullName(b.Field)) == stripped) {
+					with = append(with, b.Field)
+				}
+			}
+			if len(with) == 0 {
+				// Kept from the surface lock although nothing collides any more: a sticky drift, reported as such.
+				continue
+			}
+			sort.Strings(with)
+			out = append(out, Collision{Table: table, Field: a.Field, Name: a.Name, With: with})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
