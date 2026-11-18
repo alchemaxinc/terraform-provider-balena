@@ -10,6 +10,12 @@ jobs:
   semantic-release:
     name: Semantic Versioning and Release
     runs-on: ubuntu-latest
+    # semantic-release only releases from `main` (.releaserc.json); skip instead of failing the environment's branch
+    # rule when dispatched elsewhere.
+    if: github.ref == 'refs/heads/main'
+
+    # The GitHub App key lives in this environment, which only `main` may use.
+    environment: housekeeping
 
     permissions:
       contents: write
@@ -28,6 +34,8 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes the release tag; the release itself is published by GoReleaser.
+          permission-contents: write
 
       - name: Run semantic-release
         id: release
