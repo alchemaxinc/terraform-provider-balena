@@ -8,6 +8,8 @@ on:
 jobs:
   update-go-deps:
     runs-on: ubuntu-latest
+    # The GitHub App key lives in this environment, which only `main` may use.
+    environment: housekeeping
     permissions:
       contents: read
     steps:
@@ -19,6 +21,9 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes a branch, opens the pull request and enables auto-merge.
+          permission-contents: write
+          permission-pull-requests: write
       - name: Update Go dependencies
         uses: alchemaxinc/update-deps/golang@v2
         with:
