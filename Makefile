@@ -56,6 +56,14 @@ vet: ## Run go vet
 generate: ## Run go generate
 	go generate ./...
 
+.PHONY: generate-pine
+generate-pine: ## Regenerate the Go bindings from Balena's pinned Pine model
+	go run ./internal/cmd/pinegen
+
+.PHONY: check-pine
+check-pine: ## Verify that the checked-in Pine bindings match the pinned model
+	go run ./internal/cmd/pinegen -check
+
 .PHONY: docs
 docs: ## Generate provider documentation
 	tfplugindocs generate --provider-name=balena

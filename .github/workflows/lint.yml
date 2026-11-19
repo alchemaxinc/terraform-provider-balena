@@ -92,6 +92,9 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      - name: Check generated Pine bindings
+        run: make check-pine
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

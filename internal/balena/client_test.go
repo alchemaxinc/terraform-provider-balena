@@ -347,7 +347,10 @@ func TestDeleteApplication_404Tolerance(t *testing.T) {
 func TestGetApplicationEnvVar_Success(t *testing.T) {
 	envVar := ApplicationEnvVar{ID: 5, App: ODataRef{ID: 1}, Name: "DB_HOST", Value: "localhost"}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(pineWrap(envVar))
+		if r.Method != http.MethodGet || r.URL.Path != "/v6/application_environment_variable(5)" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"d":[{"id":5,"application":{"__id":1},"name":"DB_HOST","value":"localhost"}]}`))
 	}))
 	defer srv.Close()
 
@@ -356,21 +359,22 @@ func TestGetApplicationEnvVar_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Name != "DB_HOST" || got.Value != "localhost" {
+	if *got != envVar {
 		t.Errorf("unexpected env var: %+v", got)
 	}
 }
 
 func TestCreateApplicationEnvVar(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s", r.Method)
+		if r.Method != http.MethodPost || r.URL.Path != "/v6/application_environment_variable" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["name"] != "MY_VAR" {
-			t.Errorf("name = %v", payload["name"])
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decoding request: %v", err)
+		}
+		if len(payload) != 3 || payload["application"] != float64(1) || payload["name"] != "MY_VAR" || payload["value"] != "val" {
+			t.Errorf("unexpected payload: %v", payload)
 		}
 		_, _ = w.Write(mustJSON(t, ApplicationEnvVar{ID: 20, Name: "MY_VAR", Value: "val"}))
 	}))
@@ -388,24 +392,22 @@ func TestCreateApplicationEnvVar(t *testing.T) {
 
 func TestUpdateApplicationEnvVar(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s", r.Method)
+		if r.Method != http.MethodPatch || r.URL.Path != "/v6/application_environment_variable(10)" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		if !strings.HasSuffix(r.URL.Path, "(10)") {
-			t.Errorf("path = %s", r.URL.Path)
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decoding request: %v", err)
 		}
-		body, _ := io.ReadAll(r.Body)
-		var payload map[string]interface{}
-		_ = json.Unmarshal(body, &payload)
-		if payload["value"] != "new-val" {
-			t.Errorf("value = %v", payload["value"])
+		if len(payload) != 1 || payload["value"] != "" {
+			t.Errorf("unexpected payload: %v", payload)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
 	c := newTestClient(t, srv)
-	if err := c.UpdateApplicationEnvVar(context.Background(), 10, "new-val"); err != nil {
+	if err := c.UpdateApplicationEnvVar(context.Background(), 10, ""); err != nil {
 		t.Fatal(err)
 	}
 }

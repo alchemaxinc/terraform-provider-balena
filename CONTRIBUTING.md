@@ -31,6 +31,11 @@ make lint           # Run linters
 make docs           # Generate documentation
 ```
 
+Application environment variable bindings are generated from Balena's compiled v6 Pine model.
+Run `make generate-pine` to regenerate them or `make check-pine` to check for drift.
+These commands use the upstream Docker image pinned in `schema/pine-image`.
+Building the provider does not require Docker.
+
 ## Release Process
 
 This repository follows semantic versioning with an automated release pipeline:
