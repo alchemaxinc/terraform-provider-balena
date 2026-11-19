@@ -327,47 +327,6 @@ func (c *Client) GetHostOSRelease(ctx context.Context, deviceTypeSlug, rawVersio
 	return &items[0], nil
 }
 
-// ApplicationEnvVar represents an application-level environment variable.
-type ApplicationEnvVar struct {
-	ID    int64    `json:"id"`
-	App   ODataRef `json:"application"`
-	Name  string   `json:"name"`
-	Value string   `json:"value"`
-}
-
-type appEnvVarCreatePayload struct {
-	App   int64  `json:"application"`
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// ListApplicationEnvVars returns all environment variables for an application.
-func (c *Client) ListApplicationEnvVars(ctx context.Context, appID int64) ([]ApplicationEnvVar, error) {
-	filter := fmt.Sprintf("$filter=application eq %d", appID)
-	return doListFiltered[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", filter)
-}
-
-// GetApplicationEnvVar retrieves a single application environment variable by ID.
-func (c *Client) GetApplicationEnvVar(ctx context.Context, id int64) (*ApplicationEnvVar, error) {
-	return doGetByID[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", id)
-}
-
-// CreateApplicationEnvVar creates a new environment variable on an application.
-func (c *Client) CreateApplicationEnvVar(ctx context.Context, appID int64, name, value string) (*ApplicationEnvVar, error) {
-	payload := appEnvVarCreatePayload{App: appID, Name: name, Value: value}
-	return doCreate[ApplicationEnvVar](ctx, c, "/v6/application_environment_variable", payload)
-}
-
-// UpdateApplicationEnvVar updates the value of an application environment variable.
-func (c *Client) UpdateApplicationEnvVar(ctx context.Context, id int64, value string) error {
-	return doPatch(ctx, c, "/v6/application_environment_variable", id, map[string]interface{}{"value": value})
-}
-
-// DeleteApplicationEnvVar removes an application environment variable by ID.
-func (c *Client) DeleteApplicationEnvVar(ctx context.Context, id int64) error {
-	return doDelete(ctx, c, "/v6/application_environment_variable", id)
-}
-
 // ApplicationConfigVar represents an application-level configuration variable.
 type ApplicationConfigVar struct {
 	ID    int64    `json:"id"`
