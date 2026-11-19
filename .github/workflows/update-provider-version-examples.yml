@@ -12,9 +12,9 @@ on:
         required: false
         type: string
 
+# Every write uses the GitHub App token.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update-provider-version-examples:
@@ -23,6 +23,9 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    # The GitHub App key lives in this environment, which only `main` may use.
+    environment: housekeeping
 
     steps:
       - name: Create temporary GitHub App Token
@@ -33,6 +36,9 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes a branch, opens the pull request and enables auto-merge.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout and setup
         uses: alchemaxinc/composite-toolbox/checkout-and-setup@v1

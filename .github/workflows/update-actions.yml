@@ -8,6 +8,8 @@ on:
 jobs:
   update-actions:
     runs-on: ubuntu-latest
+    # The GitHub App key lives in this environment, which only `main` may use.
+    environment: housekeeping
     permissions:
       contents: read
     steps:
@@ -19,6 +21,10 @@ jobs:
           private-key: ${{ secrets.HOUSEKEEPING_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Pushes a branch that edits workflow files, opens the pull request and enables auto-merge.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
 
       - name: Update GitHub Actions
         uses: alchemaxinc/update-deps/actions@v2
