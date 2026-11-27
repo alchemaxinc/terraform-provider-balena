@@ -47,6 +47,17 @@ export interface Application {
     due_on: Types["Date"]["Read"];
     includes__SLA: Types["Short Text"]["Read"];
     provider: Types["Short Text"]["Read"];
+    connection: Types["Short Text"]["Read"];
+    count: Types["Short Text"]["Read"];
+    depends_on: Types["Short Text"]["Read"];
+    for_each: Types["Short Text"]["Read"];
+    lifecycle: Types["Short Text"]["Read"];
+    provisioner: Types["Short Text"]["Read"];
+    null_fields: Types["Short Text"]["Read"];
+    filter: Types["Short Text"]["Read"];
+    odata_filter: Types["Short Text"]["Read"];
+    select: Types["Short Text"]["Read"];
+    _x: Types["Short Text"]["Read"];
     /** @experimental not stable yet */
     can_x: boolean;
     plain: boolean;

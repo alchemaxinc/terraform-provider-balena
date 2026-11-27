@@ -17,16 +17,19 @@ const KINDS = {
 };
 
 const RESERVED = new Set([
+  "connection",
   "count",
   "depends_on",
   "for_each",
   "lifecycle",
   "provider",
-  "providers",
-  "connection",
   "provisioner",
+  "null_fields",
+  "filter",
+  "odata_filter",
+  "select",
 ]);
-const VALID_NAME = /^[a-z][a-z0-9_]*$/;
+const VALID_NAME = /^[a-z_][a-z0-9_]*$/;
 
 function fail(message) {
   process.stderr.write(`${message}\n`);

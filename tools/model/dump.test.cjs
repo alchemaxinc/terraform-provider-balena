@@ -42,6 +42,32 @@ test("field names are lower-cased and reserved names get a _field suffix", () =>
   assert.strictEqual(field(model, "application", "provider").terraformName, "provider_field");
 });
 
+test("every reserved name gets a _field suffix", () => {
+  const { model } = run();
+  const reserved = [
+    "connection",
+    "count",
+    "depends_on",
+    "for_each",
+    "lifecycle",
+    "provider",
+    "provisioner",
+    "null_fields",
+    "filter",
+    "odata_filter",
+    "select",
+  ];
+  for (const name of reserved) {
+    assert.strictEqual(field(model, "application", name).terraformName, `${name}_field`, name);
+  }
+});
+
+test("a leading underscore is a valid name", () => {
+  const { status, model } = run();
+  assert.strictEqual(status, 0);
+  assert.strictEqual(field(model, "application", "_x").terraformName, "_x");
+});
+
 test("references become integers with their target", () => {
   const { model } = run();
   assert.deepStrictEqual(field(model, "application", "organization"), {
