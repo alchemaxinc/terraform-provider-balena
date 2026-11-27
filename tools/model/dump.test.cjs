@@ -97,6 +97,14 @@ test("unknown Types names fall back to the resolved kind and are reported", () =
   assert.match(unknown, /Fancy/);
 });
 
+test("the Date type is unknown, not a datetime", () => {
+  const { model, report } = run();
+  const f = field(model, "application", "due_on");
+  assert.strictEqual(f.kind, "string");
+  assert.strictEqual(f.declaredType, "Date");
+  assert.match(report.split("## Unknown type names")[1], /`Date`/);
+});
+
 test("optional reverse navigations are ignored", () => {
   const { model } = run();
   assert.strictEqual(field(model, "application", "owns__device"), undefined);

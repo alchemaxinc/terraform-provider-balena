@@ -9,6 +9,7 @@ export type Types = {
   WebResource: { Read: object; Write: object };
   Boolean: { Read: boolean; Write: boolean };
   Fancy: { Read: string; Write: string };
+  Date: { Read: string; Write: string };
 };
 
 export interface Organization {
@@ -43,6 +44,7 @@ export interface Application {
     secret_hash: Types["Hashed"]["Read"];
     logo: Types["WebResource"]["Read"];
     weird: Types["Fancy"]["Read"];
+    due_on: Types["Date"]["Read"];
     includes__SLA: Types["Short Text"]["Read"];
     provider: Types["Short Text"]["Read"];
     /** @experimental not stable yet */

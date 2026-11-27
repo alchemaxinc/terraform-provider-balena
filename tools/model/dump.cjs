@@ -10,7 +10,6 @@ const KINDS = {
   Text: "string",
   Hashed: "string",
   "Date Time": "datetime",
-  Date: "datetime",
   JSON: "json",
   Real: "float",
   WebResource: "webresource",
