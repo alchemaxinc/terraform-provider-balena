@@ -67,6 +67,16 @@ validate-examples: install ## Validate all example Terraform configs
 		(cd "$$dir" && terraform validate) || exit 1; \
 	done
 
+SDK_VERSION ?= $(shell node -p "require('./internal/model/data/v7.json').source.version")
+REPORT ?= /tmp/model-report.md
+
+.PHONY: model
+model: ## Regenerate internal/model/data/v7.json from balena-sdk (SDK_VERSION, REPORT)
+	cd tools/model && npm ci --ignore-scripts \
+		&& npm install --ignore-scripts --no-save balena-sdk@$(SDK_VERSION) \
+		&& node dump.cjs node_modules/balena-sdk/es2018/types/v7.d.ts ../../internal/model/data/v7.json $(REPORT)
+	npx prettier@3.3.3 --write internal/model/data/
+
 .PHONY: clean
 clean: ## Clean up built files
 	rm -f ${BINARY}
