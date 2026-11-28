@@ -1,0 +1,6128 @@
+{
+  "version": 1,
+  "source": {
+    "package": "balena-sdk",
+    "version": "23.2.32",
+    "apiVersion": "v7"
+  },
+  "entities": [
+    {
+      "name": "actor",
+      "synonyms": [],
+      "terraformName": "actor",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "api_key",
+      "synonyms": [],
+      "terraformName": "api_key",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "expiry_date",
+          "terraformName": "expiry_date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_of__actor",
+          "terraformName": "is_of__actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "description",
+          "terraformName": "description",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application",
+      "synonyms": [],
+      "terraformName": "application",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "actor",
+          "terraformName": "actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "should_track_latest_release",
+          "terraformName": "should_track_latest_release",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_of__class",
+          "terraformName": "is_of__class",
+          "declaredType": "enum",
+          "kind": "string",
+          "nullable": false,
+          "enum": ["fleet", "block", "app"],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "app_name",
+          "terraformName": "app_name",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_for__device_type",
+          "terraformName": "is_for__device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": true
+        },
+        {
+          "apiName": "should_be_running__release",
+          "terraformName": "should_be_running__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "application_type",
+          "terraformName": "application_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application_type",
+          "writable": true
+        },
+        {
+          "apiName": "is_host",
+          "terraformName": "is_host",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_archived",
+          "terraformName": "is_archived",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "uuid",
+          "terraformName": "uuid",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_public",
+          "terraformName": "is_public",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_accessible_by_support_until__date",
+          "terraformName": "is_accessible_by_support_until__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_discoverable",
+          "terraformName": "is_discoverable",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_stored_at__repository_url",
+          "terraformName": "is_stored_at__repository_url",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application__can_use__application_as_host",
+      "synonyms": [],
+      "terraformName": "application__can_use__application_as_host",
+      "fields": [
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "can_use__application_as_host",
+          "terraformName": "can_use__application_as_host",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "application__has__build_var_name",
+      "synonyms": ["build_environment_variable"],
+      "terraformName": "build_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application__has__config_var_name",
+      "synonyms": ["application_config_variable"],
+      "terraformName": "application_config_variable",
+      "fields": [
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application__has__domain",
+      "synonyms": ["application_domain_mapping"],
+      "terraformName": "application_domain_mapping",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "domain",
+          "terraformName": "domain",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "application__has__env_var_name",
+      "synonyms": ["application_environment_variable"],
+      "terraformName": "application_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application__has__service_name",
+      "synonyms": ["service"],
+      "terraformName": "service",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "service_name",
+          "terraformName": "service_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "application__has__service_name__has__label_name",
+      "synonyms": ["service_label"],
+      "terraformName": "service_label",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "service",
+          "terraformName": "service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": true
+        },
+        {
+          "apiName": "label_name",
+          "terraformName": "label_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "application__has__service_name",
+          "terraformName": "application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "application__has__service_name__has__name",
+      "synonyms": ["service_environment_variable"],
+      "terraformName": "service_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "service",
+          "terraformName": "service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "application__has__service_name",
+          "terraformName": "application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "application__has__tag_key",
+      "synonyms": ["application_tag"],
+      "terraformName": "application_tag",
+      "fields": [
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "tag_key",
+          "terraformName": "tag_key",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application_membership_role",
+      "synonyms": [],
+      "terraformName": "application_membership_role",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "modified_at",
+          "terraformName": "modified_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__organization",
+          "terraformName": "belongs_to__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "description",
+          "terraformName": "description",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_application",
+          "terraformName": "can_read_application",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_update_application",
+          "terraformName": "can_update_application",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_application_config_variables",
+          "terraformName": "can_read_application_config_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_application_config_variables",
+          "terraformName": "can_modify_application_config_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_application_environment_variables",
+          "terraformName": "can_modify_application_environment_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_application_tags",
+          "terraformName": "can_modify_application_tags",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_create_device",
+          "terraformName": "can_create_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_device",
+          "terraformName": "can_read_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_update_device",
+          "terraformName": "can_update_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_delete_device",
+          "terraformName": "can_delete_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_deactivate_device",
+          "terraformName": "can_deactivate_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_device_service_environment_variables",
+          "terraformName": "can_read_device_service_environment_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_device_service_environment_variables",
+          "terraformName": "can_modify_device_service_environment_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_device_config_variables",
+          "terraformName": "can_modify_device_config_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_create_provisioning_api_key",
+          "terraformName": "can_create_provisioning_api_key",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_create_device_api_key",
+          "terraformName": "can_create_device_api_key",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_device_tags",
+          "terraformName": "can_modify_device_tags",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_device_environment_variables",
+          "terraformName": "can_modify_device_environment_variables",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_tunnel_to_device",
+          "terraformName": "can_tunnel_to_device",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_ssh_to_device_host",
+          "terraformName": "can_ssh_to_device_host",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_ssh_to_device_containers",
+          "terraformName": "can_ssh_to_device_containers",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_trigger_proxy_based_host_update",
+          "terraformName": "can_trigger_proxy_based_host_update",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_trigger_proxy_based_supervisor_update",
+          "terraformName": "can_trigger_proxy_based_supervisor_update",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_create_release",
+          "terraformName": "can_create_release",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_delete_release",
+          "terraformName": "can_delete_release",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_hostapp_profiles",
+          "terraformName": "can_modify_hostapp_profiles",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_application_api_keys",
+          "terraformName": "can_read_application_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_update_application_api_keys",
+          "terraformName": "can_update_application_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_delete_application_api_keys",
+          "terraformName": "can_delete_application_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_read_device_api_keys",
+          "terraformName": "can_read_device_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_update_device_api_keys",
+          "terraformName": "can_update_device_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_delete_device_api_keys",
+          "terraformName": "can_delete_device_api_keys",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_proxy_requests_to_single_device_supervisor_api",
+          "terraformName": "can_proxy_requests_to_single_device_supervisor_api",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_proxy_requests_to_whole_fleet_device_supervisor_api",
+          "terraformName": "can_proxy_requests_to_whole_fleet_device_supervisor_api",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "can_modify_release_assets",
+          "terraformName": "can_modify_release_assets",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "application_type",
+      "synonyms": [],
+      "terraformName": "application_type",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supports_web_url",
+          "terraformName": "supports_web_url",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supports_multicontainer",
+          "terraformName": "supports_multicontainer",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supports_gateway_mode",
+          "terraformName": "supports_gateway_mode",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "needs__os_version_range",
+          "terraformName": "needs__os_version_range",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "requires_payment",
+          "terraformName": "requires_payment",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_legacy",
+          "terraformName": "is_legacy",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "description",
+          "terraformName": "description",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "maximum_device_count",
+          "terraformName": "maximum_device_count",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "cpu_architecture",
+      "synonyms": [],
+      "terraformName": "cpu_architecture",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "credit_bundle",
+      "synonyms": [],
+      "terraformName": "credit_bundle",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "modified_at",
+          "terraformName": "modified_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "payment_status",
+          "terraformName": "payment_status",
+          "declaredType": "enum",
+          "kind": "string",
+          "nullable": false,
+          "enum": ["processing", "paid", "failed", "complimentary", "cancelled", "refunded", "manually invoiced"],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_created_by__user",
+          "terraformName": "is_created_by__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "is_for__feature",
+          "terraformName": "is_for__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": true
+        },
+        {
+          "apiName": "belongs_to__organization",
+          "terraformName": "belongs_to__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "unit_cost",
+          "terraformName": "unit_cost",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "original_quantity",
+          "terraformName": "original_quantity",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "available_balance",
+          "terraformName": "available_balance",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "total_cost",
+          "terraformName": "total_cost",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "total_balance",
+          "terraformName": "total_balance",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "expires_on__date",
+          "terraformName": "expires_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_associated_with__invoice_id",
+          "terraformName": "is_associated_with__invoice_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "error_message",
+          "terraformName": "error_message",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "delta",
+      "synonyms": [],
+      "terraformName": "delta",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "originates_from__image",
+          "terraformName": "originates_from__image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "image",
+          "writable": true
+        },
+        {
+          "apiName": "produces__image",
+          "terraformName": "produces__image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image",
+          "writable": true
+        },
+        {
+          "apiName": "version",
+          "terraformName": "version",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "status",
+          "terraformName": "status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "error_message",
+          "terraformName": "error_message",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_stored_at__location",
+          "terraformName": "is_stored_at__location",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "size",
+          "terraformName": "size",
+          "declaredType": "Big Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "update_timestamp",
+          "terraformName": "update_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "end_timestamp",
+          "terraformName": "end_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "device",
+      "synonyms": [],
+      "terraformName": "device",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "modified_at",
+          "terraformName": "modified_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "actor",
+          "terraformName": "actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "api_heartbeat_state",
+          "terraformName": "api_heartbeat_state",
+          "declaredType": "enum",
+          "kind": "string",
+          "nullable": false,
+          "enum": ["online", "offline", "timeout", "unknown"],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "changed_api_heartbeat_state_on__date",
+          "terraformName": "changed_api_heartbeat_state_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "uuid",
+          "terraformName": "uuid",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "local_id",
+          "terraformName": "local_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "device_name",
+          "terraformName": "device_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "note",
+          "terraformName": "note",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_of__device_type",
+          "terraformName": "is_of__device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": true
+        },
+        {
+          "apiName": "belongs_to__application",
+          "terraformName": "belongs_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "is_online",
+          "terraformName": "is_online",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "last_connectivity_event",
+          "terraformName": "last_connectivity_event",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_connected_to_vpn",
+          "terraformName": "is_connected_to_vpn",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "last_vpn_event",
+          "terraformName": "last_vpn_event",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_locked_until__date",
+          "terraformName": "is_locked_until__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "public_address",
+          "terraformName": "public_address",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "ip_address",
+          "terraformName": "ip_address",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "mac_address",
+          "terraformName": "mac_address",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_web_accessible",
+          "terraformName": "is_web_accessible",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "memory_usage",
+          "terraformName": "memory_usage",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "memory_total",
+          "terraformName": "memory_total",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "storage_block_device",
+          "terraformName": "storage_block_device",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "storage_usage",
+          "terraformName": "storage_usage",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "storage_total",
+          "terraformName": "storage_total",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "cpu_usage",
+          "terraformName": "cpu_usage",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "cpu_temp",
+          "terraformName": "cpu_temp",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_undervolted",
+          "terraformName": "is_undervolted",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "cpu_id",
+          "terraformName": "cpu_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_running__release",
+          "terraformName": "is_running__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "download_progress",
+          "terraformName": "download_progress",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "status",
+          "terraformName": "status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "os_version",
+          "terraformName": "os_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "os_variant",
+          "terraformName": "os_variant",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "overall_status",
+          "terraformName": "overall_status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "overall_progress",
+          "terraformName": "overall_progress",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supervisor_version",
+          "terraformName": "supervisor_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "provisioning_progress",
+          "terraformName": "provisioning_progress",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "provisioning_state",
+          "terraformName": "provisioning_state",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_managed_by__service_instance",
+          "terraformName": "is_managed_by__service_instance",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "service_instance",
+          "writable": true
+        },
+        {
+          "apiName": "is_pinned_on__release",
+          "terraformName": "is_pinned_on__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "should_be_running__release",
+          "terraformName": "should_be_running__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        },
+        {
+          "apiName": "should_be_operated_by__release",
+          "terraformName": "should_be_operated_by__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "should_be_managed_by__release",
+          "terraformName": "should_be_managed_by__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "update_status",
+          "terraformName": "update_status",
+          "declaredType": "enum",
+          "kind": "string",
+          "nullable": true,
+          "enum": ["rejected", "downloading", "downloaded", "applying changes", "aborted", "done"],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "last_update_status_event",
+          "terraformName": "last_update_status_event",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "belongs_to__user",
+          "terraformName": "belongs_to__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "latitude",
+          "terraformName": "latitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "longitude",
+          "terraformName": "longitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "custom_latitude",
+          "terraformName": "custom_latitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "custom_longitude",
+          "terraformName": "custom_longitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "location",
+          "terraformName": "location",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_accessible_by_support_until__date",
+          "terraformName": "is_accessible_by_support_until__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_active",
+          "terraformName": "is_active",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_frozen",
+          "terraformName": "is_frozen",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device__has__config_var_name",
+      "synonyms": ["device_config_variable"],
+      "terraformName": "device_config_variable",
+      "fields": [
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "device__has__env_var_name",
+      "synonyms": ["device_environment_variable"],
+      "terraformName": "device_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "device__has__fqdn",
+      "synonyms": ["device_domain_mapping"],
+      "terraformName": "device_domain_mapping",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": false
+        },
+        {
+          "apiName": "fqdn",
+          "terraformName": "fqdn",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device__has__tag_key",
+      "synonyms": ["device_tag"],
+      "terraformName": "device_tag",
+      "fields": [
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": true
+        },
+        {
+          "apiName": "tag_key",
+          "terraformName": "tag_key",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "device__installs__application__has__service_name",
+      "synonyms": ["service_install"],
+      "terraformName": "service_install",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": true
+        },
+        {
+          "apiName": "installs__service",
+          "terraformName": "installs__service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application__has__service_name",
+          "terraformName": "application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        },
+        {
+          "apiName": "service",
+          "terraformName": "service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        },
+        {
+          "apiName": "installs__application__has__service_name",
+          "terraformName": "installs__application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device__installs__application__has__service_name__has__name",
+      "synonyms": ["device_service_environment_variable"],
+      "terraformName": "device_service_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "service_install",
+          "terraformName": "service_install",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device__installs__application__has__service_name",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "device__installs__application__has__service_name",
+          "terraformName": "device__installs__application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device__installs__application__has__service_name",
+          "writable": false
+        },
+        {
+          "apiName": "device__installs__service",
+          "terraformName": "device__installs__service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device__installs__application__has__service_name",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device__installs__image",
+      "synonyms": ["image_install"],
+      "terraformName": "image_install",
+      "fields": [
+        {
+          "apiName": "device",
+          "terraformName": "device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device",
+          "writable": true
+        },
+        {
+          "apiName": "installs__image",
+          "terraformName": "installs__image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "install_date",
+          "terraformName": "install_date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "download_progress",
+          "terraformName": "download_progress",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "status",
+          "terraformName": "status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_provided_by__release",
+          "terraformName": "is_provided_by__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "image",
+          "terraformName": "image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device_family",
+      "synonyms": [],
+      "terraformName": "device_family",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_manufactured_by__device_manufacturer",
+          "terraformName": "is_manufactured_by__device_manufacturer",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "device_manufacturer",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device_history",
+      "synonyms": [],
+      "terraformName": "device_history",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "end_timestamp",
+          "terraformName": "end_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_created_by__actor",
+          "terraformName": "is_created_by__actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "is_ended_by__actor",
+          "terraformName": "is_ended_by__actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "tracks__device",
+          "terraformName": "tracks__device",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "device",
+          "writable": false
+        },
+        {
+          "apiName": "tracks__actor",
+          "terraformName": "tracks__actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "uuid",
+          "terraformName": "uuid",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__application",
+          "terraformName": "belongs_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "is_active",
+          "terraformName": "is_active",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_running__release",
+          "terraformName": "is_running__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        },
+        {
+          "apiName": "is_pinned_on__release",
+          "terraformName": "is_pinned_on__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        },
+        {
+          "apiName": "is_managed_by__service_instance",
+          "terraformName": "is_managed_by__service_instance",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "service_instance",
+          "writable": false
+        },
+        {
+          "apiName": "os_version",
+          "terraformName": "os_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "os_variant",
+          "terraformName": "os_variant",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supervisor_version",
+          "terraformName": "supervisor_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_of__device_type",
+          "terraformName": "is_of__device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "device_type",
+          "writable": false
+        },
+        {
+          "apiName": "cpu_id",
+          "terraformName": "cpu_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "should_be_managed_by__release",
+          "terraformName": "should_be_managed_by__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        },
+        {
+          "apiName": "should_be_operated_by__release",
+          "terraformName": "should_be_operated_by__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device_manufacturer",
+      "synonyms": [],
+      "terraformName": "device_manufacturer",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device_type",
+      "synonyms": [],
+      "terraformName": "device_type",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_of__cpu_architecture",
+          "terraformName": "is_of__cpu_architecture",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "cpu_architecture",
+          "writable": false
+        },
+        {
+          "apiName": "logo",
+          "terraformName": "logo",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "contract",
+          "terraformName": "contract",
+          "declaredType": "JSON",
+          "kind": "json",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__device_family",
+          "terraformName": "belongs_to__device_family",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "device_family",
+          "writable": false
+        },
+        {
+          "apiName": "is_private",
+          "terraformName": "is_private",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "supports__cpu_architecture",
+          "terraformName": "supports__cpu_architecture",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "cpu_architecture",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "device_type__is_referenced_by__alias",
+      "synonyms": ["device_type_alias"],
+      "terraformName": "device_type_alias",
+      "fields": [
+        {
+          "apiName": "device_type",
+          "terraformName": "device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": false
+        },
+        {
+          "apiName": "is_referenced_by__alias",
+          "terraformName": "is_referenced_by__alias",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "feature",
+      "synonyms": [],
+      "terraformName": "feature",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "title",
+          "terraformName": "title",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "billing_code",
+          "terraformName": "billing_code",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "identity_provider",
+      "synonyms": [],
+      "terraformName": "identity_provider",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "sso_identifier",
+          "terraformName": "sso_identifier",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "entry_point",
+          "terraformName": "entry_point",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "issuer",
+          "terraformName": "issuer",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "certificate",
+          "terraformName": "certificate",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "requires_signed_authn_response",
+          "terraformName": "requires_signed_authn_response",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "image",
+      "synonyms": [],
+      "terraformName": "image",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "start_timestamp",
+          "terraformName": "start_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "end_timestamp",
+          "terraformName": "end_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "dockerfile",
+          "terraformName": "dockerfile",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_a_build_of__service",
+          "terraformName": "is_a_build_of__service",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": true
+        },
+        {
+          "apiName": "image_size",
+          "terraformName": "image_size",
+          "declaredType": "Big Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_stored_at__image_location",
+          "terraformName": "is_stored_at__image_location",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "project_type",
+          "terraformName": "project_type",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "error_message",
+          "terraformName": "error_message",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "build_log",
+          "terraformName": "build_log",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "push_timestamp",
+          "terraformName": "push_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "status",
+          "terraformName": "status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "content_hash",
+          "terraformName": "content_hash",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "contract",
+          "terraformName": "contract",
+          "declaredType": "JSON",
+          "kind": "json",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_a_build_of__application__has__service_name",
+          "terraformName": "is_a_build_of__application__has__service_name",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application__has__service_name",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "image__is_part_of__release",
+      "synonyms": ["release_image"],
+      "terraformName": "release_image",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "image",
+          "terraformName": "image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image",
+          "writable": true
+        },
+        {
+          "apiName": "is_part_of__release",
+          "terraformName": "is_part_of__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "release",
+          "terraformName": "release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "release",
+          "writable": false
+        },
+        {
+          "apiName": "contains__image",
+          "terraformName": "contains__image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "image__is_part_of__release__has__label_name",
+      "synonyms": ["image_label"],
+      "terraformName": "image_label",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "release_image",
+          "terraformName": "release_image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image__is_part_of__release",
+          "writable": true
+        },
+        {
+          "apiName": "label_name",
+          "terraformName": "label_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "image__is_part_of__release",
+          "terraformName": "image__is_part_of__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image__is_part_of__release",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "image__is_part_of__release__has__name",
+      "synonyms": ["image_environment_variable"],
+      "terraformName": "image_environment_variable",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "release_image",
+          "terraformName": "release_image",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image__is_part_of__release",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "image__is_part_of__release",
+          "terraformName": "image__is_part_of__release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "image__is_part_of__release",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "invitee",
+      "synonyms": [],
+      "terraformName": "invitee",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "email",
+          "terraformName": "email",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "invitee__is_invited_to__application",
+      "synonyms": ["application_invite"],
+      "terraformName": "application_invite",
+      "fields": [
+        {
+          "apiName": "invitee",
+          "terraformName": "invitee",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "invitee",
+          "writable": true
+        },
+        {
+          "apiName": "is_invited_to__application",
+          "terraformName": "is_invited_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application_membership_role",
+          "terraformName": "application_membership_role",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application_membership_role",
+          "writable": true
+        },
+        {
+          "apiName": "message",
+          "terraformName": "message",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_created_by__user",
+          "terraformName": "is_created_by__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "invitee__is_invited_to__organization",
+      "synonyms": ["organization_invite"],
+      "terraformName": "organization_invite",
+      "fields": [
+        {
+          "apiName": "invitee",
+          "terraformName": "invitee",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "invitee",
+          "writable": true
+        },
+        {
+          "apiName": "is_invited_to__organization",
+          "terraformName": "is_invited_to__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "organization_membership_role",
+          "terraformName": "organization_membership_role",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization_membership_role",
+          "writable": true
+        },
+        {
+          "apiName": "message",
+          "terraformName": "message",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_created_by__user",
+          "terraformName": "is_created_by__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "oauth_application",
+      "synonyms": [],
+      "terraformName": "oauth_application",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "client_id",
+          "terraformName": "client_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "redirect_uri",
+          "terraformName": "redirect_uri",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "description",
+          "terraformName": "description",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "oauth_application_authorization",
+      "synonyms": [],
+      "terraformName": "oauth_application_authorization",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "belongs_to__user",
+          "terraformName": "belongs_to__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "is_for__oauth_application",
+          "terraformName": "is_for__oauth_application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "oauth_application",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "synonyms": [],
+      "terraformName": "organization",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "handle",
+          "terraformName": "handle",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "company_name",
+          "terraformName": "company_name",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "billing_account_code",
+          "terraformName": "billing_account_code",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "has_past_due_invoice_since__date",
+          "terraformName": "has_past_due_invoice_since__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_frozen",
+          "terraformName": "is_frozen",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "industry",
+          "terraformName": "industry",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "website",
+          "terraformName": "website",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "logo_image",
+          "terraformName": "logo_image",
+          "declaredType": "WebResource",
+          "kind": "webresource",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_using__billing_version",
+          "terraformName": "is_using__billing_version",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_enforcing_saml_login",
+          "terraformName": "is_enforcing_saml_login",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "billing_contact_email",
+          "terraformName": "billing_contact_email",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "organization__has_private_access_to__device_type",
+      "synonyms": [],
+      "terraformName": "organization__has_private_access_to__device_type",
+      "fields": [
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        },
+        {
+          "apiName": "has_private_access_to__device_type",
+          "terraformName": "has_private_access_to__device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "device_type",
+          "terraformName": "device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": false
+        },
+        {
+          "apiName": "is_accessible_privately_by__organization",
+          "terraformName": "is_accessible_privately_by__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "organization__is_authorized_by__identity_provider",
+      "synonyms": ["identity_provider_membership"],
+      "terraformName": "identity_provider_membership",
+      "fields": [
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "is_authorized_by__identity_provider",
+          "terraformName": "is_authorized_by__identity_provider",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "identity_provider",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "grants_access_to__team",
+          "terraformName": "grants_access_to__team",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "team",
+          "writable": true
+        },
+        {
+          "apiName": "identity_provider",
+          "terraformName": "identity_provider",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "identity_provider",
+          "writable": false
+        },
+        {
+          "apiName": "authorizes__organization",
+          "terraformName": "authorizes__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "organization__owns_credit_notification_for__feature",
+      "synonyms": ["organization_credit_notification"],
+      "terraformName": "organization_credit_notification",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "owns_credit_notification_for__feature",
+          "terraformName": "owns_credit_notification_for__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_sent_when_below__threshold",
+          "terraformName": "is_sent_when_below__threshold",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "feature",
+          "terraformName": "feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "organization_membership_role",
+      "synonyms": [],
+      "terraformName": "organization_membership_role",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "plan",
+      "synonyms": [],
+      "terraformName": "plan",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "title",
+          "terraformName": "title",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "billing_code",
+          "terraformName": "billing_code",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "monthly_price",
+          "terraformName": "monthly_price",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "annual_price",
+          "terraformName": "annual_price",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "can_self_serve",
+          "terraformName": "can_self_serve",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_legacy",
+          "terraformName": "is_legacy",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_valid_from__date",
+          "terraformName": "is_valid_from__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_valid_until__date",
+          "terraformName": "is_valid_until__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "plan__has__discount_code",
+      "synonyms": [],
+      "terraformName": "plan__has__discount_code",
+      "fields": [
+        {
+          "apiName": "plan",
+          "terraformName": "plan",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan",
+          "writable": false
+        },
+        {
+          "apiName": "discount_code",
+          "terraformName": "discount_code",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "plan__offers__feature",
+      "synonyms": ["plan_addon"],
+      "terraformName": "plan_addon",
+      "fields": [
+        {
+          "apiName": "plan",
+          "terraformName": "plan",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan",
+          "writable": false
+        },
+        {
+          "apiName": "offers__feature",
+          "terraformName": "offers__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "base_price",
+          "terraformName": "base_price",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "can_self_serve",
+          "terraformName": "can_self_serve",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "bills_dynamically",
+          "terraformName": "bills_dynamically",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "feature",
+          "terraformName": "feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        },
+        {
+          "apiName": "is_offered_by__plan",
+          "terraformName": "is_offered_by__plan",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "plan__provides__feature",
+      "synonyms": ["plan_feature"],
+      "terraformName": "plan_feature",
+      "fields": [
+        {
+          "apiName": "plan",
+          "terraformName": "plan",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan",
+          "writable": false
+        },
+        {
+          "apiName": "provides__feature",
+          "terraformName": "provides__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "quantity",
+          "terraformName": "quantity",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "feature",
+          "terraformName": "feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "public_device",
+      "synonyms": [],
+      "terraformName": "public_device",
+      "fields": [
+        {
+          "apiName": "is_of__device_type",
+          "terraformName": "is_of__device_type",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "device_type",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__application",
+          "terraformName": "belongs_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "latitude",
+          "terraformName": "latitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "longitude",
+          "terraformName": "longitude",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "was_recently_online",
+          "terraformName": "was_recently_online",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "public_organization",
+      "synonyms": [],
+      "terraformName": "public_organization",
+      "fields": [
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "handle",
+          "terraformName": "handle",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "recovery_two_factor",
+      "synonyms": [],
+      "terraformName": "recovery_two_factor",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "used_timestamp",
+          "terraformName": "used_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__user",
+          "terraformName": "belongs_to__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "release",
+      "synonyms": [],
+      "terraformName": "release",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__application",
+          "terraformName": "belongs_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "commit",
+          "terraformName": "commit",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "composition",
+          "terraformName": "composition",
+          "declaredType": "JSON",
+          "kind": "json",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "status",
+          "terraformName": "status",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "source",
+          "terraformName": "source",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "build_log",
+          "terraformName": "build_log",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_invalidated",
+          "terraformName": "is_invalidated",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "start_timestamp",
+          "terraformName": "start_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "end_timestamp",
+          "terraformName": "end_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "update_timestamp",
+          "terraformName": "update_timestamp",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "release_version",
+          "terraformName": "release_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "contract",
+          "terraformName": "contract",
+          "declaredType": "JSON",
+          "kind": "json",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_passing_tests",
+          "terraformName": "is_passing_tests",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_finalized_at__date",
+          "terraformName": "is_finalized_at__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "phase",
+          "terraformName": "phase",
+          "declaredType": "enum",
+          "kind": "string",
+          "nullable": true,
+          "enum": ["next", "current", "sunset", "end-of-life"],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_final",
+          "terraformName": "is_final",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver",
+          "terraformName": "semver",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver_major",
+          "terraformName": "semver_major",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver_minor",
+          "terraformName": "semver_minor",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver_patch",
+          "terraformName": "semver_patch",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver_prerelease",
+          "terraformName": "semver_prerelease",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "semver_build",
+          "terraformName": "semver_build",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "variant",
+          "terraformName": "variant",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "revision",
+          "terraformName": "revision",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "raw_version",
+          "terraformName": "raw_version",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "version",
+          "terraformName": "version",
+          "declaredType": "JSON",
+          "kind": "json",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "known_issue_list",
+          "terraformName": "known_issue_list",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "note",
+          "terraformName": "note",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "invalidation_reason",
+          "terraformName": "invalidation_reason",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_created_by__user",
+          "terraformName": "is_created_by__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "release__has__asset_key",
+      "synonyms": ["release_asset"],
+      "terraformName": "release_asset",
+      "fields": [
+        {
+          "apiName": "release",
+          "terraformName": "release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "asset_key",
+          "terraformName": "asset_key",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "asset",
+          "terraformName": "asset",
+          "declaredType": "WebResource",
+          "kind": "webresource",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "release__has__tag_key",
+      "synonyms": ["release_tag"],
+      "terraformName": "release_tag",
+      "fields": [
+        {
+          "apiName": "release",
+          "terraformName": "release",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "release",
+          "writable": true
+        },
+        {
+          "apiName": "tag_key",
+          "terraformName": "tag_key",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "saml_account",
+      "synonyms": [],
+      "terraformName": "saml_account",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__user",
+          "terraformName": "belongs_to__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "was_generated_by__identity_provider",
+          "terraformName": "was_generated_by__identity_provider",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "identity_provider",
+          "writable": false
+        },
+        {
+          "apiName": "remote_id",
+          "terraformName": "remote_id",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "display_name",
+          "terraformName": "display_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "service_instance",
+      "synonyms": [],
+      "terraformName": "service_instance",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "ip_address",
+          "terraformName": "ip_address",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "social_service_account",
+      "synonyms": [],
+      "terraformName": "social_service_account",
+      "fields": [
+        {
+          "apiName": "belongs_to__user",
+          "terraformName": "belongs_to__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "provider",
+          "terraformName": "provider_field",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "display_name",
+          "terraformName": "display_name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "subscription",
+      "synonyms": [],
+      "terraformName": "subscription",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_for__plan",
+          "terraformName": "is_for__plan",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan",
+          "writable": true
+        },
+        {
+          "apiName": "is_for__organization",
+          "terraformName": "is_for__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "billing_cycle",
+          "terraformName": "billing_cycle",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "starts_on__date",
+          "terraformName": "starts_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "ends_on__date",
+          "terraformName": "ends_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "is_active",
+          "terraformName": "is_active",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "discount_percentage",
+          "terraformName": "discount_percentage",
+          "declaredType": "Real",
+          "kind": "float",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "origin",
+          "terraformName": "origin",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "subscription__discounts__plan__offers__feature",
+      "synonyms": ["subscription_addon_discount"],
+      "terraformName": "subscription_addon_discount",
+      "fields": [
+        {
+          "apiName": "subscription",
+          "terraformName": "subscription",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "subscription",
+          "writable": false
+        },
+        {
+          "apiName": "discounts__plan_addon",
+          "terraformName": "discounts__plan_addon",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "discount_percentage",
+          "terraformName": "discount_percentage",
+          "declaredType": "Real",
+          "kind": "float",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "plan__offers__feature",
+          "terraformName": "plan__offers__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        },
+        {
+          "apiName": "plan_addon",
+          "terraformName": "plan_addon",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        },
+        {
+          "apiName": "discounts__plan__offers__feature",
+          "terraformName": "discounts__plan__offers__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "subscription_prepaid_addon",
+      "synonyms": [],
+      "terraformName": "subscription_prepaid_addon",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_for__subscription",
+          "terraformName": "is_for__subscription",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "subscription",
+          "writable": false
+        },
+        {
+          "apiName": "is_for__plan_addon",
+          "terraformName": "is_for__plan_addon",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        },
+        {
+          "apiName": "discount_percentage",
+          "terraformName": "discount_percentage",
+          "declaredType": "Real",
+          "kind": "float",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "quantity",
+          "terraformName": "quantity",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "starts_on__date",
+          "terraformName": "starts_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "expires_on__date",
+          "terraformName": "expires_on__date",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_for__plan__offers__feature",
+          "terraformName": "is_for__plan__offers__feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "plan__offers__feature",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "support_feature",
+      "synonyms": [],
+      "terraformName": "support_feature",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "feature",
+          "terraformName": "feature",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "feature",
+          "writable": false
+        },
+        {
+          "apiName": "support_tier",
+          "terraformName": "support_tier",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "support_tier",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "support_tier",
+      "synonyms": [],
+      "terraformName": "support_tier",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "title",
+          "terraformName": "title",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "slug",
+          "terraformName": "slug",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "includes_private_support",
+          "terraformName": "includes_private_support",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "includes__SLA",
+          "terraformName": "includes__sla",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "team",
+      "synonyms": [],
+      "terraformName": "team",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "belongs_to__organization",
+          "terraformName": "belongs_to__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "name",
+          "terraformName": "name",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "description",
+          "terraformName": "description",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "team__grants_access_to__application",
+      "synonyms": ["team_application_access"],
+      "terraformName": "team_application_access",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "team",
+          "terraformName": "team",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "team",
+          "writable": true
+        },
+        {
+          "apiName": "grants_access_to__application",
+          "terraformName": "grants_access_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application_membership_role",
+          "terraformName": "application_membership_role",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application_membership_role",
+          "writable": true
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "is_accessible_by__team",
+          "terraformName": "is_accessible_by__team",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "team",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "synonyms": [],
+      "terraformName": "user",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "actor",
+          "terraformName": "actor",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "actor",
+          "writable": false
+        },
+        {
+          "apiName": "username",
+          "terraformName": "username",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "has_legacy_link_to__organization",
+          "terraformName": "has_legacy_link_to__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": true,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user__has__public_key",
+      "synonyms": ["user_public_key"],
+      "terraformName": "user_public_key",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "user",
+          "terraformName": "user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "public_key",
+          "terraformName": "public_key",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "title",
+          "terraformName": "title",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        }
+      ]
+    },
+    {
+      "name": "user__has_direct_access_to__application",
+      "synonyms": [],
+      "terraformName": "user__has_direct_access_to__application",
+      "fields": [
+        {
+          "apiName": "user",
+          "terraformName": "user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "has_direct_access_to__application",
+          "terraformName": "has_direct_access_to__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "is_directly_accessible_by__user",
+          "terraformName": "is_directly_accessible_by__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user__is_member_of__application",
+      "synonyms": ["user_application_membership"],
+      "terraformName": "user_application_membership",
+      "fields": [
+        {
+          "apiName": "user",
+          "terraformName": "user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "is_member_of__application",
+          "terraformName": "is_member_of__application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "application_membership_role",
+          "terraformName": "application_membership_role",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application_membership_role",
+          "writable": true
+        },
+        {
+          "apiName": "application",
+          "terraformName": "application",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "application",
+          "writable": false
+        },
+        {
+          "apiName": "includes__user",
+          "terraformName": "includes__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user__is_member_of__organization",
+      "synonyms": ["organization_membership"],
+      "terraformName": "organization_membership",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "user",
+          "terraformName": "user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "is_member_of__organization",
+          "terraformName": "is_member_of__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "organization_membership_role",
+          "terraformName": "organization_membership_role",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization_membership_role",
+          "writable": true
+        },
+        {
+          "apiName": "effective_seat_role",
+          "terraformName": "effective_seat_role",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "organization",
+          "terraformName": "organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "organization",
+          "writable": false
+        },
+        {
+          "apiName": "includes__user",
+          "terraformName": "includes__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user__is_member_of__organization__has__tag_key",
+      "synonyms": ["organization_membership_tag"],
+      "terraformName": "organization_membership_tag",
+      "fields": [
+        {
+          "apiName": "organization_membership",
+          "terraformName": "organization_membership",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user__is_member_of__organization",
+          "writable": true
+        },
+        {
+          "apiName": "tag_key",
+          "terraformName": "tag_key",
+          "declaredType": "Short Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "value",
+          "terraformName": "value",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": true
+        },
+        {
+          "apiName": "user__is_member_of__organization",
+          "terraformName": "user__is_member_of__organization",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user__is_member_of__organization",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user__is_member_of__team",
+      "synonyms": ["team_membership"],
+      "terraformName": "team_membership",
+      "fields": [
+        {
+          "apiName": "created_at",
+          "terraformName": "created_at",
+          "declaredType": "Date Time",
+          "kind": "datetime",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "user",
+          "terraformName": "user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": true
+        },
+        {
+          "apiName": "is_member_of__team",
+          "terraformName": "is_member_of__team",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "team",
+          "writable": true
+        },
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "team",
+          "terraformName": "team",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "team",
+          "writable": false
+        },
+        {
+          "apiName": "includes__user",
+          "terraformName": "includes__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        }
+      ]
+    },
+    {
+      "name": "user_profile",
+      "synonyms": [],
+      "terraformName": "user_profile",
+      "fields": [
+        {
+          "apiName": "id",
+          "terraformName": "id",
+          "declaredType": "Integer",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_of__user",
+          "terraformName": "is_of__user",
+          "declaredType": "reference",
+          "kind": "integer",
+          "nullable": false,
+          "enum": [],
+          "reference": "user",
+          "writable": false
+        },
+        {
+          "apiName": "email",
+          "terraformName": "email",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "has_disabled_newsletter",
+          "terraformName": "has_disabled_newsletter",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "is_verified",
+          "terraformName": "is_verified",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "must_be_verified",
+          "terraformName": "must_be_verified",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "first_name",
+          "terraformName": "first_name",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "last_name",
+          "terraformName": "last_name",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "account_type",
+          "terraformName": "account_type",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "has_password_set",
+          "terraformName": "has_password_set",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "company",
+          "terraformName": "company",
+          "declaredType": "Text",
+          "kind": "string",
+          "nullable": true,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        },
+        {
+          "apiName": "has_responded_to_profile",
+          "terraformName": "has_responded_to_profile",
+          "declaredType": "Boolean",
+          "kind": "boolean",
+          "nullable": false,
+          "enum": [],
+          "reference": "",
+          "writable": false
+        }
+      ]
+    }
+  ]
+}

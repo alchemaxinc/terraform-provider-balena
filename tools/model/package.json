@@ -1,0 +1,10 @@
+{
+  "name": "balena-model-dump",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "typescript": "5.9.3"
+  }
+}
