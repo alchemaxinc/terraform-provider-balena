@@ -1,0 +1,42 @@
+{
+  "computed_only": {
+    "device": [
+      "is_online",
+      "last_connectivity_event",
+      "public_address",
+      "ip_address",
+      "mac_address",
+      "memory_usage",
+      "memory_total",
+      "storage_block_device",
+      "storage_usage",
+      "storage_total",
+      "cpu_usage",
+      "cpu_temp",
+      "is_undervolted",
+      "cpu_id",
+      "is_running__release",
+      "download_progress",
+      "status",
+      "os_version",
+      "os_variant",
+      "supervisor_version",
+      "provisioning_progress",
+      "provisioning_state",
+      "update_status",
+      "last_update_status_event"
+    ]
+  },
+  "import_only": ["api_key", "device"],
+  "retain_on_destroy": ["device"],
+  "not_sensitive": [
+    "application_tag.value",
+    "device_tag.value",
+    "release_tag.value",
+    "service_label.value",
+    "image_label.value",
+    "organization_membership_tag.value",
+    "application_config_variable.value",
+    "device_config_variable.value"
+  ]
+}
